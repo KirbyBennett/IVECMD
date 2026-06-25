@@ -1,0 +1,3701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Explorer — Gaia Variability Dataset Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================
+   Theme — ported from the PySide6 THEME dict
+   ===================================================== */
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-alt: #21262d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --orange: #d29922;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+}
+
+body { padding: 14px; }
+
+#container {
+  display: flex;
+  height: calc(100vh - 28px);
+  min-height: 560px;
+  background: var(--panel);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.63);
+}
+
+/* ---------- Sidebar ---------- */
+#sidebar {
+  width: 320px;
+  flex: 0 0 320px;
+  background: var(--panel-alt);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+#sidebar::-webkit-scrollbar { width: 8px; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.title { font-size: 30px; font-weight: 700; line-height: 1.15; }
+.subtitle { color: var(--muted); font-size: 14px; padding-bottom: 4px; }
+
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.section-title { font-size: 15px; font-weight: 600; }
+
+/* ---------- Buttons ---------- */
+button {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .14s cubic-bezier(.33,1,.68,1), color .14s, box-shadow .14s, border-color .14s;
+}
+button:hover {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent-hover);
+  box-shadow: 0 0 25px rgba(88,166,255,0.35);
+}
+button:active { background: var(--accent-hover); }
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--panel-alt);
+  color: var(--text);
+  box-shadow: none;
+  border-color: var(--border);
+}
+button.toggled { border-color: var(--accent); color: var(--accent); }
+button.toggled:hover { color: #000; }
+button.small { padding: 6px 12px; font-size: 12px; }
+
+/* ---------- Variable-star list controls ---------- */
+.sl-row { display: flex; gap: 6px; }
+.sl-list {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; font-size: 13px; text-align: left;
+}
+.sl-only { flex: 0 0 auto; }
+.sl-swatch {
+  width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.45);
+}
+.sl-count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.sl-list.active, .sl-only.active, .sl-subs .sl-sub.active {
+  border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.10);
+}
+.sl-list.active:hover, .sl-only.active:hover, .sl-subs .sl-sub.active:hover { color: #000; background: var(--accent); }
+.sl-list.loading { opacity: 0.7; }
+.sl-list.missing .sl-count { color: var(--orange); }
+.sl-subs { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 6px; }
+.sl-subs .sl-sub {
+  flex: 1 1 auto; min-width: max-content;
+  display: flex; align-items: center; gap: 6px; padding: 6px;
+}
+.sl-subs .sl-sub.loading { opacity: 0.7; }
+.sl-subs .sl-sub.missing .sl-count { color: var(--orange); }
+
+/* ---------- Inputs ---------- */
+input[type=text] {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+input[type=text]:focus { outline: none; border-color: var(--accent); }
+input[type=text]::placeholder { color: var(--muted); }
+
+.seg-group { display: flex; gap: 6px; }
+.seg-group button { flex: 1; padding: 8px 4px; font-size: 12px; }
+.seg-group button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(88,166,255,0.10);
+}
+.seg-group button.active:hover { color: #000; background: var(--accent); }
+
+label.check {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+label.check input { display: none; }
+label.check .box {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s;
+}
+label.check:hover .box { border-color: var(--accent); }
+label.check input:checked + .box { background: var(--accent); border-color: var(--accent); }
+label.check input:checked + .box::after {
+  content: ''; width: 8px; height: 5px;
+  border-left: 2px solid #000; border-bottom: 2px solid #000;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 6px;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+input[type=range]::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 6px;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.field-label { color: var(--text); font-size: 13px; }
+.msg { color: var(--text); line-height: 1.45; word-break: break-word; }
+.muted { color: var(--muted); }
+
+/* ---------- Main area ---------- */
+#main-area {
+  flex: 1;
+  background: var(--panel);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+#title-bar { display: flex; align-items: center; gap: 8px; }
+#window-title { font-size: 22px; font-weight: 700; flex: 1; }
+#title-bar button { width: 36px; height: 36px; padding: 0; font-size: 15px; }
+
+#plot-panel {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  gap: 18px;
+  min-height: 0;
+  position: relative;
+}
+.plot-half { flex: 1; min-width: 0; position: relative; }
+.plot-half canvas { width: 100%; height: 100%; display: block; }
+#detail-canvas { cursor: crosshair; }
+#overview-canvas { cursor: grab; }
+#overview-canvas.dragging { cursor: grabbing; }
+
+/* ---------- Tooltip ---------- */
+#tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--panel-alt);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  z-index: 50;
+  display: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+#tooltip .tt-id { color: var(--accent); font-weight: 600; }
+
+/* ---------- Color legend ---------- */
+.legend-bar {
+  height: 12px; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.legend-ticks {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted);
+}
+
+/* ---------- Region statistics ---------- */
+.stat-rows { display: flex; flex-direction: column; gap: 6px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 12px; }
+.stat-row span:last-child { font-variant-numeric: tabular-nums; color: var(--text); }
+
+/* ---------- Modals ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  max-width: 92vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;           /* allows h2 to shrink below its content size */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal-body { padding: 18px; overflow-y: auto; }
+
+#help-modal .modal { width: 560px; }
+#help-modal h3 { font-size: 15px; margin: 14px 0 6px; color: var(--accent); }
+#help-modal h3:first-child { margin-top: 0; }
+#help-modal p, #help-modal li { line-height: 1.55; color: var(--text); }
+#help-modal ul { padding-left: 20px; margin: 6px 0; }
+#help-modal b { color: var(--accent-hover); }
+#help-modal code {
+  background: var(--panel-alt); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; font-size: 12px;
+}
+
+#cmd-modal .modal { width: 920px; }
+#phase-modal .modal { width: 940px; }
+#phase-plot-wrap { position: relative; overflow-y: auto; max-height: calc(92vh - 110px); }
+#phase-canvas { width: 100%; height: 780px; display: block; background: var(--panel); }
+#phase-loading {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: center; justify-content: center;
+  background: var(--panel);
+  color: var(--muted);
+}
+#phase-status { padding: 10px 18px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); min-height: 20px; }
+#mep-modal .modal { width: 940px; }
+#mep-plot-wrap { position: relative; overflow-y: auto; max-height: calc(92vh - 110px); }
+#mep-canvas { width: 100%; height: 720px; display: block; background: var(--panel); }
+#mep-status { padding: 10px 18px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); min-height: 20px; }
+#cmd-canvas { width: 100%; height: 560px; display: block; background: var(--panel); cursor: grab; }
+#cmd-canvas.panning { cursor: grabbing; }
+#cmd-status { padding: 10px 18px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); min-height: 20px;}
+#cmd-links { display: flex; gap: 8px; }
+#cmd-links a {
+  color: var(--accent); text-decoration: none; font-size: 12px;
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  transition: border-color .12s, color .12s;
+}
+#cmd-links a:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+.spinner {
+  width: 42px; height: 42px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#cmd-loading {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: center; justify-content: center;
+  background: var(--panel);
+  color: var(--muted);
+}
+#cmd-plot-wrap { position: relative; }
+
+/* ---------- Initial loading / drop zone ---------- */
+#boot-overlay {
+  position: absolute; inset: 0;
+  background: var(--panel);
+  border-radius: 8px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px;
+  z-index: 20;
+  text-align: center;
+  padding: 30px;
+}
+#boot-overlay h2 { font-size: 20px; }
+#boot-overlay p { color: var(--muted); max-width: 480px; line-height: 1.6; }
+#boot-overlay.dragover { outline: 2px dashed var(--accent); outline-offset: -10px; }
+
+@media (max-width: 900px) {
+  #container { flex-direction: column; height: auto; }
+  #sidebar { width: 100%; flex: none; max-height: none; }
+  #plot-panel { flex-direction: column; min-height: 700px; }
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <!-- ================= Sidebar ================= -->
+  <aside id="sidebar">
+    <div>
+      <div class="title">Data Explorer</div>
+      <div class="subtitle">Visualize and interact with large datasets</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">View Info</div>
+      <div class="msg" id="counts-label">—</div>
+      <div class="muted" id="filter-count" style="font-size:12px;">—</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Messages</div>
+      <div class="msg" id="message-label">Enter a file name and click 'Save File' to write the current Detail View points</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Search</div>
+      <input type="text" id="search-input" placeholder="Gaia DR3 source ID">
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Filters</div>
+      <div class="field-label">Slope direction</div>
+      <div class="seg-group">
+        <button id="dir-all" class="active">All</button>
+        <button id="dir-pos"><span style="color:#5e7ce2">●</span> Bluing</button>
+        <button id="dir-neg"><span style="color:#d65c5c">●</span> Reddening</button>
+      </div>
+      <div class="field-label" id="sig-label">Significance: p ≤ 1e-4</div>
+      <input type="range" id="sig-slider" min="0" max="10" step="1" value="4">
+      <div class="field-label" id="rho-label">Min |ρ|: 0.00</div>
+      <input type="range" id="rho-slider" min="0" max="0.95" step="0.05" value="0">
+      <div class="field-label" id="poe-label">Min parallax / error: 10</div>
+      <input type="range" id="poe-slider" min="0" max="50" step="1" value="10">
+      <div class="field-label" id="plx-label">Min parallax: off</div>
+      <input type="range" id="plx-slider" min="0" max="20" step="0.1" value="0">
+      <button id="filter-reset-btn" class="small">Clear filters</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Variable-Star Lists</div>
+      <div class="muted" style="font-size:12px; line-height:1.5;">
+        Highlight catalog members on both plots, or restrict the view to a catalog.
+        Toggle several to compare them in different colors.
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-cepheid" class="sl-list"><span class="sl-swatch" style="background:#ffd700"></span>Cepheids<span class="sl-count" id="sl-count-cepheid"></span></button>
+        <button id="sl-only-cepheid" class="sl-only small" title="Show only Cepheids">only</button>
+      </div>
+      <div class="sl-subs" id="sl-subs-cepheid" hidden>
+        <button class="sl-sub small" data-sub="CepI"><span class="sl-swatch" style="background:#ef4444"></span>Type I<span class="sl-count" id="sl-count-CepI"></span></button>
+        <button class="sl-sub small" data-sub="CepII"><span class="sl-swatch" style="background:#3b82f6"></span>Type II<span class="sl-count" id="sl-count-CepII"></span></button>
+        <button class="sl-sub small" data-sub="CepAnom"><span class="sl-swatch" style="background:#84cc16"></span>Anomalous<span class="sl-count" id="sl-count-CepAnom"></span></button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-rrlyrae" class="sl-list"><span class="sl-swatch" style="background:#22e3e3"></span>RR Lyrae<span class="sl-count" id="sl-count-rrlyrae"></span></button>
+        <button id="sl-only-rrlyrae" class="sl-only small" title="Show only RR Lyrae">only</button>
+      </div>
+      <div class="sl-subs" id="sl-subs-rrlyrae" hidden>
+        <button class="sl-sub small" data-sub="RRab"><span class="sl-swatch" style="background:#ff5cf4"></span>RRab<span class="sl-count" id="sl-count-RRab"></span></button>
+        <button class="sl-sub small" data-sub="RRc"><span class="sl-swatch" style="background:#34d399"></span>RRc<span class="sl-count" id="sl-count-RRc"></span></button>
+        <button class="sl-sub small" data-sub="RRd"><span class="sl-swatch" style="background:#fbbf24"></span>RRd<span class="sl-count" id="sl-count-RRd"></span></button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-dsct" class="sl-list"><span class="sl-swatch" style="background:#ff8c1a"></span>δ Scuti<span class="sl-count" id="sl-count-dsct"></span></button>
+        <button id="sl-only-dsct" class="sl-only small" title="Show only δ Scuti">only</button>
+      </div>
+      <div class="sl-subs" id="sl-subs-dsct" hidden>
+        <button class="sl-sub small" data-sub="SXP"><span class="sl-swatch" style="background:#14b8a6"></span>SX Phoenicis<span class="sl-count" id="sl-count-SXP"></span></button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-mira" class="sl-list"><span class="sl-swatch" style="background:#c084fc"></span>Mira<span class="sl-count" id="sl-count-mira"></span></button>
+        <button id="sl-only-mira" class="sl-only small" title="Show only Mira">only</button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-semireg" class="sl-list"><span class="sl-swatch" style="background:#f472b6"></span>Semiregular<span class="sl-count" id="sl-count-semireg"></span></button>
+        <button id="sl-only-semireg" class="sl-only small" title="Show only Semiregular">only</button>
+      </div>
+      <div class="sl-subs" id="sl-subs-semireg" hidden>
+        <button class="sl-sub small" data-sub="SRA"><span class="sl-swatch" style="background:#38bdf8"></span>SRA<span class="sl-count" id="sl-count-SRA"></span></button>
+        <button class="sl-sub small" data-sub="SRB"><span class="sl-swatch" style="background:#fb7185"></span>SRB<span class="sl-count" id="sl-count-SRB"></span></button>
+        <button class="sl-sub small" data-sub="SRC"><span class="sl-swatch" style="background:#a855f7"></span>SRC<span class="sl-count" id="sl-count-SRC"></span></button>
+        <button class="sl-sub small" data-sub="SRD"><span class="sl-swatch" style="background:#2dd4bf"></span>SRD<span class="sl-count" id="sl-count-SRD"></span></button>
+        <button class="sl-sub small" data-sub="SRS"><span class="sl-swatch" style="background:#e11d48"></span>SRS<span class="sl-count" id="sl-count-SRS"></span></button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-blap" class="sl-list"><span class="sl-swatch" style="background:#4d8bff"></span>BLAPs<span class="sl-count" id="sl-count-blap"></span></button>
+        <button id="sl-only-blap" class="sl-only small" title="Show only BLAPs">only</button>
+      </div>
+
+      <div class="sl-row">
+        <button id="sl-hl-sdbv" class="sl-list"><span class="sl-swatch" style="background:#22c55e"></span>sdBV<span class="sl-count" id="sl-count-sdbv"></span></button>
+        <button id="sl-only-sdbv" class="sl-only small" title="Show only sdBV">only</button>
+      </div>
+
+      <div class="sl-row">
+        <button class="sl-list" disabled title="Parameter-based custom lists are not configured yet"><span class="sl-swatch" style="background:#8b949e"></span>Custom…</button>
+        <button class="sl-only small" disabled>only</button>
+      </div>
+
+      <button id="sl-clear" class="small" disabled>Clear all lists</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Transparency Scaling</div>
+      <div class="seg-group">
+        <button id="alpha-sig" class="active">Significance</button>
+        <button id="alpha-rho">|ρ|</button>
+      </div>
+      <div class="seg-group">
+        <button id="alpha-const">Constant</button>
+        <button id="alpha-comb">Combined</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Display</div>
+      <div class="field-label" id="slider-label">Line thickness ×: 2.0</div>
+      <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
+      <label class="check"><input type="checkbox" id="hr-ref-checkbox"><span class="box"></span>Show HR diagram reference lines</label>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Selected Sources</div>
+      <div class="msg" id="sel-count">0 selected</div>
+      <div class="muted" id="sel-list" style="font-size:11px; word-break:break-all;"></div>
+      <button id="clear-sel-btn" class="small" disabled>Clear Selection</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Region Statistics</div>
+      <div class="stat-rows">
+        <div class="stat-row"><span class="muted">Visible sources</span><span id="rs-count">—</span></div>
+        <div class="stat-row"><span class="muted">Median ρ</span><span id="rs-rho">—</span></div>
+        <div class="stat-row"><span class="muted">Median p</span><span id="rs-p">—</span></div>
+        <div class="stat-row"><span class="muted">Fraction bluing</span><span id="rs-blue">—</span></div>
+        <div class="stat-row"><span class="muted">Fraction reddening</span><span id="rs-red">—</span></div>
+        <div class="stat-row"><span class="muted">Mean CMD vector length</span><span id="rs-len">—</span></div>
+      </div>
+    </div>
+
+    <div class="card" id="legend-card">
+      <div class="section-title">Color Legend</div>
+      <div class="legend-bar" id="legend-bar"></div>
+      <div class="legend-ticks"><span>−1 (reddening)</span><span>0</span><span>+1 (bluing)</span></div>
+      <div class="muted" id="legend-desc" style="font-size:12px; line-height:1.5;">
+        Each line is one star. Color encodes the Spearman correlation between its
+        color and brightness across epochs; opacity scales with statistical
+        significance (−log<sub>10</sub> p).
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Actions</div>
+      <button id="invert-y-btn">Invert Y-Axis</button>
+      <button id="reset-view-btn">Reset View</button>
+      <button id="undo-view-btn" disabled>Undo View</button>
+      <button id="redo-view-btn" disabled>Redo View</button>
+      <button id="help-btn">Show Help</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Export</div>
+      <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
+      <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
+      <button id="export-visible-btn">Export Visible Sources</button>
+      <button id="export-selected-btn">Export Selected Sources (0)</button>
+      <button id="export-filtered-btn">Export Filtered Sources</button>
+      <button id="export-detail-png-btn">Export Detail View PNG</button>
+      <button id="export-overview-png-btn">Export Overview PNG</button>
+    </div>
+
+    <input type="file" id="spearman-file-input" hidden>
+  </aside>
+
+  <!-- ================= Main area ================= -->
+  <main id="main-area">
+    <div id="title-bar">
+      <div id="window-title">Dataset Viewer</div>
+      <button id="fullscreen-btn" title="Toggle fullscreen">⛶</button>
+    </div>
+    <div id="plot-panel">
+      <div class="plot-half"><canvas id="overview-canvas"></canvas></div>
+      <div class="plot-half"><canvas id="detail-canvas" tabindex="0"></canvas></div>
+      <div id="boot-overlay">
+        <div class="spinner"></div>
+        <h2 id="boot-title">Loading dataset…</h2>
+        <p id="boot-msg">Fetching the Spearman scatter–slope table.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="tooltip"></div>
+
+<!-- ================= Help modal ================= -->
+<div class="modal-backdrop" id="help-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Data Explorer Help</h2>
+      <button class="small" id="help-close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <h3>Quick start</h3>
+      <ul>
+        <li><b>Overview Plot:</b> Displays every star in the dataset. Click or drag the green rectangle to change the detail view. Scroll on the overview to grow/shrink the rectangle.</li>
+        <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
+        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. Dragging the CMD's axis strips pans that axis alone.</li>
+        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters.</li>
+        <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
+        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts.</li>
+        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>5-min high-res grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators).</li>
+        <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
+        <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
+        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV, or either panel as a PNG.</li>
+      </ul>
+      <h3>Keyboard shortcuts</h3>
+      <ul>
+        <li><code>F</code> fit all data in the Detail View · <code>0</code> reset to the default window</li>
+        <li><code>+</code>/<code>−</code> zoom the detail window · <code>I</code> invert the Y axis</li>
+        <li><code>/</code> focus the search box · <code>H</code> toggle this help</li>
+        <li><code>S</code> export the current selection · <code>Esc</code> clear selection / close dialogs</li>
+        <li><code>Ctrl/Cmd+Z</code> undo view · <code>Ctrl/Cmd+Shift+Z</code> redo view</li>
+      </ul>
+      <h3>What am I looking at?</h3>
+      <p>
+        Each line segment represents one star observed many times by ESA's
+        <b>Gaia</b> space telescope. The horizontal axis is the star's color
+        (G<sub>BP</sub>−G<sub>RP</sub>, blue→red), and the vertical axis is its absolute
+        brightness (GMAG). A star that varies traces a small path in this diagram:
+        the segment shows the direction and size of that path.
+      </p>
+      <p>
+        <b style="color:#6b8dd6">Blue lines</b> are stars that get <i>bluer</i> as they brighten;
+        <b style="color:#d65c5c">red lines</b> get <i>redder</i> as they brighten.
+        Bolder, more opaque lines have a more statistically significant correlation
+        (smaller Spearman p-value).
+      </p>
+      <h3>For astronomers</h3>
+      <p>
+        Source list: Gaia DR3 epoch photometry (VizieR <code>I/355/epphot</code>),
+        filtered to ρ ≠ 0 and ≥ 6 epochs. Clicking a source runs: flux→mag error
+        propagation, distance modulus from DR3 parallax, iterative 4σ flux clip,
+        SNR &gt; 1 cut on G/BP/RP, an std-ratio slope-stability clip (10% threshold),
+        and an unweighted linear fit to the kept epochs.
+      </p>
+      <h3>Serving this file</h3>
+      <p>
+        For the dataset to auto-load and VizieR queries to work smoothly, serve this
+        folder over HTTP, e.g. <code>python3 -m http.server 8000</code> then open
+        <code>http://localhost:8000/index.html</code>. If opened directly from disk,
+        you can drag &amp; drop or browse for the data table instead.
+      </p>
+      <button id="help-close-btn" style="margin-top:14px; width:100%;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CMD modal ================= -->
+<div class="modal-backdrop" id="cmd-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="cmd-title">CMD</h2>
+      <div id="cmd-links"></div>
+      <button class="small" id="cmd-reset-zoom-btn" style="display:none">Reset Zoom</button>
+      <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
+      <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Folding</button>
+      <button class="small" id="cmd-png-btn">Download PNG</button>
+      <button class="small" id="cmd-close-btn">✕</button>
+    </div>
+    <div id="cmd-plot-wrap">
+      <canvas id="cmd-canvas"></canvas>
+      <div id="cmd-loading"><div class="spinner"></div><div id="cmd-loading-text">Querying VizieR…</div></div>
+    </div>
+    <div id="cmd-status"></div>
+  </div>
+</div>
+
+<!-- ================= Phase analysis modal ================= -->
+<div class="modal-backdrop" id="phase-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="phase-title">Phase Analysis</h2>
+      <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>5-min high-res grid</label>
+      <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
+      <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
+      <button class="small" id="phase-png-btn">Download PNG</button>
+      <button class="small" id="phase-close-btn">✕</button>
+    </div>
+    <div id="phase-plot-wrap">
+      <canvas id="phase-canvas"></canvas>
+      <div id="phase-loading"><div class="spinner"></div><div id="phase-loading-text">Computing periodograms…</div></div>
+    </div>
+    <div id="phase-status"></div>
+  </div>
+</div>
+
+<!-- ================= Multi-epoch photometry modal ================= -->
+<div class="modal-backdrop" id="mep-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="mep-title">Multi-Epoch Photometry</h2>
+      <button class="small" id="mep-png-btn">Download PNG</button>
+      <button class="small" id="mep-close-btn">✕</button>
+    </div>
+    <div id="mep-plot-wrap">
+      <canvas id="mep-canvas"></canvas>
+    </div>
+    <div id="mep-status"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================
+   Web port of the PySide6 "GUI Playground" data explorer.
+   Single-file app: canvas plotting, VizieR TAP queries,
+   CMD pipeline (sigma clip, SNR cut, std-slope clip, fit).
+   ===================================================== */
+
+const THEME = {
+  bg: '#0d1117', panel: '#161b22', panelAlt: '#21262d',
+  text: '#e6edf3', muted: '#8b949e', border: '#30363d',
+  accent: '#58a6ff', accentHover: '#79c0ff', green: '#3fb950',
+};
+
+const LIST_NAME = 'RANKED';
+const DATA_FILE = `list_${LIST_NAME}_Scatter_Slope_SPEARMAN`;
+const TAP_URL = 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync';
+
+/* ---------------- Colormaps ---------------- */
+function buildLUT(anchors, n = 256) {
+  const lut = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1) * (anchors.length - 1);
+    const j = Math.min(Math.floor(t), anchors.length - 2);
+    const f = t - j;
+    lut[i] = [0, 1, 2].map(k => Math.round(anchors[j][k] + f * (anchors[j + 1][k] - anchors[j][k])));
+  }
+  return lut;
+}
+// matplotlib 'coolwarm' (Moreland) anchor approximation
+const COOLWARM = buildLUT([
+  [59, 76, 192], [98, 130, 234], [141, 176, 254], [184, 208, 249],
+  [221, 221, 221], [245, 196, 173], [244, 154, 123], [222, 96, 77], [180, 4, 38],
+]);
+function sampleLUT(lut, t) {
+  const i = Math.max(0, Math.min(lut.length - 1, Math.round(t * (lut.length - 1))));
+  return lut[i];
+}
+// coolwarm_r: reverse lookup
+function coolwarmR(t) { return sampleLUT(COOLWARM, 1 - t); }
+
+/* ---------------- Color/alpha buckets ----------------
+   At many millions of sources a per-line rgba() string (and an rgb triple) per
+   source is the dominant memory cost, and rebuilding them on every alpha-mode
+   change is slow. Instead each source stores two small integer buckets — a
+   color bucket from its ρ and an alpha bucket from the active opacity mode —
+   into Uint8Arrays, and drawing looks up a precomputed style string. */
+const NB_COLOR = 64, NA_ALPHA = 16;
+const BUCKET_RGB = [];     // [r,g,b] per color bucket
+const BUCKET_ALPHA = [];   // opacity per alpha bucket (0.1..1)
+const BUCKET_STYLE = [];   // rgba() strings, indexed cbucket * NA_ALPHA + abucket
+(function buildBuckets() {
+  for (let c = 0; c < NB_COLOR; c++) BUCKET_RGB[c] = coolwarmR(c / (NB_COLOR - 1));
+  for (let a = 0; a < NA_ALPHA; a++) BUCKET_ALPHA[a] = 0.1 + 0.9 * a / (NA_ALPHA - 1);
+  for (let c = 0; c < NB_COLOR; c++) {
+    const [r, g, b] = BUCKET_RGB[c];
+    for (let a = 0; a < NA_ALPHA; a++) {
+      BUCKET_STYLE[c * NA_ALPHA + a] = `rgba(${r},${g},${b},${BUCKET_ALPHA[a].toFixed(3)})`;
+    }
+  }
+})();
+function colorBucket(coeff) {            // (coeff+1)/2 ∈ [0,1] → 0..NB-1
+  let t = (coeff + 1) * 0.5;
+  return Math.round((t < 0 ? 0 : t > 1 ? 1 : t) * (NB_COLOR - 1));
+}
+function alphaBucket(a) {                // a ∈ [0.1,1] → 0..NA-1
+  let t = (a - 0.1) / 0.9;
+  return Math.round((t < 0 ? 0 : t > 1 ? 1 : t) * (NA_ALPHA - 1));
+}
+// segment endpoints from the source's center + half-vector, written into `out`
+// (reused scratch) so we never allocate per line nor store 4 endpoint arrays.
+function segEnds(i, out) {
+  const dir = state.coeff[i] < 0 ? -1 : 1;   // ρ === 0 rows are dropped at load
+  const hdx = state.dBR[i] * 0.5 * dir, hdy = state.dG[i] * 0.5;
+  const cx = state.xFull[i], cy = state.yFull[i];
+  out[0] = cx - hdx; out[1] = cy - hdy;
+  out[2] = cx + hdx; out[3] = cy + hdy;
+}
+
+/* ---------------- Small math utilities ---------------- */
+function percentile(sortedArr, p) {
+  const n = sortedArr.length;
+  if (n === 0) return NaN;
+  const idx = (p / 100) * (n - 1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  return sortedArr[lo] + (sortedArr[hi] - sortedArr[lo]) * (idx - lo);
+}
+function nanmedian(a) {
+  const v = a.filter(Number.isFinite).sort((x, y) => x - y);
+  const n = v.length;
+  if (!n) return NaN;
+  return n % 2 ? v[(n - 1) / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
+}
+function nanstd(a) {
+  const v = a.filter(Number.isFinite);
+  if (!v.length) return NaN;
+  const m = v.reduce((s, x) => s + x, 0) / v.length;
+  return Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / v.length);
+}
+function std(a) {
+  const n = a.length;
+  if (!n) return NaN;
+  const m = a.reduce((s, x) => s + x, 0) / n;
+  return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / n);
+}
+function linFit(x, y) {  // unweighted OLS, same as the curve_fit(linear_func) usage
+  const n = x.length;
+  let sx = 0, sy = 0;
+  for (let i = 0; i < n; i++) { sx += x[i]; sy += y[i]; }
+  const mx = sx / n, my = sy / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) { num += (x[i] - mx) * (y[i] - my); den += (x[i] - mx) ** 2; }
+  const m = num / den;
+  return [m, my - m * mx];
+}
+function fluxErrToMagErr(flux, fluxErr) { return (2.5 * fluxErr) / (flux * Math.LN10); }
+
+function niceTicks(lo, hi, target = 6) {
+  if (!(isFinite(lo) && isFinite(hi)) || lo === hi) return [];
+  const span = hi - lo;
+  const step0 = span / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  let step = mag;
+  for (const m of [1, 2, 2.5, 5, 10]) {
+    if (step0 / mag <= m) { step = m * mag; break; }
+  }
+  const ticks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9 * span; v += step) {
+    ticks.push(Math.abs(v) < step * 1e-6 ? 0 : v);
+  }
+  return ticks;
+}
+function fmtTick(v) {
+  const a = Math.abs(v);
+  if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(1);
+  return parseFloat(v.toPrecision(6)).toString();
+}
+function timestamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ---------------- DOM handles ---------------- */
+const $ = id => document.getElementById(id);
+const messageLabel = $('message-label');
+const countsLabel = $('counts-label');
+function setMessage(text) { messageLabel.textContent = text; }
+
+/* ---------------- Plot class ----------------
+   Handles HiDPI canvas sizing, data<->pixel transforms,
+   themed axes/ticks/labels. All drawing in CSS px. */
+const MARGIN = { l: 58, r: 12, t: 34, b: 46 };
+
+class Plot {
+  constructor(canvas, title) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.title = title;
+    this.xlim = [0, 1];
+    this.ylim = [0, 1];   // [bottom, top] in data terms; invert handled in transform
+    this.invertY = false;
+    this.xlabelParts = null;
+    this.ylabelParts = null;
+    this.w = 0; this.h = 0;
+  }
+  resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    this.w = rect.width; this.h = rect.height;
+    this.canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    this.canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  get plotRect() {
+    return { x: MARGIN.l, y: MARGIN.t, w: this.w - MARGIN.l - MARGIN.r, h: this.h - MARGIN.t - MARGIN.b };
+  }
+  xToPx(x) {
+    const r = this.plotRect;
+    return r.x + (x - this.xlim[0]) / (this.xlim[1] - this.xlim[0]) * r.w;
+  }
+  yToPx(y) {
+    const r = this.plotRect;
+    const f = (y - this.ylim[0]) / (this.ylim[1] - this.ylim[0]);
+    return this.invertY ? r.y + f * r.h : r.y + (1 - f) * r.h;
+  }
+  pxToX(px) {
+    const r = this.plotRect;
+    return this.xlim[0] + (px - r.x) / r.w * (this.xlim[1] - this.xlim[0]);
+  }
+  pxToY(py) {
+    const r = this.plotRect;
+    const f = this.invertY ? (py - r.y) / r.h : 1 - (py - r.y) / r.h;
+    return this.ylim[0] + f * (this.ylim[1] - this.ylim[0]);
+  }
+  inPlot(px, py) {
+    const r = this.plotRect;
+    return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+  }
+  // Draws background, axes box, ticks, labels and title; leaves clip set to plot area.
+  begin() {
+    const ctx = this.ctx, r = this.plotRect;
+    ctx.save();
+    ctx.clearRect(0, 0, this.w, this.h);
+    ctx.fillStyle = THEME.panel;
+    ctx.fillRect(0, 0, this.w, this.h);
+    ctx.fillStyle = THEME.panelAlt;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+
+    // ticks
+    ctx.fillStyle = THEME.muted;
+    ctx.strokeStyle = THEME.border;
+    ctx.font = '11px Inter, sans-serif';
+    const xt = niceTicks(this.xlim[0], this.xlim[1]);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const v of xt) {
+      const px = this.xToPx(v);
+      if (px < r.x - 0.5 || px > r.x + r.w + 0.5) continue;
+      ctx.beginPath(); ctx.moveTo(px, r.y + r.h); ctx.lineTo(px, r.y + r.h + 5); ctx.stroke();
+      ctx.fillText(fmtTick(v), px, r.y + r.h + 8);
+    }
+    const yt = niceTicks(this.ylim[0], this.ylim[1]);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const v of yt) {
+      const py = this.yToPx(v);
+      if (py < r.y - 0.5 || py > r.y + r.h + 0.5) continue;
+      ctx.beginPath(); ctx.moveTo(r.x, py); ctx.lineTo(r.x - 5, py); ctx.stroke();
+      ctx.fillText(fmtTick(v), r.x - 8, py);
+    }
+    // frame
+    ctx.strokeStyle = THEME.border;
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+
+    // title
+    ctx.fillStyle = THEME.text;
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(this.title, r.x + r.w / 2, r.y - 10);
+
+    // axis labels (supports subscript parts like G_BP)
+    ctx.fillStyle = THEME.muted;
+    if (this.xlabelParts) {
+      drawMathText(ctx, this.xlabelParts, r.x + r.w / 2, this.h - 8, 13, 'center');
+    }
+    if (this.ylabelParts) {
+      ctx.save();
+      ctx.translate(14, r.y + r.h / 2);
+      ctx.rotate(-Math.PI / 2);
+      drawMathText(ctx, this.ylabelParts, 0, 0, 13, 'center');
+      ctx.restore();
+    }
+    ctx.restore();
+    // clip for data drawing
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.clip();
+  }
+  end() { this.ctx.restore(); }
+}
+
+// Render text with optional subscript pieces: [{t:'G'},{t:'BP',sub:true},...]
+function drawMathText(ctx, parts, x, y, size, align = 'center') {
+  ctx.save();
+  const sub = Math.round(size * 0.72);
+  let total = 0;
+  for (const p of parts) {
+    ctx.font = `${p.sub ? sub : size}px Inter, sans-serif`;
+    total += ctx.measureText(p.t).width;
+  }
+  let cx = align === 'center' ? x - total / 2 : x;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  for (const p of parts) {
+    ctx.font = `${p.sub ? sub : size}px Inter, sans-serif`;
+    ctx.fillText(p.t, cx, y + (p.sub ? size * 0.22 : 0));
+    cx += ctx.measureText(p.t).width;
+  }
+  ctx.restore();
+}
+const LBL_BPRP = [{ t: 'G' }, { t: 'BP', sub: true }, { t: ' − ' }, { t: 'G' }, { t: 'RP', sub: true }];
+const LBL_GMAG = [{ t: 'GMAG' }];
+
+/* ---------------- Application state ---------------- */
+const state = {
+  ids: [], ra: null, dec: null,
+  coeff: null, p: null, dBR: null, dG: null,
+  xFull: null, yFull: null,      // segment centers (avg_B_R / avg_G)
+  parallax: null, poe: null,     // parallax (mas) and parallax / parallax_error
+  cbucket: null, abucket: null,  // per-source color & alpha buckets (Uint8Array)
+  visMask: null,                 // Uint8Array, 1 where the source passes the filters
+  // view
+  invertY: false,
+  thickness: 2,
+  showHRRef: false,
+  alphaMode: 'sig',              // 'sig' | 'rho' | 'const' | 'comb'
+  visIdx: [],                    // indices passing the active filters
+  detailIdx: [],                 // visible indices currently inside the detail window
+  selection: [],                 // multi-selection (indices)
+  hover: -1,
+  filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minParallax: 0 },
+  xColName: 'avg_B_R', yColName: 'avg_G',
+};
+
+const overview = new Plot($('overview-canvas'), 'Overview');
+const detail = new Plot($('detail-canvas'), 'Detail View');
+overview.xlabelParts = LBL_BPRP; overview.ylabelParts = LBL_GMAG;
+detail.xlabelParts = LBL_BPRP; detail.ylabelParts = LBL_GMAG;
+
+let overviewCache = null;        // offscreen canvas with segments pre-rendered
+let overviewCacheKey = '';
+
+/* ---------------- Data loading: Spearman table ----------------
+   The table is read as a chunked byte STREAM and parsed line-by-line, so the
+   whole file is never buffered or turned into one giant string. That matters at
+   scale: an 11M-row table is several GB, which both exhausts memory and blows
+   past V8's ~1 GB max string length — exactly what made a plain
+   `await resp.text()` crash the tab (and drop the server connection with a
+   broken pipe). For each line a tiny tokenizer reads only the columns we need,
+   and survivors are appended into a SEGMENTED column store (fixed-size blocks)
+   that never reallocates/copies as it grows — avoiding the transient ~2x
+   memory spike that crashed the parse partway through very large files. */
+function computeColumnMeta(headerLine) {
+  const header = headerLine.trim().split(/\s+/);
+  const col = {}; header.forEach((h, i) => col[h] = i);
+
+  const need = ['Spearman_coeff', 'Spearman_p', 'delta_B_R', 'delta_G', 'avg_B_R', 'avg_G'];
+  for (const c of need) if (!(c in col)) throw new Error(`Missing column '${c}' in data table`);
+
+  const finiteCols = ['Spearman_coeff', 'Spearman_p', 'delta_B_R', 'delta_G', 'avg_B_R', 'avg_G',
+    'B-R_Scatter', 'B-R_Slope', 'Slope_Uncertainty', 'Slope_Certainty',
+    'Pearson_coeff', 'Pearson_p', 'std_B_R', 'std_G', 'B-R_Length', 'Median_err_ratio']
+    .filter(c => c in col).map(c => col[c]);
+
+  const idCol = col[['ID', 'SOURCE_ID', 'GaiaEDR3'].find(c => c in col)];
+  const raCol = col['RA'], decCol = col['DEC'], lenCol = col['B-R_Length'];
+  const scCol = col['Spearman_coeff'], spCol = col['Spearman_p'];
+  const dbrCol = col['delta_B_R'], dgCol = col['delta_G'];
+  const abrCol = col['avg_B_R'], agCol = col['avg_G'];
+  const plxCol = col['parallax'], plxErrCol = col['parallax_error'];
+  const hasPlx = plxCol !== undefined && plxErrCol !== undefined;
+
+  // every column index we must read; the tokenizer stops after the largest one
+  const wanted = [idCol, raCol, decCol, scCol, spCol, dbrCol, dgCol, abrCol, agCol,
+    lenCol, plxCol, plxErrCol, ...finiteCols].filter(v => v !== undefined);
+  const maxCol = Math.max(...wanted);
+  const read = new Array(maxCol + 1).fill(false);
+  for (const c of wanted) read[c] = true;
+
+  return { idCol, raCol, decCol, lenCol, scCol, spCol, dbrCol, dgCol, abrCol, agCol,
+    plxCol, plxErrCol, hasPlx, finiteCols, read, maxCol };
+}
+
+// pull the first (maxCol+1) whitespace tokens from str[s..e) into `vals`,
+// slicing ONLY the columns we need (so unused trailing columns are never copied)
+function tokenizeRange(str, s, e, meta, vals) {
+  const read = meta.read, maxCol = meta.maxCol;
+  let i = s, c = 0;
+  while (c <= maxCol) {
+    while (i < e) { const ch = str.charCodeAt(i); if (ch !== 32 && ch !== 9 && ch !== 13) break; i++; }
+    if (i >= e) return false;
+    let j = i;
+    while (j < e) { const ch = str.charCodeAt(j); if (ch === 32 || ch === 9 || ch === 13) break; j++; }
+    if (read[c]) vals[c] = str.slice(i, j);
+    i = j; c++;
+  }
+  return true;
+}
+
+/* Segmented column store. Rows are appended into fixed-size blocks; growing
+   just allocates one more block (no copy of existing data), so peak memory
+   tracks the data size with no doubling spike. finish() concatenates into
+   exact-size typed arrays one column at a time, freeing each block's column as
+   it goes so the peak stays ~1x rather than 2x. */
+// Gaia DR3 source ids are 64-bit integers (up to ~6.9e18, beyond Number's safe
+// 2^53). Stored as BigInt in a BigInt64Array — 8 bytes each, off the JS heap —
+// instead of ~50-byte strings, which at 11M rows is the difference between
+// ~90 MB and ~530 MB and is what was exhausting memory partway through the load.
+function parseId(s) { try { return BigInt(s); } catch { return 0n; } }
+
+const ACC_BLOCK = 1 << 20;   // 1,048,576 rows per block
+function makeRowAccumulator() {
+  const blocks = [];
+  let cur = null, off = ACC_BLOCK, m = 0;
+  function newBlock() {
+    cur = {
+      ids: new BigInt64Array(ACC_BLOCK),
+      ra: new Float32Array(ACC_BLOCK), dec: new Float32Array(ACC_BLOCK),
+      coeff: new Float32Array(ACC_BLOCK), p: new Float32Array(ACC_BLOCK),
+      dBR: new Float32Array(ACC_BLOCK), dG: new Float32Array(ACC_BLOCK),
+      avgBR: new Float32Array(ACC_BLOCK), avgG: new Float32Array(ACC_BLOCK),
+      parallax: new Float32Array(ACC_BLOCK), poe: new Float32Array(ACC_BLOCK),
+    };
+    blocks.push(cur); off = 0;
+  }
+  return {
+    count: () => m,
+    push(id, raV, decV, sc, pV, dbr, dg, abr, ag, plx, poeV) {
+      if (off >= ACC_BLOCK) newBlock();
+      cur.ids[off] = parseId(id); cur.ra[off] = raV; cur.dec[off] = decV; cur.coeff[off] = sc; cur.p[off] = pV;
+      cur.dBR[off] = dbr; cur.dG[off] = dg; cur.avgBR[off] = abr; cur.avgG[off] = ag;
+      cur.parallax[off] = plx; cur.poe[off] = poeV;
+      off++; m++;
+    },
+    finish() {
+      const total = m, nb = blocks.length;
+      const lenOf = bi => (bi < nb - 1 ? ACC_BLOCK : total - bi * ACC_BLOCK);
+      const join = (key, Ctor) => {
+        const out = new Ctor(total);
+        let o = 0;
+        for (let bi = 0; bi < nb; bi++) {
+          const len = lenOf(bi);
+          out.set(blocks[bi][key].subarray(0, len), o);
+          o += len; blocks[bi][key] = null;   // free each block's column as it's copied
+        }
+        return out;
+      };
+      return {
+        ids: join('ids', BigInt64Array),
+        ra: join('ra', Float32Array), dec: join('dec', Float32Array),
+        coeff: join('coeff', Float32Array), p: join('p', Float32Array),
+        dBR: join('dBR', Float32Array), dG: join('dG', Float32Array),
+        avgBR: join('avgBR', Float32Array), avgG: join('avgG', Float32Array),
+        parallax: join('parallax', Float32Array), poe: join('poe', Float32Array),
+      };
+    },
+  };
+}
+
+// apply the quality filters to one tokenized row; append survivors
+function acceptRow(meta, vals, acc) {
+  const sc = +vals[meta.scCol];
+  if (sc === 0) return;
+  if (meta.lenCol !== undefined && !(+vals[meta.lenCol] > 5)) return;
+  for (const ci of meta.finiteCols) if (!Number.isFinite(+vals[ci])) return;
+  let plx, poeV;
+  if (meta.hasPlx) {
+    plx = +vals[meta.plxCol]; const e = +vals[meta.plxErrCol];
+    poeV = e !== 0 ? plx / e : (plx > 0 ? Infinity : plx < 0 ? -Infinity : NaN);
+  } else { plx = Infinity; poeV = Infinity; }   // absent → the cuts never hide a row
+  acc.push(
+    meta.idCol !== undefined ? vals[meta.idCol] : String(acc.count()),  // parsed to BigInt in push()
+    meta.raCol !== undefined ? +vals[meta.raCol] : NaN,
+    meta.decCol !== undefined ? +vals[meta.decCol] : NaN,
+    sc, +vals[meta.spCol], +vals[meta.dbrCol], +vals[meta.dgCol],
+    +vals[meta.abrCol], +vals[meta.agCol], plx, poeV);
+}
+
+// `stream` is a ReadableStream (resp.body or file.stream()). totalBytes is
+// optional and only drives the progress readout.
+async function streamParseSpearman(stream, totalBytes, onProgress) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let meta = null, acc = null, vals = null;
+  let buffer = '', bytesRead = 0;
+  let lastYield = performance.now();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytesRead += value.length;
+    buffer += decoder.decode(value, { stream: true });
+    let start = 0, nl;
+    while ((nl = buffer.indexOf('\n', start)) >= 0) {
+      if (meta === null) {                              // first line is the header
+        meta = computeColumnMeta(buffer.substring(start, nl));
+        vals = new Array(meta.maxCol + 1);
+        acc = makeRowAccumulator();
+      } else if (tokenizeRange(buffer, start, nl, meta, vals)) {
+        acceptRow(meta, vals, acc);
+      }
+      start = nl + 1;
+    }
+    buffer = buffer.substring(start);                   // keep the trailing partial line
+    if (onProgress) onProgress(bytesRead, totalBytes, acc ? acc.count() : 0);
+    // yield a few times a second so the tab stays responsive on multi-GB files
+    const now = performance.now();
+    if (now - lastYield > 120) { lastYield = now; await new Promise(r => setTimeout(r)); }
+  }
+
+  buffer += decoder.decode();                           // flush any trailing bytes
+  if (meta === null) throw new Error('table has no header row');
+  let start = 0, nl;
+  while ((nl = buffer.indexOf('\n', start)) >= 0) {
+    if (tokenizeRange(buffer, start, nl, meta, vals)) acceptRow(meta, vals, acc);
+    start = nl + 1;
+  }
+  if (start < buffer.length && tokenizeRange(buffer, start, buffer.length, meta, vals)) {
+    acceptRow(meta, vals, acc);
+  }
+  return acc.finish();
+}
+
+function ingestSpearmanData(d) {
+  state.ids = d.ids; state.ra = d.ra; state.dec = d.dec;
+  state.coeff = d.coeff; state.p = d.p;       // already Float32Array from the parser
+  state.xFull = d.avgBR; state.yFull = d.avgG;
+  state.dBR = d.dBR; state.dG = d.dG;
+  state.parallax = d.parallax; state.poe = d.poe;
+
+  const n = state.coeff.length;
+  state.cbucket = new Uint8Array(n);          // color bucket from ρ (fixed for the dataset)
+  state.abucket = new Uint8Array(n);          // alpha bucket (recomputed per opacity mode)
+  for (let i = 0; i < n; i++) state.cbucket[i] = colorBucket(state.coeff[i]);
+  state.visMask = null;
+  computeAlphas();
+
+  state.selection = []; state.hover = -1;
+  overviewCacheKey = '';
+
+  setOverviewLimitsLines();
+  setDetailToCenterWindow(0.1);
+  applyFilters();
+  updateSelectionInfo();
+  slOnDataLoaded();   // re-index any loaded catalogs against the new dataset
+
+  // seed the view history with the initial viewport
+  viewHistory.stack = [snapshotView()];
+  viewHistory.idx = 0;
+  updateHistoryButtons();
+}
+
+/* ---------------- Transparency scaling modes ----------------
+   Opacity arrays are recomputed only on mode change or data load. */
+function computeAlphas() {
+  const n = state.coeff.length, mode = state.alphaMode;
+  for (let i = 0; i < n; i++) {
+    const logp = -Math.log10(Math.max(state.p[i], 1e-10));  // 0..10
+    let a;
+    switch (mode) {
+      case 'rho':   a = Math.abs(state.coeff[i]); break;
+      case 'const': a = 0.6; break;
+      case 'comb':  a = Math.abs(state.coeff[i]) * logp / 10; break;
+      default:      a = logp / 10;                            // 'sig'
+    }
+    state.abucket[i] = alphaBucket(a < 0.1 ? 0.1 : a > 1 ? 1 : a);
+  }
+}
+
+const LEGEND_DESC = {
+  sig: 'opacity scales with statistical significance (−log<sub>10</sub> p)',
+  rho: 'opacity scales with correlation strength |ρ|',
+  const: 'all lines share a constant opacity',
+  comb: 'opacity scales with |ρ| × −log<sub>10</sub> p (strength × significance)',
+};
+function setAlphaMode(mode) {
+  state.alphaMode = mode;
+  for (const [id, m] of [['alpha-sig', 'sig'], ['alpha-rho', 'rho'], ['alpha-const', 'const'], ['alpha-comb', 'comb']]) {
+    $(id).classList.toggle('active', m === mode);
+  }
+  computeAlphas();
+  overviewCacheKey = '';
+  $('legend-desc').innerHTML =
+    `Each line is one star. Color encodes the Spearman correlation between its ` +
+    `color and brightness across epochs; ${LEGEND_DESC[mode]}.`;
+  requestRedraw();
+}
+$('alpha-sig').addEventListener('click', () => setAlphaMode('sig'));
+$('alpha-rho').addEventListener('click', () => setAlphaMode('rho'));
+$('alpha-const').addEventListener('click', () => setAlphaMode('const'));
+$('alpha-comb').addEventListener('click', () => setAlphaMode('comb'));
+
+/* ---------------- Filters ---------------- */
+function applyFilters() {
+  const f = state.filter;
+  const pMax = Math.pow(10, -f.minLogP);
+  const minRho = f.minAbsRho, minPoe = f.minPoe, minPlx = f.minParallax;
+  const rset = slRestrictSet;   // catalog "show only" restriction, or null when off
+  const n = state.coeff.length;
+  // reuse the mask buffer across calls; only reallocate when the dataset changes
+  let mask = state.visMask;
+  if (!mask || mask.length !== n) { mask = new Uint8Array(n); state.visMask = mask; }
+  else mask.fill(0);
+  const vis = [];
+  for (let i = 0; i < n; i++) {
+    if (rset && !rset.has(i)) continue;
+    const c = state.coeff[i];
+    if (f.dir === 'pos' && c <= 0) continue;
+    if (f.dir === 'neg' && c >= 0) continue;
+    if (minRho > 0 && Math.abs(c) < minRho) continue;
+    if (state.p[i] > pMax) continue;
+    if (minPoe > 0 && !(state.poe[i] >= minPoe)) continue;
+    if (minPlx > 0 && !(state.parallax[i] >= minPlx)) continue;
+    vis.push(i);
+    mask[i] = 1;
+  }
+  state.visIdx = vis;
+  state.selection = state.selection.filter(i => mask[i]);
+  if (state.hover >= 0 && !mask[state.hover]) state.hover = -1;
+  overviewCacheKey = '';
+  $('filter-count').textContent =
+    `Showing ${vis.length.toLocaleString()} of ${state.coeff.length.toLocaleString()} sources`;
+  updateSelectionInfo();
+  requestRedraw();
+}
+
+// auto-frame overview to bulk of the data, ignoring outliers (matches Python percentiles)
+function setOverviewLimitsLines() {
+  const xs = Array.from(state.xFull).sort((a, b) => a - b);
+  const ys = Array.from(state.yFull).sort((a, b) => a - b);
+  const loX = percentile(xs, 0.1), hiX = percentile(xs, 99.9);
+  const loY = percentile(ys, 0.1), hiY = percentile(ys, 99.9);
+  const padX = 0.55 * (hiX - loX), padY = 0.35 * (hiY - loY);
+  overview.xlim = [loX - 1.25 * padX, hiX + 1.25 * padX];
+  overview.ylim = [loY - 1.25 * padY, hiY + padY];
+}
+function fullExtent() {
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+  for (let i = 0; i < state.xFull.length; i++) {
+    const x = state.xFull[i], y = state.yFull[i];
+    if (x < xmin) xmin = x; if (x > xmax) xmax = x;
+    if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+  }
+  return { xmin, xmax, ymin, ymax };
+}
+function setDetailToCenterWindow(frac) {
+  const e = fullExtent();
+  const xm = 0.5 * (e.xmin + e.xmax), ym = 0.5 * (e.ymin + e.ymax);
+  const xh = 0.5 * frac * (e.xmax - e.xmin), yh = 0.5 * frac * (e.ymax - e.ymin);
+  detail.xlim = [xm - xh, xm + xh];
+  detail.ylim = [ym - yh, ym + yh];
+}
+function setDetailToFullExtent() {
+  const e = fullExtent();
+  const dx = 0.02 * (e.xmax - e.xmin), dy = 0.02 * (e.ymax - e.ymin);
+  setDetailLimitsFromRect(e.xmin - dx, e.xmax + dx, e.ymin - dy, e.ymax + dy);
+}
+
+/* ---------------- Rendering ---------------- */
+let redrawQueued = false;
+function requestRedraw() {
+  if (redrawQueued) return;
+  redrawQueued = true;
+  requestAnimationFrame(() => { redrawQueued = false; redrawAll(); });
+}
+
+// coalesce bursts of slider 'input' events into one filter pass per frame so
+// dragging a slider re-scans the (potentially many-million-row) dataset at most once a frame
+let filtersQueued = false;
+function scheduleFilters() {
+  if (filtersQueued) return;
+  filtersQueued = true;
+  requestAnimationFrame(() => { filtersQueued = false; applyFilters(); });
+}
+
+function redrawAll() {
+  overview.invertY = state.invertY;
+  detail.invertY = state.invertY;
+  drawOverview();
+  drawDetail();
+}
+
+/* Batched segment renderer. A separate ctx.beginPath()/stroke() per segment
+   means millions of stroke() calls for a multi-million-row view, which floods
+   the canvas command buffer and crashes the renderer. Instead we group segments
+   by (color, alpha) bucket and emit ONE Path2D + one stroke() per non-empty
+   bucket — at most NB_COLOR*NA_ALPHA strokes — while keeping the identical
+   appearance. Work is done in fixed-size chunks so the temporary Path2D objects
+   stay small. (ox, oy) shift into the offscreen overview-cache coordinate
+   space; pass 0, 0 to draw in place. */
+function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
+  const n = indices.length;
+  if (!n) return;
+  const r = plot.plotRect;
+  const x0 = plot.xlim[0], xspan = plot.xlim[1] - plot.xlim[0];
+  const y0 = plot.ylim[0], yspan = plot.ylim[1] - plot.ylim[0];
+  const rx = r.x - ox, ry = r.y - oy, rw = r.w, rh = r.h, inv = plot.invertY;
+  const NA = NA_ALPHA;
+  const seg = [0, 0, 0, 0];
+  const CHUNK = 300000;
+  ctx.lineCap = 'round';
+  for (let base = 0; base < n; base += CHUNK) {
+    const end = Math.min(n, base + CHUNK);
+    const paths = new Array(NB_COLOR * NA);
+    for (let k = base; k < end; k++) {
+      const i = indices[k];
+      segEnds(i, seg);
+      const x1 = rx + (seg[0] - x0) / xspan * rw;
+      const x2 = rx + (seg[2] - x0) / xspan * rw;
+      let y1, y2;
+      if (inv) {
+        y1 = ry + (seg[1] - y0) / yspan * rh;
+        y2 = ry + (seg[3] - y0) / yspan * rh;
+      } else {
+        y1 = ry + (1 - (seg[1] - y0) / yspan) * rh;
+        y2 = ry + (1 - (seg[3] - y0) / yspan) * rh;
+      }
+      const b = state.cbucket[i] * NA + state.abucket[i];
+      let pth = paths[b];
+      if (pth === undefined) pth = paths[b] = new Path2D();
+      pth.moveTo(x1, y1); pth.lineTo(x2, y2);
+    }
+    for (let b = 0; b < paths.length; b++) {
+      const pth = paths[b];
+      if (pth === undefined) continue;
+      ctx.strokeStyle = BUCKET_STYLE[b];
+      ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
+      ctx.stroke(pth);
+    }
+  }
+}
+
+function ensureOverviewCache() {
+  const r = overview.plotRect;
+  const dpr = window.devicePixelRatio || 1;
+  const f = state.filter;
+  const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h,
+    f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minParallax,
+    state.visIdx.length, state.alphaMode, slSignature()].join('|');
+  if (key === overviewCacheKey && overviewCache) return;
+  overviewCacheKey = key;
+
+  overviewCache = document.createElement('canvas');
+  overviewCache.width = Math.max(1, Math.round(r.w * dpr));
+  overviewCache.height = Math.max(1, Math.round(r.h * dpr));
+  const ctx = overviewCache.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  strokeSegmentsBatched(ctx, overview, state.visIdx, r.x, r.y, 1, 2.5);
+  // catalog overlays are baked into the cache so panning the rectangle stays cheap
+  slDrawGroups(ctx, overview, r.x, r.y, false);
+}
+
+function drawOverview() {
+  overview.begin();
+  const ctx = overview.ctx, r = overview.plotRect;
+  drawHRTracks(overview, ctx, 1.2, false);   // reference tracks sit behind the vectors
+  ensureOverviewCache();
+  ctx.drawImage(overviewCache, r.x, r.y, r.w, r.h);
+
+  // green view rectangle = current detail limits
+  const x0 = overview.xToPx(detail.xlim[0]), x1 = overview.xToPx(detail.xlim[1]);
+  const y0 = overview.yToPx(detail.ylim[0]), y1 = overview.yToPx(detail.ylim[1]);
+  const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
+  const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
+  ctx.fillStyle = 'rgba(63,185,80,0.25)';
+  ctx.fillRect(rx, ry, rw, rh);
+  ctx.strokeStyle = THEME.green;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(rx, ry, rw, rh);
+  overview.end();
+}
+
+function drawDetail() {
+  detail.begin();
+  const ctx = detail.ctx;
+  drawHRTracks(detail, ctx, 1.5, true);   // reference tracks sit behind the vectors
+  const xlo = Math.min(...detail.xlim), xhi = Math.max(...detail.xlim);
+  const ylo = Math.min(...detail.ylim), yhi = Math.max(...detail.ylim);
+  const idx = [];
+
+  const mult = state.thickness;
+  for (const i of state.visIdx) {
+    const cx = state.xFull[i], cy = state.yFull[i];
+    if (cx < xlo || cx > xhi || cy < ylo || cy > yhi) continue;
+    idx.push(i);
+  }
+  strokeSegmentsBatched(ctx, detail, idx, 0, 0, 1, mult);
+  // catalog overlays: redraw member segments in each list's color, on top
+  slDrawGroups(ctx, detail, 0, 0, true);
+  // selection rings: green, like the Qt version; hover ring: glowing gold
+  const ring = (i, color, lw, glow) => {
+    const cx = state.xFull[i], cy = state.yFull[i];
+    if (cx < xlo || cx > xhi || cy < ylo || cy > yhi) return;
+    const r = detail.plotRect;
+    ctx.save();
+    if (glow) { ctx.shadowColor = color; ctx.shadowBlur = glow; }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.ellipse(detail.xToPx(cx), detail.yToPx(cy), Math.max(7, r.w * 0.012), Math.max(7, r.h * 0.012), 0, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  };
+  for (const i of state.selection) ring(i, THEME.green, 2.5, 0);
+  if (state.hover >= 0) ring(state.hover, '#ffd700', 2.5, 10);
+
+  countsLabel.textContent = `Detail View: ${idx.length.toLocaleString()} lines in window`;
+  state.detailIdx = idx;
+  scheduleRegionStats();
+  updateExportCounts();
+  detail.end();
+}
+
+/* ---------------- HR diagram reference overlay ----------------
+   Hardcoded approximations in (G_BP−G_RP, absolute G). Replace at runtime
+   with real tracks (e.g. parsed isochrone files) via loadReferenceTracks(). */
+let HR_TRACKS = [
+  {
+    name: 'Main Sequence',
+    points: [[-0.40, -3.0], [-0.20, -1.1], [0.00, 0.6], [0.20, 1.7], [0.40, 2.7],
+             [0.60, 3.6], [0.82, 4.7], [1.00, 5.6], [1.30, 6.7], [1.60, 7.7],
+             [2.00, 8.8], [2.50, 10.1], [3.00, 11.4], [3.60, 13.0], [4.30, 14.6]],
+  },
+  {
+    name: 'Giant Branch',
+    points: [[0.95, 2.2], [1.10, 1.2], [1.25, 0.5], [1.50, 0.0],
+             [1.85, -0.7], [2.30, -1.4], [2.90, -2.3], [3.50, -3.1]],
+  },
+  {
+    name: 'White Dwarfs',
+    points: [[-0.55, 8.6], [-0.30, 9.6], [0.00, 10.8], [0.30, 11.8],
+             [0.60, 12.8], [0.90, 13.8], [1.20, 14.8], [1.50, 15.7]],
+  },
+];
+function loadReferenceTracks(tracks) {  // future hook for external track files
+  HR_TRACKS = tracks;
+  requestRedraw();
+}
+function drawHRTracks(plot, ctx, lw, withLabels) {
+  if (!state.showHRRef) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(139,148,158,0.30)';
+  ctx.fillStyle = 'rgba(139,148,158,0.55)';
+  ctx.lineWidth = lw;
+  ctx.setLineDash([6, 4]);
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  for (const t of HR_TRACKS) {
+    ctx.beginPath();
+    t.points.forEach(([x, y], k) => {
+      const px = plot.xToPx(x), py = plot.yToPx(y);
+      k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    });
+    ctx.stroke();
+    if (withLabels) {
+      const [mx, my] = t.points[Math.floor(t.points.length / 2)];
+      ctx.fillText(t.name, plot.xToPx(mx) + 6, plot.yToPx(my) - 4);
+    }
+  }
+  ctx.restore();
+}
+$('hr-ref-checkbox').addEventListener('change', ev => {
+  state.showHRRef = ev.target.checked;
+  requestRedraw();
+});
+
+/* ---------------- Region statistics (debounced) ---------------- */
+let statsTimer = null;
+function scheduleRegionStats() {
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(updateRegionStats, 120);
+}
+function updateRegionStats() {
+  const idx = state.detailIdx;
+  const set = (id, v) => { $(id).textContent = v; };
+  set('rs-count', idx.length.toLocaleString());
+  if (!idx.length) {
+    for (const id of ['rs-rho', 'rs-p', 'rs-blue', 'rs-red', 'rs-len']) set(id, '—');
+    return;
+  }
+  const coeffs = idx.map(i => state.coeff[i]);
+  const ps = idx.map(i => state.p[i]);
+  let nBlue = 0, nRed = 0, lenSum = 0;
+  for (const i of idx) {
+    if (state.coeff[i] > 0) nBlue++; else if (state.coeff[i] < 0) nRed++;
+    lenSum += Math.hypot(state.dBR[i], state.dG[i]);
+  }
+  set('rs-rho', nanmedian(coeffs).toFixed(3));
+  set('rs-p', nanmedian(ps).toExponential(2));
+  set('rs-blue', `${(100 * nBlue / idx.length).toFixed(1)}%`);
+  set('rs-red', `${(100 * nRed / idx.length).toFixed(1)}%`);
+  set('rs-len', `${(lenSum / idx.length).toFixed(3)} mag`);
+}
+
+function updateExportCounts() {
+  $('export-visible-btn').textContent = `Export Visible Sources (${state.detailIdx.length.toLocaleString()})`;
+  $('export-selected-btn').textContent = `Export Selected Sources (${state.selection.length.toLocaleString()})`;
+  $('export-filtered-btn').textContent = `Export Filtered Sources (${state.visIdx.length.toLocaleString()})`;
+}
+
+/* ---------------- Overview interactions: drag/recenter/scale rect ---------------- */
+const ovCanvas = $('overview-canvas');
+let dragging = false, dragOffset = [0, 0];
+
+function detailRectData() {
+  // rect in data coords (x, y = lower-left in value terms, w, h positive)
+  const x = Math.min(...detail.xlim), w = Math.abs(detail.xlim[1] - detail.xlim[0]);
+  const y = Math.min(...detail.ylim), h = Math.abs(detail.ylim[1] - detail.ylim[0]);
+  return { x, y, w, h };
+}
+function setDetailLimitsFromRect(xMin, xMax, yMin, yMax) {
+  // limits are always stored [min, max]; the invertY flag alone controls orientation
+  detail.xlim = [xMin, xMax];
+  detail.ylim = [yMin, yMax];
+  requestRedraw();
+}
+function clampRect(rx, ry, rw, rh) {
+  const xlo = Math.min(...overview.xlim), xhi = Math.max(...overview.xlim);
+  const ylo = Math.min(...overview.ylim), yhi = Math.max(...overview.ylim);
+  rx = Math.max(xlo, Math.min(rx, xhi - rw));
+  ry = Math.max(ylo, Math.min(ry, yhi - rh));
+  return [rx, ry];
+}
+function canvasPos(canvas, ev) {
+  const b = canvas.getBoundingClientRect();
+  return [ev.clientX - b.left, ev.clientY - b.top];
+}
+
+ovCanvas.addEventListener('mousedown', ev => {
+  if (ev.button !== 0) return;
+  const [px, py] = canvasPos(ovCanvas, ev);
+  if (!overview.inPlot(px, py)) return;
+  const x = overview.pxToX(px), y = overview.pxToY(py);
+  const rect = detailRectData();
+  const inside = x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+  if (inside) {
+    dragging = true;
+    dragOffset = [x - rect.x, y - rect.y];
+  } else {
+    let [nrx, nry] = clampRect(x - rect.w / 2, y - rect.h / 2, rect.w, rect.h);
+    setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+    dragging = true;
+    dragOffset = [x - nrx, y - nry];
+  }
+  ovCanvas.classList.add('dragging');
+});
+window.addEventListener('mousemove', ev => {
+  if (!dragging) return;
+  const [px, py] = canvasPos(ovCanvas, ev);
+  const x = overview.pxToX(px), y = overview.pxToY(py);
+  const rect = detailRectData();
+  let [nrx, nry] = clampRect(x - dragOffset[0], y - dragOffset[1], rect.w, rect.h);
+  setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+});
+window.addEventListener('mouseup', () => {
+  if (dragging) pushHistory();   // record the completed rectangle move
+  dragging = false;
+  ovCanvas.classList.remove('dragging');
+});
+
+function resizeViewRect(scale) {
+  const rect = detailRectData();
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  const nw = rect.w * scale, nh = rect.h * scale;
+  let [nrx, nry] = clampRect(cx - nw / 2, cy - nh / 2, nw, nh);
+  setDetailLimitsFromRect(nrx, nrx + nw, nry, nry + nh);
+}
+
+ovCanvas.addEventListener('wheel', ev => {
+  const [px, py] = canvasPos(ovCanvas, ev);
+  if (!overview.inPlot(px, py)) return;
+  ev.preventDefault();
+  resizeViewRect(ev.deltaY > 0 ? 0.85 : 1.15);
+  pushHistorySoon();
+}, { passive: false });
+
+/* ---------------- Detail interactions: pan, zoom, hover, click-to-CMD ---------------- */
+const dtCanvas = $('detail-canvas');
+const tooltip = $('tooltip');
+
+// drag-to-pan: a small movement threshold separates panning from click-to-select
+let dtPan = null;
+let suppressClick = false;
+
+dtCanvas.addEventListener('mousedown', ev => {
+  if (ev.button !== 0) return;
+  const [px, py] = canvasPos(dtCanvas, ev);
+  if (!detail.inPlot(px, py)) return;
+  dtPan = { px, py, xlim: [...detail.xlim], ylim: [...detail.ylim], moved: false };
+});
+window.addEventListener('mousemove', ev => {
+  if (!dtPan) return;
+  const [px, py] = canvasPos(dtCanvas, ev);
+  if (!dtPan.moved && Math.hypot(px - dtPan.px, py - dtPan.py) < 4) return;
+  dtPan.moved = true;
+  tooltip.style.display = 'none';
+  dtCanvas.style.cursor = 'grabbing';
+  const r = detail.plotRect;
+  const dx = (dtPan.px - px) * (dtPan.xlim[1] - dtPan.xlim[0]) / r.w;
+  const dy = (state.invertY ? (dtPan.py - py) : (py - dtPan.py)) * (dtPan.ylim[1] - dtPan.ylim[0]) / r.h;
+  detail.xlim = [dtPan.xlim[0] + dx, dtPan.xlim[1] + dx];
+  detail.ylim = [dtPan.ylim[0] + dy, dtPan.ylim[1] + dy];
+  requestRedraw();
+});
+window.addEventListener('mouseup', () => {
+  if (dtPan) {
+    if (dtPan.moved) {
+      suppressClick = true;
+      pushHistory();   // record the completed pan
+    }
+    dtPan = null;
+    dtCanvas.style.cursor = 'crosshair';
+  }
+});
+
+// where the cursor sits on the detail canvas: plot, x-axis strip, or y-axis strip
+function dtAxisHit(px, py) {
+  const r = detail.plotRect;
+  if (detail.inPlot(px, py)) return 'plot';
+  if (px >= r.x && px <= r.x + r.w && py > r.y + r.h && py <= r.y + r.h + MARGIN.b) return 'x';
+  if (py >= r.y && py <= r.y + r.h && px >= r.x - MARGIN.l && px < r.x) return 'y';
+  return null;
+}
+
+dtCanvas.addEventListener('wheel', ev => {
+  const [px, py] = canvasPos(dtCanvas, ev);
+  const hit = dtAxisHit(px, py);
+  if (!hit) return;
+  ev.preventDefault();
+  const scale = ev.deltaY > 0 ? 0.85 : 1.15;
+  // axis strips zoom one axis; in the plot, Shift = x-only and Alt = y-only
+  const zoomX = hit === 'x' || (hit === 'plot' && !ev.altKey);
+  const zoomY = hit === 'y' || (hit === 'plot' && !ev.shiftKey);
+  const r = detail.plotRect;
+  const cx = detail.pxToX(Math.min(Math.max(px, r.x), r.x + r.w));
+  const cy = detail.pxToY(Math.min(Math.max(py, r.y), r.y + r.h));
+  const [x0, x1] = detail.xlim, [y0, y1] = detail.ylim;
+  const nx0 = zoomX ? cx - (cx - x0) * scale : x0;
+  const nx1 = zoomX ? cx + (x1 - cx) * scale : x1;
+  const ny0 = zoomY ? cy - (cy - y0) * scale : y0;
+  const ny1 = zoomY ? cy + (y1 - cy) * scale : y1;
+  setDetailLimitsFromRect(Math.min(nx0, nx1), Math.max(nx0, nx1), Math.min(ny0, ny1), Math.max(ny0, ny1));
+  pushHistorySoon();
+}, { passive: false });
+
+// nearest in-view segment center with significance bias (ports the cKDTree pick)
+function pickDetailIndex(dataX, dataY) {
+  if (!state.detailIdx.length) return -1;
+  const xr = Math.abs(detail.xlim[1] - detail.xlim[0]);
+  const yr = Math.abs(detail.ylim[1] - detail.ylim[0]);
+  const snapRadius = 0.02 * Math.hypot(xr, yr);
+  const alphaBias = 0.05 * snapRadius;
+
+  const nearby = [];
+  for (const i of state.detailIdx) {
+    const d = Math.hypot(state.xFull[i] - dataX, state.yFull[i] - dataY);
+    if (d <= snapRadius) nearby.push([i, d]);
+  }
+  if (!nearby.length) {
+    let best = -1, bd = Infinity;
+    for (const i of state.detailIdx) {
+      const d = Math.hypot(state.xFull[i] - dataX, state.yFull[i] - dataY);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+  let best = -1, bs = -Infinity;
+  for (const [i, d] of nearby) {
+    const score = -d + alphaBias * BUCKET_ALPHA[state.abucket[i]];
+    if (score > bs) { bs = score; best = i; }
+  }
+  return best;
+}
+
+dtCanvas.addEventListener('mousemove', ev => {
+  if (dtPan && dtPan.moved) return;  // panning: no hover work
+  const [px, py] = canvasPos(dtCanvas, ev);
+  if (!detail.inPlot(px, py)) {
+    const hit = dtAxisHit(px, py);
+    dtCanvas.style.cursor = hit === 'x' ? 'ew-resize' : hit === 'y' ? 'ns-resize' : 'crosshair';
+    tooltip.style.display = 'none';
+    if (state.hover !== -1) { state.hover = -1; requestRedraw(); }
+    return;
+  }
+  const x = detail.pxToX(px), y = detail.pxToY(py);
+  const xr = Math.abs(detail.xlim[1] - detail.xlim[0]);
+  const yr = Math.abs(detail.ylim[1] - detail.ylim[0]);
+  const i = pickDetailIndex(x, y);
+  const close = i >= 0 && Math.hypot(state.xFull[i] - x, state.yFull[i] - y) <= 0.025 * Math.hypot(xr, yr);
+  if (close) {
+    if (state.hover !== i) { state.hover = i; requestRedraw(); }
+    tooltip.innerHTML = `<span class="tt-id">Gaia DR3 ${state.ids[i]}</span><br>` +
+      `ρ = ${state.coeff[i].toFixed(3)} &nbsp;|&nbsp; p = ${state.p[i].toExponential(2)}<br>` +
+      `<span style="color:${THEME.muted}">click for epoch CMD</span>`;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (ev.clientX + 14) + 'px';
+    tooltip.style.top = (ev.clientY + 14) + 'px';
+    dtCanvas.style.cursor = 'pointer';
+  } else {
+    if (state.hover !== -1) { state.hover = -1; requestRedraw(); }
+    tooltip.style.display = 'none';
+    dtCanvas.style.cursor = 'crosshair';
+  }
+});
+dtCanvas.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+  if (state.hover !== -1) { state.hover = -1; requestRedraw(); }
+});
+
+dtCanvas.addEventListener('click', ev => {
+  if (suppressClick) { suppressClick = false; return; }  // end of a pan drag, not a select
+  const [px, py] = canvasPos(dtCanvas, ev);
+  if (!detail.inPlot(px, py)) return;
+  const i = pickDetailIndex(detail.pxToX(px), detail.pxToY(py));
+  if (i < 0) return;
+  if (ev.ctrlKey || ev.metaKey) {       // ctrl/cmd-click toggles membership, no CMD query
+    toggleSelection(i);
+    return;
+  }
+  state.selection = [i];                // plain click replaces the selection
+  updateSelectionInfo();
+  requestRedraw();
+  setMessage(`ID ${state.ids[i]} | coeff ${state.coeff[i].toFixed(3)} | p ${state.p[i].toExponential(2)} | 1 selected`);
+  showEpochCMD(i);
+});
+
+/* ---------------- Multi-selection ---------------- */
+function toggleSelection(i) {
+  const k = state.selection.indexOf(i);
+  if (k >= 0) {
+    state.selection.splice(k, 1);
+    setMessage(`Removed Gaia DR3 ${state.ids[i]} from selection (${state.selection.length} selected).`);
+  } else {
+    state.selection.push(i);
+    setMessage(`Added Gaia DR3 ${state.ids[i]} to selection (${state.selection.length} selected).`);
+  }
+  updateSelectionInfo();
+  requestRedraw();
+}
+function clearSelection() {
+  if (!state.selection.length) return;
+  state.selection = [];
+  updateSelectionInfo();
+  requestRedraw();
+  setMessage('Selection cleared.');
+}
+function updateSelectionInfo() {
+  const n = state.selection.length;
+  $('sel-count').textContent = `${n} selected`;
+  $('sel-list').textContent = n
+    ? state.selection.slice(0, 6).map(i => state.ids[i]).join(', ') + (n > 6 ? ` +${n - 6} more` : '')
+    : '';
+  $('clear-sel-btn').disabled = n === 0;
+  updateExportCounts();
+}
+$('clear-sel-btn').addEventListener('click', clearSelection);
+
+/* ---------------- Gaia DR3 source search ---------------- */
+function searchSource() {
+  const q = $('search-input').value.trim().replace(/^gaia\s*(e?dr3)?\s*/i, '');
+  if (!q) { setMessage('Enter a Gaia DR3 source ID to search.'); return; }
+  let qb;
+  try { qb = BigInt(q); } catch { setMessage(`'${q}' is not a numeric Gaia DR3 source ID.`); return; }
+  const idx = state.ids.indexOf(qb);   // ids are stored as BigInt
+  if (idx === -1) {
+    setMessage(`Gaia DR3 ${q} is not in the loaded dataset ` +
+      `(${state.ids.length.toLocaleString()} sources). Note: only sources with ` +
+      `ρ ≠ 0 and more than 5 epochs were loaded from the table.`);
+    return;
+  }
+  // center the detail window on the source, keeping the current window size
+  const cx = state.xFull[idx], cy = state.yFull[idx];
+  const w = Math.abs(detail.xlim[1] - detail.xlim[0]);
+  const h = Math.abs(detail.ylim[1] - detail.ylim[0]);
+  setDetailLimitsFromRect(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2);
+  // widen the overview frame if the source falls outside it (rect follows automatically)
+  if (cx < overview.xlim[0] || cx > overview.xlim[1] || cy < overview.ylim[0] || cy > overview.ylim[1]) {
+    overview.xlim = [Math.min(overview.xlim[0], cx - w), Math.max(overview.xlim[1], cx + w)];
+    overview.ylim = [Math.min(overview.ylim[0], cy - h), Math.max(overview.ylim[1], cy + h)];
+    overviewCacheKey = '';
+  }
+  pushHistory();
+  if (!state.visIdx.includes(idx)) {
+    setMessage(`Found Gaia DR3 ${q} (ρ = ${state.coeff[idx].toFixed(3)}, ` +
+      `p = ${state.p[idx].toExponential(2)}) and centered the view, but it is ` +
+      `hidden by the active filters — clear or loosen them to display it.`);
+    requestRedraw();
+    return;
+  }
+  state.selection = [idx];
+  updateSelectionInfo();
+  requestRedraw();
+  setMessage(`Found Gaia DR3 ${q}: ρ = ${state.coeff[idx].toFixed(3)}, ` +
+    `p = ${state.p[idx].toExponential(2)}. Centered Detail View (1 selected).`);
+}
+$('search-btn').addEventListener('click', searchSource);
+$('search-input').addEventListener('keydown', ev => { if (ev.key === 'Enter') searchSource(); });
+
+/* ---------------- View history (undo/redo) ----------------
+   Only completed interactions are recorded: drag/pan ends, debounced wheel
+   zooms, resets, and search recenters. The overview rectangle is derived
+   from the detail limits, so restoring them restores the rectangle too. */
+const viewHistory = { stack: [], idx: -1, max: 100 };
+let historyTimer = null;
+function snapshotView() { return { x: [...detail.xlim], y: [...detail.ylim] }; }
+function sameView(a, b) {
+  return a && b && a.x[0] === b.x[0] && a.x[1] === b.x[1] && a.y[0] === b.y[0] && a.y[1] === b.y[1];
+}
+function pushHistory() {
+  clearTimeout(historyTimer);
+  const snap = snapshotView();
+  if (sameView(viewHistory.stack[viewHistory.idx], snap)) return;  // no duplicates
+  viewHistory.stack.length = viewHistory.idx + 1;                  // drop the redo tail
+  viewHistory.stack.push(snap);
+  if (viewHistory.stack.length > viewHistory.max) viewHistory.stack.shift();
+  viewHistory.idx = viewHistory.stack.length - 1;
+  updateHistoryButtons();
+}
+function pushHistorySoon() {  // coalesces bursts of wheel events into one entry
+  clearTimeout(historyTimer);
+  historyTimer = setTimeout(pushHistory, 400);
+}
+function restoreView(snap) {
+  detail.xlim = [...snap.x];
+  detail.ylim = [...snap.y];
+  requestRedraw();
+}
+function undoView() {
+  if (viewHistory.idx <= 0) return;
+  viewHistory.idx--;
+  restoreView(viewHistory.stack[viewHistory.idx]);
+  updateHistoryButtons();
+}
+function redoView() {
+  if (viewHistory.idx >= viewHistory.stack.length - 1) return;
+  viewHistory.idx++;
+  restoreView(viewHistory.stack[viewHistory.idx]);
+  updateHistoryButtons();
+}
+function updateHistoryButtons() {
+  $('undo-view-btn').disabled = viewHistory.idx <= 0;
+  $('redo-view-btn').disabled = viewHistory.idx >= viewHistory.stack.length - 1;
+}
+$('undo-view-btn').addEventListener('click', undoView);
+$('redo-view-btn').addEventListener('click', redoView);
+
+/* ---------------- Keyboard shortcuts ---------------- */
+window.addEventListener('keydown', ev => {
+  const t = ev.target.tagName;
+  if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;  // not while typing
+
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
+    ev.preventDefault();
+    ev.shiftKey ? redoView() : undoView();
+    return;
+  }
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;  // leave other browser shortcuts alone
+
+  if (ev.key === '+' || ev.key === '=') { resizeViewRect(0.8); pushHistorySoon(); }
+  else if (ev.key === '-') { resizeViewRect(1.25); pushHistorySoon(); }
+  else if (ev.key === '0') { setDetailToCenterWindow(0.1); requestRedraw(); pushHistory(); }
+  else if (ev.key === 'f' || ev.key === 'F') { setDetailToFullExtent(); pushHistory(); }
+  else if (ev.key === 'i' || ev.key === 'I') { $('invert-y-btn').click(); }
+  else if (ev.key === 'h' || ev.key === 'H') { $('help-btn').click(); }
+  else if (ev.key === 's' || ev.key === 'S') { exportCSV(state.selection, 'selected sources'); }
+  else if (ev.key === '/') { ev.preventDefault(); $('search-input').focus(); }
+  else if (ev.key === 'Escape') {
+    if ($('mep-modal').classList.contains('open')) closeModal('mep-modal');
+    else if ($('phase-modal').classList.contains('open')) closeModal('phase-modal');
+    else if ($('cmd-modal').classList.contains('open')) $('cmd-close-btn').click();
+    else if ($('help-modal').classList.contains('open')) { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; }
+    else clearSelection();
+  }
+});
+
+/* ---------------- Sidebar controls ---------------- */
+$('thickness-slider').addEventListener('input', ev => {
+  state.thickness = parseFloat(ev.target.value);
+  $('slider-label').textContent = `Line thickness ×: ${state.thickness.toFixed(1)}`;
+  requestRedraw();
+});
+
+$('invert-y-btn').addEventListener('click', () => {
+  state.invertY = !state.invertY;
+  $('invert-y-btn').classList.toggle('toggled', state.invertY);
+  overviewCacheKey = '';
+  requestRedraw();
+});
+
+$('reset-view-btn').addEventListener('click', () => {
+  setOverviewLimitsLines();
+  setDetailToCenterWindow(0.1);
+  overviewCacheKey = '';
+  requestRedraw();
+  pushHistory();
+});
+
+/* ---------------- Filter controls ---------------- */
+function setDirFilter(dir) {
+  state.filter.dir = dir;
+  for (const [id, d] of [['dir-all', 'all'], ['dir-pos', 'pos'], ['dir-neg', 'neg']]) {
+    $(id).classList.toggle('active', d === dir);
+  }
+  applyFilters();
+}
+$('dir-all').addEventListener('click', () => setDirFilter('all'));
+$('dir-pos').addEventListener('click', () => setDirFilter('pos'));
+$('dir-neg').addEventListener('click', () => setDirFilter('neg'));
+
+$('sig-slider').addEventListener('input', ev => {
+  state.filter.minLogP = parseFloat(ev.target.value);
+  $('sig-label').textContent = state.filter.minLogP === 0
+    ? 'Significance: all (any p)'
+    : `Significance: p ≤ 1e-${state.filter.minLogP}`;
+  scheduleFilters();
+});
+$('rho-slider').addEventListener('input', ev => {
+  state.filter.minAbsRho = parseFloat(ev.target.value);
+  $('rho-label').textContent = `Min |ρ|: ${state.filter.minAbsRho.toFixed(2)}`;
+  scheduleFilters();
+});
+$('poe-slider').addEventListener('input', ev => {
+  state.filter.minPoe = parseFloat(ev.target.value);
+  $('poe-label').textContent = state.filter.minPoe === 0
+    ? 'Min parallax / error: off'
+    : `Min parallax / error: ${state.filter.minPoe}`;
+  scheduleFilters();
+});
+$('plx-slider').addEventListener('input', ev => {
+  state.filter.minParallax = parseFloat(ev.target.value);
+  $('plx-label').textContent = state.filter.minParallax === 0
+    ? 'Min parallax: off'
+    : `Min parallax: ${state.filter.minParallax.toFixed(2)} mas`;
+  scheduleFilters();
+});
+$('filter-reset-btn').addEventListener('click', () => {
+  $('sig-slider').value = 0;
+  $('rho-slider').value = 0;
+  $('poe-slider').value = 0;
+  $('plx-slider').value = 0;
+  state.filter.minLogP = 0;
+  state.filter.minAbsRho = 0;
+  state.filter.minPoe = 0;
+  state.filter.minParallax = 0;
+  $('sig-label').textContent = 'Significance: all (any p)';
+  $('rho-label').textContent = 'Min |ρ|: 0.00';
+  $('poe-label').textContent = 'Min parallax / error: off';
+  $('plx-label').textContent = 'Min parallax: off';
+  setDirFilter('all');   // also calls applyFilters
+});
+
+/* ---------------- Help modal ---------------- */
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+$('help-btn').addEventListener('click', () => {
+  const open = $('help-modal').classList.toggle('open');
+  $('help-btn').textContent = open ? 'Hide Help' : 'Show Help';
+});
+for (const id of ['help-close-btn', 'help-close-x']) {
+  $(id).addEventListener('click', () => { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; });
+}
+$('help-modal').addEventListener('click', ev => {
+  if (ev.target === $('help-modal')) { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; }
+});
+
+/* ---------------- Fullscreen ---------------- */
+$('fullscreen-btn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen();
+});
+
+/* ---------------- Exports ---------------- */
+function exportCSV(indices, what) {
+  const name = $('filename-input').value.trim();
+  if (!name) { setMessage('Please enter a file name first'); return; }
+  if (!indices.length) { setMessage(`No ${what} to save.`); return; }
+  const filename = name.toLowerCase().endsWith('.csv') ? name : `${name}.csv`;
+  const withStats = $('stats-checkbox').checked;
+  let header, rows;
+  if (withStats) {
+    header = `ID,${state.xColName},${state.yColName},Spearman_coeff,Spearman_p`;
+    rows = indices.map(i =>
+      `${state.ids[i]},${state.xFull[i]},${state.yFull[i]},${state.coeff[i]},${state.p[i]}`);
+  } else {
+    header = `${state.xColName},${state.yColName}`;
+    rows = indices.map(i => `${state.xFull[i]},${state.yFull[i]}`);
+  }
+  const blob = new Blob([header + '\n' + rows.join('\n') + '\n'], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setMessage(`[${timestamp()}] Saved ${rows.length.toLocaleString()} ${what} to '${filename}' with columns (${state.xColName}, ${state.yColName})`);
+}
+function exportCanvasPNG(canvas, defName) {
+  const base = $('filename-input').value.trim().replace(/\.csv$/i, '');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = (base ? base + '_' : '') + defName;
+  a.click();
+  setMessage(`[${timestamp()}] Downloaded ${a.download}`);
+}
+$('export-visible-btn').addEventListener('click', () => exportCSV(state.detailIdx, 'visible sources'));
+$('export-selected-btn').addEventListener('click', () => exportCSV(state.selection, 'selected sources'));
+$('export-filtered-btn').addEventListener('click', () => exportCSV(state.visIdx, 'filtered sources'));
+$('export-detail-png-btn').addEventListener('click', () => exportCanvasPNG($('detail-canvas'), 'detail_view.png'));
+$('export-overview-png-btn').addEventListener('click', () => exportCanvasPNG($('overview-canvas'), 'overview.png'));
+
+/* ---------------- Spearman table manual load (boot fallback) ---------------- */
+$('spearman-file-input').addEventListener('change', async ev => {
+  const file = ev.target.files[0];
+  ev.target.value = '';
+  if (!file) return;
+  try {
+    setMessage(`Streaming ${file.name}…`);
+    const d = await streamParseSpearman(file.stream(), file.size, loadProgress);
+    if (!d.ids.length) throw new Error('no rows passed the quality filter');
+    ingestSpearmanData(d);
+    $('boot-overlay').style.display = 'none';
+    setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${file.name}`);
+  } catch (e) {
+    setMessage(`Error loading Spearman table: ${e.message}`);
+  }
+});
+
+/* =====================================================
+   VizieR TAP + CMD pipeline (ports show_epoch_cmd)
+   ===================================================== */
+async function tapQuery(adql, timeoutMs = 300000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch(TAP_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: 'json', QUERY: adql }),
+      signal: ctrl.signal,
+    });
+    if (!resp.ok) throw new Error(`VizieR TAP HTTP ${resp.status}`);
+    const j = await resp.json();
+    const names = j.metadata.map(m => m.name);
+    // rows -> column arrays, nulls -> NaN
+    const cols = {};
+    names.forEach((nm, ci) => {
+      cols[nm] = j.data.map(row => row[ci] === null ? NaN : row[ci]);
+    });
+    return { cols, n: j.data.length };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* Two-sided iterative sigma clip on the magnitude columns (ports the new
+   iterative_sigma_clip_table). Per column the spread is the std of the
+   5–95 percentile-trimmed values around the full-sample median, iterated
+   until stable; each column is clipped independently from the full table and
+   the removals are unioned. Outliers brighter than the median are flagged as
+   flare-direction, fainter as eclipse-direction, per band on the original
+   rows. A row is a flare/eclipse candidate when Gmag flags it and at least
+   one of BP/RP agrees; eclipse candidates with no contradictory flare flag
+   in ANY band are rescued (kept).
+   Ranks: 0 survived · 1 flare/eclipse candidate · 3 plain sigma-clipped. */
+function iterativeSigmaClipTable(cols, clipCols, sigma, maxIter = 10000) {
+  const nRows = cols[clipCols[0]].length;
+  const flareMask = {}, eclipseMask = {};
+  for (const col of clipCols) {
+    flareMask[col] = new Array(nRows).fill(false);
+    eclipseMask[col] = new Array(nRows).fill(false);
+  }
+  const removedMask = new Array(nRows).fill(false);
+
+  for (const col of clipCols) {
+    let keep = Array.from({ length: nRows }, (_, i) => i);
+    let removed = 1, iter = 0;
+    while (removed > 0 && iter < maxIter) {
+      iter++;
+      const before = keep.length;
+      const colData = keep.map(i => cols[col][i]);
+      const finite = colData.filter(Number.isFinite);
+      if (!finite.length) break;
+      let median, spread;
+      if (finite.length >= 3) {
+        const sorted = [...finite].sort((a, b) => a - b);
+        const lower = percentile(sorted, 5), upper = percentile(sorted, 95);
+        const trimmed = finite.filter(v => v >= lower && v <= upper);
+        median = nanmedian(colData);
+        spread = nanstd(trimmed);
+      } else {
+        median = nanmedian(colData);
+        spread = nanstd(colData);
+      }
+      if (!Number.isFinite(spread) || spread === 0) break;
+      const next = [];
+      for (let k = 0; k < keep.length; k++) {
+        const i = keep[k], v = colData[k];
+        if (Number.isFinite(v) && v - median >= sigma * spread) {        // fainter → eclipse direction
+          eclipseMask[col][i] = true;
+          removedMask[i] = true;
+        } else if (Number.isFinite(v) && median - v >= sigma * spread) { // brighter → flare direction
+          flareMask[col][i] = true;
+          removedMask[i] = true;
+        } else {
+          next.push(i);
+        }
+      }
+      keep = next;
+      removed = before - keep.length;
+    }
+  }
+
+  const otherCols = clipCols.filter(c => c !== 'Gmag');
+  const MIN_OTHER = 1;  // MIN_FILTER_AGREEMENT = 2, with Gmag counting as one
+  const rank = new Array(nRows).fill(0);
+  const rescued = new Array(nRows).fill(false);
+  const keepIdx = [], removeIdx = [];
+  for (let i = 0; i < nRows; i++) {
+    const flareOther = otherCols.reduce((s, c2) => s + (flareMask[c2][i] ? 1 : 0), 0);
+    const eclipseOther = otherCols.reduce((s, c2) => s + (eclipseMask[c2][i] ? 1 : 0), 0);
+    const isFlareCand = flareMask['Gmag'][i] && flareOther >= MIN_OTHER;
+    const isEclipseCand = eclipseMask['Gmag'][i] && eclipseOther >= MIN_OTHER;
+    // a true eclipse must show no contradictory flare signal in any band
+    const contradictoryFlare = clipCols.some(c2 => flareMask[c2][i]);
+    rescued[i] = isEclipseCand && !contradictoryFlare;
+    if (rescued[i] || isFlareCand) rank[i] = 1;
+    const remove = removedMask[i] && !rescued[i];
+    if (remove && !(rescued[i] || isFlareCand)) rank[i] = 3;
+    (remove ? removeIdx : keepIdx).push(i);
+  }
+  return { keepIdx, removeIdx, rank, rescued };
+}
+
+/* Pooled leave-one-out dispersion-ratio clip (ports the new sigma_clip_std_slope).
+   Kept and sigma-clipped points are pooled and re-examined as one candidate
+   set: each pass computes the leave-one-out fractional change in
+   std(y)/std(x) for every removable point, removes the single worst one if
+   it exceeds `threshold`, then re-scans until no point exceeds it.
+   Rescued-eclipse rows are protected and cannot be removed. A kept rank-0
+   point removed here is promoted to rank 2; an ox-pool point removed again
+   is reported via clip.fromOx so the caller can promote it to rank 4.
+   Inputs are already finite-filtered by the caller. */
+function sigmaClipStdSlope(kept, out, threshold, protectedMask, rankX, rankOx, maxIter = 10000) {
+  const cx = [...kept.x, ...out.x], cy = [...kept.y, ...out.y];
+  const cxe = [...kept.xe, ...out.xe], cye = [...kept.ye, ...out.ye];
+  const isKept = [...kept.x.map(() => true), ...out.x.map(() => false)];
+  const prot = [...protectedMask, ...out.x.map(() => false)];
+  const rankPool = [...rankX, ...rankOx];
+  const fromOx = [...kept.x.map(() => -1), ...out.x.map((_, i) => i)];
+  const clip = { x: [], y: [], xe: [], ye: [], wasKept: [], ranks: [], fromOx: [] };
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    const n = cx.length;
+    if (n < 3) break;
+    let sx = 0, sy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) { sx += cx[i]; sy += cy[i]; sxx += cx[i] * cx[i]; syy += cy[i] * cy[i]; }
+    const stdX = Math.sqrt(Math.max(sxx / n - (sx / n) ** 2, 0));
+    const stdY = Math.sqrt(Math.max(syy / n - (sy / n) ** 2, 0));
+    if (stdX === 0 || stdY === 0) break;
+    const stdM = stdY / stdX;
+    const m1 = n - 1;
+    let worst = -1, worstFrac = -Infinity;
+    for (let j = 0; j < n; j++) {
+      if (prot[j]) continue;
+      const mx = (sx - cx[j]) / m1, my = (sy - cy[j]) / m1;
+      const vx = Math.max((sxx - cx[j] * cx[j]) / m1 - mx * mx, 0);
+      const vy = Math.max((syy - cy[j] * cy[j]) / m1 - my * my, 0);
+      const sxl = Math.sqrt(vx), syl = Math.sqrt(vy);
+      let frac = sxl > 0 ? Math.abs(syl / sxl - stdM) / stdM : 0;
+      if (!Number.isFinite(frac)) frac = 0;
+      if (frac > worstFrac) { worstFrac = frac; worst = j; }
+    }
+    if (worst < 0 || worstFrac <= threshold) break;
+    let r = rankPool[worst];
+    if (isKept[worst] && r === 0) r = 2;   // clean kept point clipped here → rank 2
+    clip.x.push(cx[worst]); clip.y.push(cy[worst]);
+    clip.xe.push(cxe[worst]); clip.ye.push(cye[worst]);
+    clip.wasKept.push(isKept[worst]);
+    clip.ranks.push(r);
+    clip.fromOx.push(fromOx[worst]);
+    for (const arr of [cx, cy, cxe, cye, isKept, prot, rankPool, fromOx]) arr.splice(worst, 1);
+  }
+
+  // surviving originally-kept points (the fit set); pooled ox survivors stay clipped
+  const res = { kx: [], ky: [], kxe: [], kye: [], kRanks: [], clip };
+  for (let j = 0; j < cx.length; j++) {
+    if (!isKept[j]) continue;
+    res.kx.push(cx[j]); res.ky.push(cy[j]);
+    res.kxe.push(cxe[j]); res.kye.push(cye[j]);
+    res.kRanks.push(rankPool[j]);
+  }
+  return res;
+}
+
+/* ---------------- CMD modal ---------------- */
+const cmdModal = $('cmd-modal');
+const cmdCanvas = $('cmd-canvas');
+let cmdToken = 0;   // invalidates stale async queries
+let lastCMD = null; // last dataset handed to drawCMD, for interactive redraws
+let cmdView = null; // user zoom/pan limits {xmin,xmax,ymin,ymax}; null = auto fit
+let cmdXf = null;   // pixel transform of the last draw, for px↔data conversion
+
+$('cmd-close-btn').addEventListener('click', () => { cmdToken++; closeModal('cmd-modal'); });
+cmdModal.addEventListener('click', ev => { if (ev.target === cmdModal) { cmdToken++; closeModal('cmd-modal'); } });
+$('cmd-png-btn').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = cmdCanvas.toDataURL('image/png');
+  a.download = ($('cmd-title').textContent.replace(/\s+/g, '_') || 'cmd') + '.png';
+  a.click();
+});
+
+/* ---------------- CMD zoom & pan ----------------
+   Same conventions as the Detail View: scroll zooms about the cursor,
+   drag pans, double-click (or the Reset Zoom button) restores auto fit. */
+function cmdPxToData(px, py) {
+  const t = cmdXf;
+  return [
+    t.xmin + (px - t.l) / t.pw * (t.xmax - t.xmin),
+    t.ymin + (py - t.t) / t.ph * (t.ymax - t.ymin),   // magnitude axis runs downward
+  ];
+}
+function cmdInPlot(px, py) {
+  const t = cmdXf;
+  return t && px >= t.l && px <= t.l + t.pw && py >= t.t && py <= t.t + t.ph;
+}
+function redrawCMD() { if (lastCMD) drawCMD(lastCMD); }
+
+// where the cursor sits: the plot itself, the x-axis strip (below the plot,
+// zooms/pans x alone) or the y-axis strip (left of the plot, y alone)
+function cmdAxisHit(px, py) {
+  const t = cmdXf;
+  if (!t) return null;
+  if (cmdInPlot(px, py)) return 'plot';
+  if (px >= t.l && px <= t.l + t.pw && py > t.t + t.ph && py <= t.t + t.ph + 44) return 'x';
+  if (py >= t.t && py <= t.t + t.ph && px >= t.l - 56 && px < t.l) return 'y';
+  return null;
+}
+
+cmdCanvas.addEventListener('wheel', ev => {
+  if (!lastCMD) return;
+  const [px, py] = canvasPos(cmdCanvas, ev);
+  const hit = cmdAxisHit(px, py);
+  if (!hit) return;
+  ev.preventDefault();
+  const scale = ev.deltaY > 0 ? 0.85 : 1.15;
+  // axis strips zoom one axis; in the plot, Shift = x-only and Alt = y-only
+  const zoomX = hit === 'x' || (hit === 'plot' && !ev.altKey);
+  const zoomY = hit === 'y' || (hit === 'plot' && !ev.shiftKey);
+  const t = cmdXf;
+  const [cx, cy] = cmdPxToData(
+    Math.min(Math.max(px, t.l), t.l + t.pw),
+    Math.min(Math.max(py, t.t), t.t + t.ph));
+  const v = cmdView || cmdAutoExtent(lastCMD);
+  cmdView = {
+    xmin: zoomX ? cx - (cx - v.xmin) * scale : v.xmin,
+    xmax: zoomX ? cx + (v.xmax - cx) * scale : v.xmax,
+    ymin: zoomY ? cy - (cy - v.ymin) * scale : v.ymin,
+    ymax: zoomY ? cy + (v.ymax - cy) * scale : v.ymax,
+  };
+  redrawCMD();
+}, { passive: false });
+
+let cmdPan = null;
+cmdCanvas.addEventListener('mousemove', ev => {
+  if (cmdPan) return;
+  const [px, py] = canvasPos(cmdCanvas, ev);
+  const hit = cmdAxisHit(px, py);
+  cmdCanvas.style.cursor =
+    hit === 'x' ? 'ew-resize' : hit === 'y' ? 'ns-resize' : hit === 'plot' ? 'grab' : 'default';
+});
+cmdCanvas.addEventListener('mousedown', ev => {
+  if (ev.button !== 0 || !lastCMD) return;
+  const [px, py] = canvasPos(cmdCanvas, ev);
+  const hit = cmdAxisHit(px, py);
+  if (!hit) return;
+  cmdPan = { px, py, axis: hit, view: cmdView || cmdAutoExtent(lastCMD) };
+  cmdCanvas.style.cursor = hit === 'x' ? 'ew-resize' : hit === 'y' ? 'ns-resize' : 'grabbing';
+});
+window.addEventListener('mousemove', ev => {
+  if (!cmdPan) return;
+  const [px, py] = canvasPos(cmdCanvas, ev);
+  const v = cmdPan.view;
+  const dx = cmdPan.axis === 'y' ? 0 : (cmdPan.px - px) * (v.xmax - v.xmin) / cmdXf.pw;
+  const dy = cmdPan.axis === 'x' ? 0 : (cmdPan.py - py) * (v.ymax - v.ymin) / cmdXf.ph;
+  cmdView = { xmin: v.xmin + dx, xmax: v.xmax + dx, ymin: v.ymin + dy, ymax: v.ymax + dy };
+  redrawCMD();
+});
+window.addEventListener('mouseup', () => {
+  if (cmdPan) {
+    cmdPan = null;
+    cmdCanvas.style.cursor = 'grab';
+  }
+});
+cmdCanvas.addEventListener('dblclick', () => { cmdView = null; redrawCMD(); });
+$('cmd-reset-zoom-btn').addEventListener('click', () => { cmdView = null; redrawCMD(); });
+
+async function showEpochCMD(gi) {
+  const id = state.ids[gi];
+  const token = ++cmdToken;
+
+  lastEpoch = null;                            // stale series from the previous star
+  $('cmd-phase-btn').disabled = true;
+  $('cmd-mep-btn').disabled = true;
+  lastCMD = null;                              // fresh star → fresh auto-fit view
+  cmdView = null;
+  $('cmd-reset-zoom-btn').style.display = 'none';
+
+  $('cmd-title').textContent = `Gaia DR3 ${id}`;
+  const links = $('cmd-links');
+  links.innerHTML = '';
+  const mkLink = (label, url) => {
+    const a = document.createElement('a');
+    a.textContent = label; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    links.appendChild(a);
+  };
+  mkLink('SIMBAD ↗', `https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Gaia+DR3+${id}`);
+  mkLink('VizieR ↗', `https://vizier.cds.unistra.fr/viz-bin/VizieR-4?-source=I/355/gaiadr3&Source=${id}`);
+
+  const raDec = Number.isFinite(state.ra[gi]) ? ` | RA ${state.ra[gi].toFixed(5)}°, Dec ${state.dec[gi].toFixed(5)}°` : '';
+  $('cmd-status').textContent = `ρ = ${state.coeff[gi].toFixed(3)}, p = ${state.p[gi].toExponential(2)}${raDec}`;
+  $('cmd-loading').style.display = 'flex';
+  $('cmd-loading-text').textContent = `Querying VizieR for epoch photometry of ${id}…`;
+  openModal('cmd-modal');
+  setMessage(`Querying Vizier for epoch photometry of ${id}...`);
+
+  try {
+    const epCols = ['Source', 'RA_ICRS', 'DE_ICRS', 'TimeG', 'FG', 'e_FG', 'RFG', 'Gmag',
+      'TimeBP', 'FBP', 'e_FBP', 'RFBP', 'BPmag', 'TimeRP', 'FRP', 'e_FRP', 'RFRP', 'RPmag'];
+    const epQ = `SELECT ${epCols.map(c => `"${c}"`).join(',')} FROM "I/355/epphot" WHERE "Source"=${id}`;
+    const plxQ = `SELECT TOP 1 "Plx","e_Plx" FROM "I/355/gaiadr3" WHERE "Source"=${id}`;
+
+    const [ep, plx] = await Promise.all([tapQuery(epQ), tapQuery(plxQ)]);
+    if (token !== cmdToken) return;  // user closed / clicked another star
+
+    if (!ep.n) {
+      setMessage(`No epoch photometry for ${id}.`);
+      $('cmd-loading-text').textContent = `No epoch photometry found for ${id}.`;
+      return;
+    }
+    if (!plx.n || !Number.isFinite(plx.cols['Plx'][0])) throw new Error('no parallax in Gaia DR3');
+    const parallaxMas = plx.cols['Plx'][0];
+    const distancePc = 1 / (parallaxMas / 1000);
+    const distMod = 5 * (Math.log10(Math.abs(distancePc)) - 1);
+
+    // derived columns
+    const n0 = ep.n, c = ep.cols;
+    c['e_Gmag'] = c['FG'].map((f, i) => fluxErrToMagErr(f, c['e_FG'][i]));
+    c['e_BPmag'] = c['FBP'].map((f, i) => fluxErrToMagErr(f, c['e_FBP'][i]));
+    c['e_RPmag'] = c['FRP'].map((f, i) => fluxErrToMagErr(f, c['e_FRP'][i]));
+    c['GMAG'] = c['Gmag'].map(g => g - distMod);
+    c['B_R'] = c['BPmag'].map((b, i) => b - c['RPmag'][i]);
+
+    const allNames = Object.keys(c);
+
+    // entry quality cut: finite pipeline values + per-band flux SNR > 1
+    const snrMin = 1.0;
+    const goodIdx = [], snrBadIdx = [];
+    for (let i = 0; i < n0; i++) {
+      const ok = [c['B_R'][i], c['GMAG'][i], c['e_Gmag'][i], c['e_BPmag'][i], c['e_RPmag'][i]]
+        .every(Number.isFinite);
+      if (!ok) continue;
+      if (c['RFG'][i] > snrMin && c['RFBP'][i] > snrMin && c['RFRP'][i] > snrMin) goodIdx.push(i);
+      else snrBadIdx.push(i);
+    }
+    if (goodIdx.length < 3) {
+      setMessage(`Not enough good epochs for ${id} (${goodIdx.length} pass SNR).`);
+      $('cmd-loading-text').textContent = `Not enough good epochs (${goodIdx.length} pass SNR).`;
+      return;
+    }
+    const pickRows = idxs => {
+      const sub = {};
+      for (const nm of allNames) sub[nm] = idxs.map(i => c[nm][i]);
+      return sub;
+    };
+
+    // stage 1: two-sided sigma clip on the magnitudes with flare/eclipse
+    // classification and eclipse rescue (rows indexed within goodIdx)
+    const sub = pickRows(goodIdx);
+    const clip1 = iterativeSigmaClipTable(sub, ['Gmag', 'BPmag', 'RPmag'], 4);
+
+    // cleaned per-band epoch series for phase-folding analysis
+    const keptTable = pickRows(clip1.keepIdx.map(p => goodIdx[p]));
+    lastEpoch = {
+      id,
+      G:  extractSeries(keptTable, 'TimeG', 'Gmag', 'e_Gmag', 'RFG'),
+      BP: extractSeries(keptTable, 'TimeBP', 'BPmag', 'e_BPmag', 'RFBP'),
+      RP: extractSeries(keptTable, 'TimeRP', 'RPmag', 'e_RPmag', 'RFRP'),
+      color: extractColorSeries(keptTable),
+    };
+    if (token === cmdToken) {
+      $('cmd-phase-btn').disabled = false;
+      $('cmd-mep-btn').disabled = false;
+    }
+
+    const series = idxs => ({
+      x: idxs.map(i => c['B_R'][i]),
+      y: idxs.map(i => c['GMAG'][i]),
+      xe: idxs.map(i => Math.hypot(c['e_BPmag'][i], c['e_RPmag'][i])),
+      ye: idxs.map(i => c['e_Gmag'][i]),
+    });
+    const k0 = series(clip1.keepIdx.map(p => goodIdx[p]));
+    const o0 = series(clip1.removeIdx.map(p => goodIdx[p]));
+    const rankK = clip1.keepIdx.map(p => clip1.rank[p]);
+    const rankO = clip1.removeIdx.map(p => clip1.rank[p]);
+    const protectedK = clip1.keepIdx.map(p => clip1.rescued[p]);
+
+    if (k0.x.length < 2) {
+      setMessage(`Not enough epochs after sigma clipping for ${id} (${k0.x.length} kept).`);
+      $('cmd-loading-text').textContent = `Not enough epochs after sigma clipping (${k0.x.length} kept).`;
+      return;
+    }
+
+    // stage 2: pooled leave-one-out dispersion-ratio clip with rank tracking
+    const ss = sigmaClipStdSlope(k0, o0, 0.1, protectedK, rankK, rankO);
+
+    if (ss.kx.length < 2) {
+      setMessage(`Not enough epochs after std-slope clip for ${id} (${ss.kx.length} kept).`);
+      $('cmd-loading-text').textContent = `Not enough epochs after clipping (${ss.kx.length} kept).`;
+      return;
+    }
+    const [m, b] = linFit(ss.kx, ss.ky);
+
+    // assemble final per-rank point sets for plotting
+    const mkSet = () => ({ x: [], y: [], xe: [], ye: [] });
+    const rankPts = { 0: mkSet(), 1: mkSet(), 2: mkSet(), 3: mkSet(), 4: mkSet() };
+    const pushPt = (set, x, y, xe, ye) => { set.x.push(x); set.y.push(y); set.xe.push(xe); set.ye.push(ye); };
+    // survivors of the kept pool (rank 0 clean, rank 1 rescued eclipses)
+    for (let k = 0; k < ss.kx.length; k++) {
+      pushPt(rankPts[ss.kRanks[k]], ss.kx[k], ss.ky[k], ss.kxe[k], ss.kye[k]);
+    }
+    // std-slope clipped points; sigma-clipped repeats are promoted 3 → 4
+    for (let k = 0; k < ss.clip.x.length; k++) {
+      let r = ss.clip.ranks[k];
+      if (ss.clip.fromOx[k] >= 0 && r === 3) r = 4;
+      pushPt(rankPts[r], ss.clip.x[k], ss.clip.y[k], ss.clip.xe[k], ss.clip.ye[k]);
+    }
+    // stage-1 removed points the std-slope pass left alone keep their rank (1 or 3)
+    const clippedOx = new Set(ss.clip.fromOx.filter(v => v >= 0));
+    for (let k = 0; k < o0.x.length; k++) {
+      if (clippedOx.has(k)) continue;
+      pushPt(rankPts[rankO[k]], o0.x[k], o0.y[k], o0.xe[k], o0.ye[k]);
+    }
+
+    if (token !== cmdToken) return;
+    $('cmd-loading').style.display = 'none';
+    drawCMD({
+      id, m, b,
+      usedX: ss.kx, usedY: ss.ky,
+      rankPts,
+      snrBad: series(snrBadIdx),
+    });
+    const nr = r => rankPts[r].x.length;
+    $('cmd-status').textContent =
+      `ρ = ${state.coeff[gi].toFixed(3)}, p = ${state.p[gi].toExponential(2)}${raDec}` +
+      ` | plx = ${parallaxMas.toFixed(3)} mas (d ≈ ${distancePc.toFixed(0)} pc)` +
+      ` | ${n0} epochs, ${ss.kx.length} used` +
+      ` (ranks 1/2/3/4: ${nr(1)}/${nr(2)}/${nr(3)}/${nr(4)}, ${snrBadIdx.length} low-SNR)` +
+      ` | slope m = ${m.toFixed(3)}`;
+    setMessage(`CMD shown for ${id} (${n0} epochs, ${ss.kx.length} used, slope m = ${m.toFixed(3)}).`);
+  } catch (exc) {
+    if (token !== cmdToken) return;
+    setMessage(`Could not build CMD for ${id}: ${exc.message || exc}`);
+    $('cmd-loading-text').textContent = `Could not build CMD: ${exc.message || exc}`;
+  }
+}
+
+/* ---------------- CMD plot rendering ---------------- */
+// rank → marker / color / label for the CMD scatter
+const CMD_RANK_STYLE = {
+  0: { marker: 'circle',  color: THEME.text, alpha: 0.70, label: 'used' },
+  1: { marker: 'star',    color: '#d2a8ff',  alpha: 0.90, label: 'flare/eclipse candidate' },
+  2: { marker: 'diamond', color: '#ff8c00',  alpha: 0.80, label: 'std-slope clipped' },
+  3: { marker: 'square',  color: '#f85149',  alpha: 0.70, label: 'sigma-clipped' },
+  4: { marker: 'cross',   color: '#db61a2',  alpha: 0.85, label: 'clipped by both' },
+};
+
+function drawCMDMarker(ctx, px, py, marker, color, s = 5) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.6;
+  if (marker === 'circle') {
+    ctx.beginPath(); ctx.arc(px, py, s * 0.8, 0, 2 * Math.PI); ctx.fill();
+  } else if (marker === 'star') {
+    drawStar(ctx, px, py, s + 2, color, color);
+  } else if (marker === 'diamond') {
+    ctx.beginPath();
+    ctx.moveTo(px, py - s); ctx.lineTo(px + s, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s, py);
+    ctx.closePath(); ctx.stroke();
+  } else if (marker === 'square') {
+    ctx.strokeRect(px - s + 0.5, py - s + 0.5, 2 * s - 1, 2 * s - 1);
+  } else if (marker === 'cross') {
+    ctx.beginPath();
+    ctx.moveTo(px - s, py - s); ctx.lineTo(px + s, py + s);
+    ctx.moveTo(px - s, py + s); ctx.lineTo(px + s, py - s);
+    ctx.stroke();
+  }
+}
+
+// auto-fit extent over every category, including error bars
+function cmdAutoExtent(d) {
+  const allX = [], allY = [];
+  const push = (xs, ys, xe, ye) => {
+    for (let i = 0; i < xs.length; i++) {
+      allX.push(xs[i] - (xe ? xe[i] : 0), xs[i] + (xe ? xe[i] : 0));
+      allY.push(ys[i] - (ye ? ye[i] : 0), ys[i] + (ye ? ye[i] : 0));
+    }
+  };
+  for (const r of [0, 1, 2, 3, 4]) push(d.rankPts[r].x, d.rankPts[r].y, d.rankPts[r].xe, d.rankPts[r].ye);
+  push(d.snrBad.x, d.snrBad.y, d.snrBad.xe, d.snrBad.ye);
+  let xmin = Math.min(...allX), xmax = Math.max(...allX);
+  let ymin = Math.min(...allY), ymax = Math.max(...allY);
+  const padX = 0.06 * (xmax - xmin || 1), padY = 0.08 * (ymax - ymin || 1);
+  return { xmin: xmin - padX, xmax: xmax + padX, ymin: ymin - padY, ymax: ymax + padY };
+}
+
+function drawCMD(d) {
+  lastCMD = d;
+  const dpr = window.devicePixelRatio || 1;
+  const W = cmdCanvas.clientWidth || 684, H = 560;
+  cmdCanvas.width = W * dpr; cmdCanvas.height = H * dpr;
+  const ctx = cmdCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.fillStyle = THEME.panel;
+  ctx.fillRect(0, 0, W, H);
+
+  const M = { l: 66, r: 20, t: 48, b: 56 };
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
+
+  // user zoom/pan view when active, otherwise auto fit
+  const { xmin, xmax, ymin, ymax } = cmdView || cmdAutoExtent(d);
+  $('cmd-reset-zoom-btn').style.display = cmdView ? '' : 'none';
+
+  const X = v => M.l + (v - xmin) / (xmax - xmin) * pw;
+  const Y = v => M.t + (v - ymin) / (ymax - ymin) * ph;   // inverted y: larger mag = fainter = lower
+  cmdXf = { l: M.l, t: M.t, pw, ph, xmin, xmax, ymin, ymax };
+
+  // panel + axes
+  ctx.fillStyle = THEME.panelAlt;
+  ctx.fillRect(M.l, M.t, pw, ph);
+  ctx.strokeStyle = THEME.border;
+  ctx.strokeRect(M.l + 0.5, M.t + 0.5, pw - 1, ph - 1);
+
+  ctx.font = '11px Inter, sans-serif';
+  ctx.fillStyle = THEME.muted;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const v of niceTicks(xmin, xmax)) {
+    const px = X(v);
+    if (px < M.l || px > M.l + pw) continue;
+    ctx.strokeStyle = THEME.border;
+    ctx.beginPath(); ctx.moveTo(px, M.t + ph); ctx.lineTo(px, M.t + ph + 5); ctx.stroke();
+    ctx.fillText(fmtTick(v), px, M.t + ph + 8);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const v of niceTicks(ymin, ymax)) {
+    const py = Y(v);
+    if (py < M.t || py > M.t + ph) continue;
+    ctx.beginPath(); ctx.moveTo(M.l, py); ctx.lineTo(M.l - 5, py); ctx.stroke();
+    ctx.fillText(fmtTick(v), M.l - 8, py);
+  }
+
+  // labels + title
+  ctx.fillStyle = THEME.text;
+  ctx.font = '600 16px Inter, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`Gaia DR3 ${d.id}`, M.l + pw / 2, M.t - 14);
+  ctx.fillStyle = THEME.muted;
+  drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - 14, 14, 'center');
+  ctx.save();
+  ctx.translate(18, M.t + ph / 2); ctx.rotate(-Math.PI / 2);
+  drawMathText(ctx, LBL_GMAG, 0, 0, 14, 'center');
+  ctx.restore();
+
+  // pixel positions of everything drawn, so the legend can avoid them
+  const occupied = [];
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(M.l, M.t, pw, ph); ctx.clip();
+
+  const errBar = (x, y, xe, ye, color, alpha) => {
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(x - xe), Y(y)); ctx.lineTo(X(x + xe), Y(y));
+    ctx.moveTo(X(x), Y(y - ye)); ctx.lineTo(X(x), Y(y + ye));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+
+  // SNR rejected (lowest z): faint gray ×
+  for (let i = 0; i < d.snrBad.x.length; i++) {
+    const x = d.snrBad.x[i], y = d.snrBad.y[i];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    errBar(x, y, d.snrBad.xe[i] || 0, d.snrBad.ye[i] || 0, '#8b949e', 0.3);
+    ctx.globalAlpha = 0.35;
+    drawCMDMarker(ctx, X(x), Y(y), 'cross', '#8b949e', 4.5);
+    ctx.globalAlpha = 1;
+    occupied.push([X(x), Y(y)]);
+  }
+  // rank categories, clipped ranks under the kept ones
+  for (const r of [3, 4, 2, 1, 0]) {
+    const st = CMD_RANK_STYLE[r], p = d.rankPts[r];
+    for (let i = 0; i < p.x.length; i++) {
+      errBar(p.x[i], p.y[i], p.xe[i], p.ye[i], st.color, st.alpha * 0.6);
+      ctx.globalAlpha = st.alpha;
+      drawCMDMarker(ctx, X(p.x[i]), Y(p.y[i]), st.marker, st.color);
+      ctx.globalAlpha = 1;
+      occupied.push([X(p.x[i]), Y(p.y[i])]);
+    }
+  }
+  // fit line over the used points, red if negative slope, blue if positive
+  const fx0 = Math.min(...d.usedX), fx1 = Math.max(...d.usedX);
+  ctx.strokeStyle = d.m < 0 ? '#f85149' : '#58a6ff';
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(X(fx0), Y(d.m * fx0 + d.b));
+  ctx.lineTo(X(fx1), Y(d.m * fx1 + d.b));
+  ctx.stroke();
+  // gold star at mean of used points
+  const mkx = d.usedX.reduce((s, v) => s + v, 0) / d.usedX.length;
+  const mky = d.usedY.reduce((s, v) => s + v, 0) / d.usedY.length;
+  drawStar(ctx, X(mkx), Y(mky), 11, '#ffd700', THEME.muted);
+  occupied.push([X(mkx), Y(mky)]);
+  ctx.restore();
+
+  // slope box (top-left, like the skyblue bbox)
+  ctx.font = '600 14px Inter, sans-serif';
+  const slopeTxt = `m = ${d.m.toFixed(2)}`;
+  const tw = ctx.measureText(slopeTxt).width;
+  ctx.fillStyle = 'rgba(135,206,235,0.25)';
+  ctx.strokeStyle = 'rgba(135,206,235,0.6)';
+  roundRect(ctx, M.l + 12, M.t + 12, tw + 20, 28, 7);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = THEME.text;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(slopeTxt, M.l + 22, M.t + 26);
+  // block the legend from landing on the slope box
+  for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
+    occupied.push([M.l + 12 + fx * (tw + 20), M.t + 12 + fy * 28]);
+  }
+
+  // legend: every rank present, placed where the fewest points sit
+  const items = [];
+  for (const r of [0, 1, 2, 3, 4]) {
+    const p = d.rankPts[r];
+    if (p.x.length) {
+      items.push({ marker: CMD_RANK_STYLE[r].marker, color: CMD_RANK_STYLE[r].color,
+        label: `${CMD_RANK_STYLE[r].label} (${p.x.length})` });
+    }
+  }
+  if (d.snrBad.x.length) {
+    items.push({ marker: 'cross', color: '#8b949e', label: `SNR rejected (${d.snrBad.x.length})` });
+  }
+  items.push({ marker: 'meanstar', color: '#ffd700', label: 'mean of used points' });
+
+  ctx.font = '12px Inter, sans-serif';
+  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + 38;
+  const lh = items.length * 20 + 12;
+  const pad = 12;
+  const candidates = [
+    [M.l + pw - lw - pad, M.t + pad],            // top-right
+    [M.l + pad, M.t + pad],                      // top-left
+    [M.l + pw - lw - pad, M.t + ph - lh - pad],  // bottom-right
+    [M.l + pad, M.t + ph - lh - pad],            // bottom-left
+    [M.l + (pw - lw) / 2, M.t + pad],            // top-center
+    [M.l + (pw - lw) / 2, M.t + ph - lh - pad],  // bottom-center
+    [M.l + pw - lw - pad, M.t + (ph - lh) / 2],  // mid-right
+    [M.l + pad, M.t + (ph - lh) / 2],            // mid-left
+  ];
+  let lx = candidates[0][0], ly = candidates[0][1], bestCount = Infinity;
+  for (const [cxp, cyp] of candidates) {
+    let count = 0;
+    for (const [px, py] of occupied) {
+      if (px >= cxp - 8 && px <= cxp + lw + 8 && py >= cyp - 8 && py <= cyp + lh + 8) count++;
+    }
+    if (count < bestCount) { bestCount = count; lx = cxp; ly = cyp; }
+    if (count === 0) break;   // earlier candidates are preferred on ties
+  }
+
+  ctx.fillStyle = 'rgba(13,17,23,0.85)';
+  ctx.strokeStyle = THEME.border;
+  roundRect(ctx, lx, ly, lw, lh, 7);
+  ctx.fill(); ctx.stroke();
+  items.forEach((it, i) => {
+    const cy = ly + 16 + i * 20, cx = lx + 16;
+    if (it.marker === 'meanstar') {
+      drawStar(ctx, cx, cy, 6, '#ffd700', THEME.muted);
+    } else {
+      drawCMDMarker(ctx, cx, cy, it.marker, it.color, 4.5);
+    }
+    ctx.fillStyle = THEME.text;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(it.label, lx + 30, cy);
+  });
+}
+
+function drawStar(ctx, cx, cy, r, fill, stroke) {
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const ang = -Math.PI / 2 + i * Math.PI / 5;
+    const rad = i % 2 ? r * 0.45 : r;
+    const px = cx + rad * Math.cos(ang), py = cy + rad * Math.sin(ang);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1;
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* =====================================================
+   Phase folding & Lomb–Scargle periodograms
+   ===================================================== */
+let lastEpoch = null;
+const phaseModal = $('phase-modal');
+const phaseCanvas = $('phase-canvas');
+
+// soft pastel palette for the phase-analysis window
+const PHASE_COLORS = {
+  G: '#b8d8c7',         // soft mint
+  BP: '#a9c5f0',        // soft blue
+  RP: '#f0b3ab',        // soft coral
+  combined: '#ead9a6',  // soft sand
+  color: '#cfc0e8',     // soft lavender (BP−RP)
+  peak: '#ead9a6',      // peak markers & period annotations
+};
+
+// pull one band's (time, mag, magErr) epochs out of the clipped table
+function extractSeries(c, tCol, mCol, eCol, snrCol) {
+  const t = [], m = [], e = [];
+  for (let i = 0; i < c[tCol].length; i++) {
+    const ti = c[tCol][i], mi = c[mCol][i], ei = c[eCol][i];
+    if (!Number.isFinite(ti) || !Number.isFinite(mi) || !Number.isFinite(ei)) continue;
+    if (!(c[snrCol][i] > 1)) continue;
+    t.push(ti); m.push(mi); e.push(ei);
+  }
+  return { t, m, e };
+}
+// per-epoch BP−RP color series (rows where both bands are good)
+function extractColorSeries(c) {
+  const t = [], m = [], e = [];
+  for (let i = 0; i < c['TimeBP'].length; i++) {
+    const ti = c['TimeBP'][i], bp = c['BPmag'][i], rp = c['RPmag'][i];
+    const eb = c['e_BPmag'][i], er = c['e_RPmag'][i];
+    if (![ti, bp, rp, eb, er].every(Number.isFinite)) continue;
+    if (!(c['RFBP'][i] > 1 && c['RFRP'][i] > 1)) continue;
+    t.push(ti); m.push(bp - rp); e.push(Math.hypot(eb, er));
+  }
+  return { t, m, e };
+}
+
+function argmaxArr(a) {
+  let bi = 0;
+  for (let i = 1; i < a.length; i++) if (a[i] > a[bi]) bi = i;
+  return bi;
+}
+
+// Generalized Lomb–Scargle (Zechmeister & Kürster 2009): floating mean,
+// inverse-variance weights, power normalized to 0..1.
+// The frequency grid is uniform, so cos/sin advance by a fixed per-point
+// rotation between frequencies — no trig in the hot loop. The rotation is
+// re-synced from exact trig every 1024 steps to kill accumulated drift.
+function lombScargle(t, y, err, freqs) {
+  const n = t.length;
+  const wn = new Float64Array(n);
+  let W = 0;
+  for (let i = 0; i < n; i++) { wn[i] = 1 / (err[i] * err[i] || 1e-12); W += wn[i]; }
+  for (let i = 0; i < n; i++) wn[i] /= W;
+  let ybar = 0;
+  for (let i = 0; i < n; i++) ybar += wn[i] * y[i];
+  const yv = new Float64Array(n);
+  let YY = 0;
+  for (let i = 0; i < n; i++) { yv[i] = y[i] - ybar; YY += wn[i] * yv[i] * yv[i]; }
+  const power = new Float64Array(freqs.length);
+  if (YY <= 0 || !freqs.length) return power;
+
+  const df = freqs.length > 1 ? freqs[1] - freqs[0] : 0;
+  const c = new Float64Array(n), s = new Float64Array(n);
+  const cd = new Float64Array(n), sd = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    cd[i] = Math.cos(2 * Math.PI * df * t[i]);
+    sd[i] = Math.sin(2 * Math.PI * df * t[i]);
+  }
+  for (let k = 0; k < freqs.length; k++) {
+    if (k % 1024 === 0) {
+      const om = 2 * Math.PI * freqs[k];
+      for (let i = 0; i < n; i++) { c[i] = Math.cos(om * t[i]); s[i] = Math.sin(om * t[i]); }
+    }
+    let C = 0, S = 0, YC = 0, YS = 0, CC = 0, SS = 0, CS = 0;
+    for (let i = 0; i < n; i++) {
+      const ci = c[i], si = s[i], wi = wn[i], yvi = yv[i];
+      C += wi * ci; S += wi * si;
+      YC += wi * yvi * ci; YS += wi * yvi * si;
+      CC += wi * ci * ci; SS += wi * si * si; CS += wi * ci * si;
+      c[i] = ci * cd[i] - si * sd[i];   // rotate to the next frequency
+      s[i] = si * cd[i] + ci * sd[i];
+    }
+    const CCh = CC - C * C, SSh = SS - S * S, CSh = CS - C * S;
+    const D = CCh * SSh - CSh * CSh;
+    power[k] = D > 1e-12 ? (SSh * YC * YC + CCh * YS * YS - 2 * CSh * YC * YS) / (YY * D) : 0;
+  }
+  return power;
+}
+
+// shared frequency grid so the per-band periodograms can be multiplied.
+// With the multi-year Gaia baseline the peaks are ~1/T wide, so the grid is
+// heavily oversampled (30 samples across a peak). The standard grid extends to
+// 1-hour periods; the optional high-res grid (toggled by the "5-min high-res grid"
+// checkbox) extends to 5-minute periods at the same density — that's ~12× more
+// frequencies, so it's opt-in and unnecessary for most systems.
+const PHASE_FMAX_DEFAULT = 24;        // cycles/day → shortest period = 1 hour
+const PHASE_FMAX_HIRES   = 288;       // cycles/day → shortest period = 5 minutes (1/288 d)
+const PHASE_OVERSAMPLE   = 30;        // samples across the natural peak width 1/T
+const PHASE_NF_CAP_DEFAULT = 1500000;
+const PHASE_NF_CAP_HIRES   = 12000000;
+let phaseHighRes = false;             // high-sampling 5-min grid on/off (default off)
+function phaseFmax() { return phaseHighRes ? PHASE_FMAX_HIRES : PHASE_FMAX_DEFAULT; }
+function buildFreqGrid(tAll) {
+  const fmax = phaseFmax();
+  // Reaching the 5-min floor at the full 30× oversampling needs ~fmax·OVERSAMPLE·T
+  // points — ~9M for a ~1000-day Gaia baseline — so the high-res cap is large; the
+  // standard cap stays modest since the 1-hour grid is 12× smaller.
+  const cap = phaseHighRes ? PHASE_NF_CAP_HIRES : PHASE_NF_CAP_DEFAULT;
+  const T = Math.max(Math.max(...tAll) - Math.min(...tAll), 1);
+  const fmin = 1 / T;
+  const df = 1 / (PHASE_OVERSAMPLE * T);
+  const nf = Math.min(Math.floor((fmax - fmin) / df), cap);
+  const freqs = new Float64Array(nf);
+  for (let i = 0; i < nf; i++) freqs[i] = fmin + i * df;
+  return freqs;
+}
+
+const fmtPeriod = P => `${P < 1 ? P.toFixed(4) : P.toFixed(3)} d`;
+
+/* ---- small panel plotting helpers for the 4×2 grid ---- */
+function phasePanel(ctx, r, xlim, ylim, opts = {}) {
+  ctx.fillStyle = THEME.panelAlt;
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.strokeStyle = THEME.border;
+  ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+  const X = v => r.x + (v - xlim[0]) / (xlim[1] - xlim[0]) * r.w;
+  const Y = v => opts.invertY
+    ? r.y + (v - ylim[0]) / (ylim[1] - ylim[0]) * r.h
+    : r.y + (1 - (v - ylim[0]) / (ylim[1] - ylim[0])) * r.h;
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillStyle = THEME.muted;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const v of niceTicks(xlim[0], xlim[1], 5)) {
+    const px = X(v);
+    if (px < r.x - 0.5 || px > r.x + r.w + 0.5) continue;
+    ctx.fillText(fmtTick(v), px, r.y + r.h + 4);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const v of niceTicks(ylim[0], ylim[1], 4)) {
+    const py = Y(v);
+    if (py < r.y - 0.5 || py > r.y + r.h + 0.5) continue;
+    ctx.fillText(fmtTick(v), r.x - 5, py);
+  }
+  if (opts.title) {
+    ctx.font = '600 12px Inter, sans-serif';
+    ctx.fillStyle = opts.titleColor || THEME.text;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(opts.title, r.x + 2, r.y - 5);
+  }
+  if (opts.note) {
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = PHASE_COLORS.peak;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText(opts.note, r.x + r.w - 2, r.y - 5);
+  }
+  if (opts.xlabel) {
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = THEME.muted;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(opts.xlabel, r.x + r.w / 2, r.y + r.h + 17);
+  }
+  return [X, Y];
+}
+
+function emptyPhasePanel(ctx, r, title, msg) {
+  phasePanel(ctx, r, [0, 1], [0, 1], { title });
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillStyle = THEME.muted;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(msg, r.x + r.w / 2, r.y + r.h / 2);
+}
+
+function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel) {
+  const pmax = Math.max(power[argmaxArr(power)], 1e-6);
+  const xlim = [0, freqs[freqs.length - 1]];
+  const ylim = [0, pmax * 1.12];
+  const P = 1 / freqs[peakI];
+  const [X, Y] = phasePanel(ctx, r, xlim, ylim,
+    { title, titleColor: color, note: `P = ${fmtPeriod(P)}`, xlabel });
+  // per-pixel max decimation keeps narrow peaks visible
+  const bins = new Float64Array(Math.max(2, Math.ceil(r.w)));
+  for (let i = 0; i < freqs.length; i++) {
+    const px = Math.min(bins.length - 1,
+      Math.max(0, Math.floor((freqs[i] - xlim[0]) / (xlim[1] - xlim[0]) * (bins.length - 1))));
+    if (power[i] > bins[px]) bins[px] = power[i];
+  }
+  ctx.save();
+  ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let px = 0; px < bins.length; px++) {
+    const x = r.x + px * (r.w / (bins.length - 1)), y = Y(bins[px]);
+    px ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = PHASE_COLORS.peak;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(X(freqs[peakI]), r.y);
+  ctx.lineTo(X(freqs[peakI]), r.y + r.h);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFoldedPanel(ctx, r, s, period, color, title, opts = {}) {
+  const t0 = Math.min(...s.t);
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < s.m.length; i++) {
+    lo = Math.min(lo, s.m[i] - s.e[i]);
+    hi = Math.max(hi, s.m[i] + s.e[i]);
+  }
+  const pad = 0.08 * (hi - lo || 1);
+  const [X, Y] = phasePanel(ctx, r, [0, 2], [lo - pad, hi + pad],
+    { title, titleColor: color, invertY: opts.invertY, xlabel: opts.xlabel, note: opts.note });
+  ctx.save();
+  ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+  // plot two phase cycles so the shape is easy to read
+  for (const off of [0, 1]) {
+    for (let i = 0; i < s.t.length; i++) {
+      const ph = ((s.t[i] - t0) / period) % 1;
+      const px = X(ph + off);
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, Y(s.m[i] - s.e[i]));
+      ctx.lineTo(px, Y(s.m[i] + s.e[i]));
+      ctx.stroke();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(px, Y(s.m[i]), 2.5, 0, 2 * Math.PI); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = THEME.border;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(X(1), r.y); ctx.lineTo(X(1), r.y + r.h); ctx.stroke();
+  ctx.restore();
+}
+
+let phaseData = null;   // cached periodogram results for the current star
+let phaseFactor = 1;    // fold-period multiplier (Period ×2 / ÷2 buttons)
+
+// the heavy pass: periodograms on the shared grid + their product (cached)
+function computePhase() {
+  const d = lastEpoch;
+  const bands = [
+    { label: 'G',  color: PHASE_COLORS.G, s: d.G },
+    { label: 'BP', color: PHASE_COLORS.BP, s: d.BP },
+    { label: 'RP', color: PHASE_COLORS.RP, s: d.RP },
+  ];
+  const tAll = [...d.G.t, ...d.BP.t, ...d.RP.t];
+  if (tAll.length < 12) throw new Error('not enough good epochs for period analysis');
+  const freqs = buildFreqGrid(tAll);
+
+  for (const b of bands) {
+    if (b.s.t.length >= 6) {
+      b.power = lombScargle(b.s.t, b.s.m, b.s.e, freqs);
+      b.peakI = argmaxArr(b.power);
+      b.period = 1 / freqs[b.peakI];
+    }
+  }
+  const withPower = bands.filter(b => b.power);
+  if (!withPower.length) throw new Error('no band has enough epochs (≥6 required)');
+
+  // product of the per-band periodograms (shared grid), normalized for display
+  const comb = new Float64Array(freqs.length);
+  for (let i = 0; i < freqs.length; i++) {
+    let v = 1;
+    for (const b of withPower) v *= b.power[i];
+    comb[i] = v;
+  }
+  const combPeakI = argmaxArr(comb);
+  const combPeriod = 1 / freqs[combPeakI];
+  const combMax = Math.max(comb[combPeakI], 1e-12);
+  for (let i = 0; i < comb.length; i++) comb[i] /= combMax;
+
+  phaseData = { id: d.id, bands, withPower, freqs, comb, combPeakI, combPeriod };
+}
+
+// the light pass: folds at peak period × phaseFactor and redraws all panels
+function drawPhase() {
+  const d = lastEpoch, pd = phaseData;
+  const f = phaseFactor;
+  const xf = f !== 1 ? ` (×${f})` : '';
+
+  // ---- layout: 4 rows × 2 columns ----
+  const dpr = window.devicePixelRatio || 1;
+  const W = phaseCanvas.clientWidth || 900, H = phaseCanvas.clientHeight || 780;
+  phaseCanvas.width = Math.round(W * dpr);
+  phaseCanvas.height = Math.round(H * dpr);
+  const ctx = phaseCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = THEME.panel;
+  ctx.fillRect(0, 0, W, H);
+
+  const mL = 52, mR = 16, gapX = 64, topPad = 34, rowGap = 48, botPad = 36, rows = 4;
+  const colW = (W - mL - mR - gapX) / 2;
+  const rowH = (H - topPad - botPad - rowGap * (rows - 1)) / rows;
+  const rectAt = (row, col) => ({
+    x: mL + col * (colW + gapX),
+    y: topPad + row * (rowH + rowGap),
+    w: colW, h: rowH,
+  });
+
+  pd.bands.forEach((b, row) => {
+    if (b.power) {
+      drawPeriodogramPanel(ctx, rectAt(row, 0), pd.freqs, b.power, b.peakI, b.color,
+        `${b.label} periodogram (${b.s.t.length} epochs)`);
+      drawFoldedPanel(ctx, rectAt(row, 1), b.s, b.period * f, b.color,
+        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`, { invertY: true });
+    } else {
+      emptyPhasePanel(ctx, rectAt(row, 0), `${b.label} periodogram`,
+        `not enough epochs (${b.s.t.length})`);
+      emptyPhasePanel(ctx, rectAt(row, 1), `${b.label} folded`, '—');
+    }
+  });
+
+  drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.combined,
+    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]');
+  if (d.color.t.length >= 3) {
+    drawFoldedPanel(ctx, rectAt(3, 1), d.color, pd.combPeriod * f, PHASE_COLORS.color,
+      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`, { invertY: false, xlabel: 'phase' });
+  } else {
+    emptyPhasePanel(ctx, rectAt(3, 1), 'BP−RP folded', 'not enough simultaneous BP/RP epochs');
+  }
+
+  $('phase-status').textContent =
+    `Best GLS periods — ` +
+    pd.bands.map(b => `${b.label}: ${b.period ? fmtPeriod(b.period) : '—'}`).join(', ') +
+    ` | combined: ${fmtPeriod(pd.combPeriod)}` +
+    (f !== 1 ? ` | folds drawn at ×${f} the peak periods` : '') +
+    ` | grid: ${pd.freqs.length.toLocaleString()} frequencies up to ${phaseFmax()} c/d ` +
+    `(P ≥ ${phaseHighRes ? '5 min' : '1 h'}), ${PHASE_OVERSAMPLE}× oversampled` +
+    (phaseHighRes ? ' [high-res]' : '');
+}
+
+function computeAndDrawPhase() {
+  if (!phaseData || !lastEpoch || phaseData.id !== lastEpoch.id) computePhase();
+  drawPhase();
+}
+
+$('cmd-phase-btn').addEventListener('click', () => {
+  if (!lastEpoch) return;
+  phaseFactor = 1;   // every fresh open starts at the GLS peak periods
+  $('phase-title').textContent = `Phase Analysis — Gaia DR3 ${lastEpoch.id}`;
+  $('phase-status').textContent = '';
+  $('phase-loading').style.display = 'flex';
+  $('phase-loading-text').textContent = 'Computing periodograms…';
+  openModal('phase-modal');
+  // let the modal paint before the (CPU-heavy) periodogram pass
+  setTimeout(() => {
+    try {
+      computeAndDrawPhase();
+      $('phase-loading').style.display = 'none';
+    } catch (e) {
+      $('phase-loading-text').textContent = `Could not compute phase analysis: ${e.message}`;
+    }
+  }, 40);
+});
+$('phase-close-btn').addEventListener('click', () => closeModal('phase-modal'));
+phaseModal.addEventListener('click', ev => { if (ev.target === phaseModal) closeModal('phase-modal'); });
+$('phase-png-btn').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = phaseCanvas.toDataURL('image/png');
+  a.download = (lastEpoch ? `gaia_dr3_${lastEpoch.id}_phase` : 'phase_analysis') + '.png';
+  a.click();
+});
+// harmonic re-folds: GLS often locks onto half (or twice) the true period,
+// e.g. eclipsing binaries — these re-fold instantly from the cached periodograms
+$('phase-double-btn').addEventListener('click', () => {
+  if (!phaseData) return;
+  phaseFactor = Math.min(phaseFactor * 2, 16);
+  drawPhase();
+});
+$('phase-half-btn').addEventListener('click', () => {
+  if (!phaseData) return;
+  phaseFactor = Math.max(phaseFactor / 2, 0.125);
+  drawPhase();
+});
+// high-res toggle: switching the grid changes every periodogram, so drop the
+// cache and recompute. The 5-min grid is CPU-heavy (~12× more frequencies), so
+// show the spinner and let it paint before the blocking pass.
+$('phase-hires-chk').addEventListener('change', ev => {
+  phaseHighRes = ev.target.checked;
+  if (!lastEpoch || !phaseModal.classList.contains('open')) return;
+  phaseData = null;   // invalidate cached periodograms; forces a recompute
+  phaseFactor = 1;    // peaks may shift to short-period harmonics; start at GLS peak
+  $('phase-loading-text').textContent = phaseHighRes
+    ? 'Computing high-res periodograms…' : 'Computing periodograms…';
+  $('phase-loading').style.display = 'flex';
+  setTimeout(() => {
+    try {
+      computeAndDrawPhase();
+      $('phase-loading').style.display = 'none';
+    } catch (e) {
+      $('phase-loading-text').textContent = `Could not compute phase analysis: ${e.message}`;
+    }
+  }, 40);
+});
+
+/* =====================================================
+   Multi-epoch photometry: light curves per band + color
+   ===================================================== */
+const mepModal = $('mep-modal');
+const mepCanvas = $('mep-canvas');
+
+function drawMEP() {
+  const d = lastEpoch;
+  const rows = [
+    { label: 'G',     color: PHASE_COLORS.G,     s: d.G,     invertY: true },
+    { label: 'BP',    color: PHASE_COLORS.BP,    s: d.BP,    invertY: true },
+    { label: 'RP',    color: PHASE_COLORS.RP,    s: d.RP,    invertY: true },
+    { label: 'BP−RP', color: PHASE_COLORS.color, s: d.color, invertY: false },
+  ];
+  const tAll = rows.flatMap(r => r.s.t);
+  if (!tAll.length) throw new Error('no epochs to plot');
+  let tmin = Math.min(...tAll), tmax = Math.max(...tAll);
+  const baseline = tmax - tmin;
+  const tpad = 0.02 * (baseline || 1);
+  tmin -= tpad; tmax += tpad;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = mepCanvas.clientWidth || 900, H = mepCanvas.clientHeight || 720;
+  mepCanvas.width = Math.round(W * dpr);
+  mepCanvas.height = Math.round(H * dpr);
+  const ctx = mepCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = THEME.panel;
+  ctx.fillRect(0, 0, W, H);
+
+  const mL = 64, mR = 20, topPad = 34, rowGap = 46, botPad = 42, n = rows.length;
+  const rowH = (H - topPad - botPad - rowGap * (n - 1)) / n;
+
+  rows.forEach((row, i) => {
+    const r = { x: mL, y: topPad + i * (rowH + rowGap), w: W - mL - mR, h: rowH };
+    if (!row.s.t.length) {
+      emptyPhasePanel(ctx, r, row.label, 'no epochs');
+      return;
+    }
+    let lo = Infinity, hi = -Infinity;
+    for (let k = 0; k < row.s.m.length; k++) {
+      lo = Math.min(lo, row.s.m[k] - row.s.e[k]);
+      hi = Math.max(hi, row.s.m[k] + row.s.e[k]);
+    }
+    const pad = 0.1 * (hi - lo || 1);
+    const [X, Y] = phasePanel(ctx, r, [tmin, tmax], [lo - pad, hi + pad], {
+      title: `${row.label} (${row.s.t.length} epochs)`,
+      titleColor: row.color,
+      invertY: row.invertY,
+      xlabel: i === n - 1 ? 'time [JD − 2455197.5, days]' : undefined,
+    });
+    ctx.save();
+    ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    for (let k = 0; k < row.s.t.length; k++) {
+      const px = X(row.s.t[k]);
+      ctx.strokeStyle = row.color; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, Y(row.s.m[k] - row.s.e[k]));
+      ctx.lineTo(px, Y(row.s.m[k] + row.s.e[k]));
+      ctx.stroke();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = row.color;
+      ctx.beginPath(); ctx.arc(px, Y(row.s.m[k]), 2.5, 0, 2 * Math.PI); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  });
+
+  $('mep-status').textContent =
+    rows.map(r => `${r.label}: ${r.s.t.length}`).join(' · ') +
+    ` epochs | baseline ${baseline.toFixed(1)} d`;
+}
+
+$('cmd-mep-btn').addEventListener('click', () => {
+  if (!lastEpoch) return;
+  $('mep-title').textContent = `Multi-Epoch Photometry — Gaia DR3 ${lastEpoch.id}`;
+  openModal('mep-modal');
+  try {
+    drawMEP();
+  } catch (e) {
+    $('mep-status').textContent = `Could not draw light curves: ${e.message}`;
+  }
+});
+$('mep-close-btn').addEventListener('click', () => closeModal('mep-modal'));
+mepModal.addEventListener('click', ev => { if (ev.target === mepModal) closeModal('mep-modal'); });
+$('mep-png-btn').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = mepCanvas.toDataURL('image/png');
+  a.download = (lastEpoch ? `gaia_dr3_${lastEpoch.id}_mep` : 'light_curves') + '.png';
+  a.click();
+});
+
+/* ---------------- Color legend bar ---------------- */
+(function buildLegend() {
+  const stops = [];
+  for (let i = 0; i <= 10; i++) {
+    const [r, g, b] = coolwarmR(i / 10);
+    stops.push(`rgb(${r},${g},${b}) ${i * 10}%`);
+  }
+  $('legend-bar').style.background = `linear-gradient(to right, ${stops.join(',')})`;
+})();
+
+/* =====================================================
+   Variable-star catalog overlays
+   -----------------------------------------------------
+   Highlight catalog members (Cepheids, RR Lyrae, …) on both plots, or restrict
+   the view to a catalog. Catalogs are whitespace tables with an ID column
+   (Gaia DR3 source id) plus RA/DEC; RR Lyrae adds an RR_TYPE column. Files are
+   fetched lazily on first use from the same folder as this page, so the
+   δ Scuti / Mira entries light up automatically once their file (named like the
+   others) is dropped in. Highlight respects the active ρ/p filters; "only" adds
+   the catalog as an extra filter on the visible set.
+   ===================================================== */
+// subtype highlight colors; RR Lyrae (column-backed) seeded here, file-backed
+// subtypes register their colors from the `subs` configs in the init loop below.
+const SL_SUBTYPE_COLORS = { RRab: '#ff5cf4', RRc: '#34d399', RRd: '#fbbf24' };
+const STAR_LISTS = [
+  { key: 'cepheid', label: 'Cepheids', file: 'list_Gaia_DR3_Cepheids', color: '#ffd700',
+    subs: [
+      { id: 'CepI',    label: 'Type I',    file: 'list_Gaia_DR3_Cepheids_Type_I',    color: '#ef4444' },
+      { id: 'CepII',   label: 'Type II',   file: 'list_Gaia_DR3_Cepheids_Type_II',   color: '#3b82f6' },
+      { id: 'CepAnom', label: 'Anomalous', file: 'list_Gaia_DR3_Cepheids_Anomalous', color: '#84cc16' },
+    ] },
+  { key: 'rrlyrae', label: 'RR Lyrae', file: 'list_Gaia_DR3_RRLyrae', color: '#22e3e3',
+    subtypeCol: 'RR_TYPE', subtypes: ['RRab', 'RRc', 'RRd'] },
+  { key: 'dsct', label: 'δ Scuti', file: 'list_Gaia_DR3_Delta_Scuti', color: '#ff8c1a',
+    subs: [
+      { id: 'SXP', label: 'SX Phoenicis', file: 'list_Gaia_DR3_SX_Phoenicis', color: '#14b8a6' },
+    ] },
+  { key: 'mira', label: 'Mira', file: 'list_Gaia_DR3_Mira', color: '#c084fc' },
+  { key: 'semireg', label: 'Semiregular', file: 'list_Gaia_DR3_Semiregular', color: '#f472b6',
+    subs: [
+      { id: 'SRA', label: 'SRA', file: 'list_Gaia_DR3_Semiregular_SRA', color: '#38bdf8' },
+      { id: 'SRB', label: 'SRB', file: 'list_Gaia_DR3_Semiregular_SRB', color: '#fb7185' },
+      { id: 'SRC', label: 'SRC', file: 'list_Gaia_DR3_Semiregular_SRC', color: '#a855f7' },
+      { id: 'SRD', label: 'SRD', file: 'list_Gaia_DR3_Semiregular_SRD', color: '#2dd4bf' },
+      { id: 'SRS', label: 'SRS', file: 'list_Gaia_DR3_Semiregular_SRS', color: '#e11d48' },
+    ] },
+  { key: 'blap', label: 'BLAPs', file: 'list_Gaia_DR3_BLAPs', color: '#4d8bff' },
+  { key: 'sdbv', label: 'sdBV', file: 'list_Gaia_DR3_rm_sdBV', color: '#22c55e' },
+];
+for (const L of STAR_LISTS) {
+  L.loaded = false; L.loading = false; L.missing = false;
+  L.catIds = null; L.subtypeById = null;
+  L.members = []; L.membersBySubtype = {};
+  L.highlight = false; L.restrict = false; L.activeSubtypes = new Set();
+  // File-backed subtypes: each sub is its own catalog file. Derive the shared
+  // `subtypes` id list the rest of the UI uses, register colors, and seed state.
+  if (L.subs) {
+    L.subtypes = L.subs.map(s => s.id);
+    for (const s of L.subs) {
+      SL_SUBTYPE_COLORS[s.id] = s.color;
+      L.membersBySubtype[s.id] = [];
+      s.loaded = false; s.loading = false; s.missing = false; s.catIds = null;
+    }
+  } else if (L.subtypes) {
+    for (const st of L.subtypes) L.membersBySubtype[st] = [];
+  }
+}
+let slIdIndex = null;       // Map<sourceId, datasetIndex>, rebuilt on each data load
+let slRestrictSet = null;   // Set<datasetIndex> while any "only" is active, else null
+
+function invalidateOverviewCache() { overviewCacheKey = ''; }
+
+function slBuildIdIndex() {
+  slIdIndex = new Map();
+  for (let i = 0; i < state.ids.length; i++) slIdIndex.set(state.ids[i], i);
+}
+// intersect a catalog's IDs with the loaded dataset, bucketing by subtype
+function slComputeMembers(L) {
+  L.members = []; L.membersBySubtype = {};
+  if (L.subtypes) for (const st of L.subtypes) L.membersBySubtype[st] = [];
+  if (!L.catIds || !slIdIndex) return;
+  for (const id of L.catIds) {
+    const gi = slIdIndex.get(id);
+    if (gi === undefined) continue;
+    L.members.push(gi);
+    if (L.subtypeById) {
+      const st = L.subtypeById.get(id);
+      if (L.membersBySubtype[st]) L.membersBySubtype[st].push(gi);
+    }
+  }
+}
+function slParseCatalog(L, text) {
+  const lines = text.split('\n');
+  let h = 0;
+  while (h < lines.length && !lines[h].trim()) h++;            // skip blank leading lines
+  const header = lines[h].trim().split(/\s+/);
+  let idc = header.findIndex(c => /^(id|source_?id|gaia\w*)$/i.test(c));
+  if (idc < 0) idc = 0;
+  const stc = L.subtypeCol ? header.indexOf(L.subtypeCol) : -1;
+  const catIds = new Set();
+  const subtypeById = stc >= 0 ? new Map() : null;
+  for (let i = h + 1; i < lines.length; i++) {
+    const ln = lines[i];
+    if (!ln) continue;
+    const f = ln.trim().split(/\s+/);
+    if (f.length <= idc || !f[idc]) continue;
+    const id = parseId(f[idc]);   // BigInt, to match the dataset's BigInt ids
+    catIds.add(id);
+    if (subtypeById && f.length > stc) subtypeById.set(id, f[stc]);
+  }
+  L.catIds = catIds; L.subtypeById = subtypeById;
+}
+async function slEnsureLoaded(L) {
+  if (L.loaded || L.loading) return L.loaded;
+  L.loading = true; L.missing = false; slRefreshUI();
+  try {
+    const resp = await fetch(L.file);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    slParseCatalog(L, await resp.text());
+    if (!slIdIndex) slBuildIdIndex();
+    slComputeMembers(L);
+    L.loaded = true;
+    setMessage(`Loaded ${L.label}: ${L.catIds.size.toLocaleString()} catalog IDs, ` +
+      `${L.members.length.toLocaleString()} present in the current dataset.`);
+  } catch (e) {
+    L.missing = true;
+    setMessage(`Could not load the ${L.label} list from “${L.file}”: ${e.message}. ` +
+      `Add a whitespace table named “${L.file}” (columns ID RA DEC` +
+      `${L.subtypeCol ? ' ' + L.subtypeCol : ''}) next to index.html and serve over HTTP to enable it.`);
+  } finally {
+    L.loading = false; slRefreshUI();
+  }
+  return L.loaded;
+}
+
+// intersect a file-backed subtype's IDs with the loaded dataset
+function slComputeSubMembers(L, sub) {
+  const arr = [];
+  L.membersBySubtype[sub.id] = arr;
+  if (!sub.catIds || !slIdIndex) return;
+  for (const id of sub.catIds) {
+    const gi = slIdIndex.get(id);
+    if (gi !== undefined) arr.push(gi);
+  }
+}
+// lazily fetch a file-backed subtype's own catalog file on first use
+async function slEnsureSubLoaded(L, sub) {
+  if (sub.loaded || sub.loading) return sub.loaded;
+  sub.loading = true; sub.missing = false; slRefreshUI();
+  try {
+    const resp = await fetch(sub.file);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const tmp = {};
+    slParseCatalog(tmp, await resp.text());   // reuse the catalog parser as-is
+    sub.catIds = tmp.catIds;
+    if (!slIdIndex) slBuildIdIndex();
+    slComputeSubMembers(L, sub);
+    sub.loaded = true;
+    setMessage(`Loaded ${L.label} / ${sub.label}: ${sub.catIds.size.toLocaleString()} catalog IDs, ` +
+      `${L.membersBySubtype[sub.id].length.toLocaleString()} present in the current dataset.`);
+  } catch (e) {
+    sub.missing = true;
+    setMessage(`Could not load the ${L.label} / ${sub.label} list from “${sub.file}”: ${e.message}. ` +
+      `Add a whitespace table named “${sub.file}” (columns ID RA DEC) next to index.html and serve over HTTP to enable it.`);
+  } finally {
+    sub.loading = false; slRefreshUI();
+  }
+  return sub.loaded;
+}
+
+// effective dataset indices for a list, honoring any RR subtype selection
+function slListIndices(L) {
+  if (L.subtypes && L.activeSubtypes.size) {
+    const out = [];
+    for (const st of L.subtypes) if (L.activeSubtypes.has(st)) {
+      for (const gi of L.membersBySubtype[st]) out.push(gi);
+    }
+    return out;
+  }
+  return L.members;
+}
+// highlight render groups: each {color, idx[]} drawn in its own color
+function slHighlightGroups() {
+  const groups = [];
+  for (const L of STAR_LISTS) {
+    if (!L.highlight || !L.loaded) continue;
+    if (L.subtypes && L.activeSubtypes.size) {
+      for (const st of L.subtypes) if (L.activeSubtypes.has(st)) {
+        groups.push({ color: SL_SUBTYPE_COLORS[st] || L.color, idx: L.membersBySubtype[st] });
+      }
+    } else {
+      groups.push({ color: L.color, idx: L.members });
+    }
+  }
+  return groups;
+}
+function slRebuildRestrict() {
+  const any = STAR_LISTS.some(L => L.restrict && L.loaded);
+  if (!any) { slRestrictSet = null; return; }
+  const s = new Set();
+  for (const L of STAR_LISTS) if (L.restrict && L.loaded) {
+    for (const gi of slListIndices(L)) s.add(gi);
+  }
+  slRestrictSet = s;
+}
+// signature folded into the overview cache key so it re-bakes only when needed
+function slSignature() {
+  return slHighlightGroups().map(g => g.color + g.idx.length).join('|');
+}
+// draw each group's member segments; (ox,oy) offsets for the offscreen cache,
+// clipWindow restricts to the detail window. Honors the active visibility mask.
+function slDrawGroups(ctx, plot, ox, oy, clipWindow) {
+  const groups = slHighlightGroups();
+  if (!groups.length) return;
+  const mask = state.visMask;
+  let xlo, xhi, ylo, yhi;
+  if (clipWindow) {
+    xlo = Math.min(plot.xlim[0], plot.xlim[1]); xhi = Math.max(plot.xlim[0], plot.xlim[1]);
+    ylo = Math.min(plot.ylim[0], plot.ylim[1]); yhi = Math.max(plot.ylim[0], plot.ylim[1]);
+  }
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = clipWindow ? 2.6 : 1.8;
+  const seg = [0, 0, 0, 0];
+  for (const g of groups) {
+    ctx.strokeStyle = g.color;
+    for (const i of g.idx) {
+      if (mask && !mask[i]) continue;
+      if (clipWindow) {
+        const cx = state.xFull[i], cy = state.yFull[i];
+        if (cx < xlo || cx > xhi || cy < ylo || cy > yhi) continue;
+      }
+      segEnds(i, seg);
+      ctx.beginPath();
+      ctx.moveTo(plot.xToPx(seg[0]) - ox, plot.yToPx(seg[1]) - oy);
+      ctx.lineTo(plot.xToPx(seg[2]) - ox, plot.yToPx(seg[3]) - oy);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function slOnDataLoaded() {
+  slBuildIdIndex();
+  for (const L of STAR_LISTS) {
+    if (L.loaded) slComputeMembers(L);   // resets membersBySubtype; recompute loaded subs after
+    if (L.subs) for (const sub of L.subs) if (sub.loaded) slComputeSubMembers(L, sub);
+  }
+  slRebuildRestrict();
+  slRefreshUI();
+}
+
+/* ---- catalog UI wiring ---- */
+function slAnyActive() { return STAR_LISTS.some(L => L.highlight || L.restrict); }
+function slRefreshUI() {
+  for (const L of STAR_LISTS) {
+    const hl = $('sl-hl-' + L.key), only = $('sl-only-' + L.key), cnt = $('sl-count-' + L.key);
+    hl.classList.toggle('active', L.highlight);
+    hl.classList.toggle('loading', L.loading);
+    hl.classList.toggle('missing', L.missing);
+    only.classList.toggle('active', L.restrict);
+    cnt.textContent = L.loading ? '…' : L.missing ? 'no file'
+      : L.loaded ? L.members.length.toLocaleString() : '';
+    if (L.subtypes) {
+      const subs = $('sl-subs-' + L.key);
+      subs.hidden = !(L.loaded && (L.highlight || L.restrict));
+      for (const st of L.subtypes) {
+        const btn = subs.querySelector(`[data-sub="${st}"]`);
+        btn.classList.toggle('active', L.activeSubtypes.has(st));
+        const sub = L.subs ? L.subs.find(s => s.id === st) : null;
+        const c = $('sl-count-' + st);
+        if (sub) {   // file-backed: count/loading reflect the sub's own file
+          btn.classList.toggle('loading', sub.loading);
+          btn.classList.toggle('missing', sub.missing);
+          if (c) c.textContent = sub.loading ? '…' : sub.missing ? 'no file'
+            : sub.loaded ? (L.membersBySubtype[st] || []).length.toLocaleString() : '';
+        } else if (c) {   // column-backed (RR Lyrae): counts come with the parent file
+          c.textContent = L.loaded ? (L.membersBySubtype[st] || []).length.toLocaleString() : '';
+        }
+      }
+    }
+  }
+  $('sl-clear').disabled = !slAnyActive();
+}
+for (const L of STAR_LISTS) {
+  $('sl-hl-' + L.key).addEventListener('click', async () => {
+    if (!L.loaded && !(await slEnsureLoaded(L))) return;   // load on first use; bail if missing
+    L.highlight = !L.highlight;
+    invalidateOverviewCache();
+    slRefreshUI();
+    requestRedraw();
+  });
+  $('sl-only-' + L.key).addEventListener('click', async () => {
+    if (!L.loaded && !(await slEnsureLoaded(L))) return;
+    L.restrict = !L.restrict;
+    slRebuildRestrict();
+    invalidateOverviewCache();
+    slRefreshUI();
+    applyFilters();   // recomputes the visible set and redraws
+  });
+  if (L.subtypes) {
+    const subs = $('sl-subs-' + L.key);
+    for (const st of L.subtypes) {
+      const sub = L.subs ? L.subs.find(s => s.id === st) : null;
+      subs.querySelector(`[data-sub="${st}"]`).addEventListener('click', async () => {
+        if (L.activeSubtypes.has(st)) {
+          L.activeSubtypes.delete(st);
+        } else {
+          // file-backed subtypes load their own file on first use; bail if missing
+          if (sub && !sub.loaded && !(await slEnsureSubLoaded(L, sub))) return;
+          L.activeSubtypes.add(st);
+        }
+        slRebuildRestrict();
+        invalidateOverviewCache();
+        slRefreshUI();
+        if (L.restrict) applyFilters(); else requestRedraw();
+      });
+    }
+  }
+}
+$('sl-clear').addEventListener('click', () => {
+  for (const L of STAR_LISTS) { L.highlight = false; L.restrict = false; L.activeSubtypes.clear(); }
+  slRestrictSet = null;
+  invalidateOverviewCache();
+  slRefreshUI();
+  applyFilters();
+});
+slRefreshUI();
+
+/* ---------------- Resize handling ---------------- */
+function handleResize() {
+  overview.resize();
+  detail.resize();
+  overviewCacheKey = '';
+  requestRedraw();
+}
+new ResizeObserver(handleResize).observe($('plot-panel'));
+window.addEventListener('resize', handleResize);
+
+/* ---------------- Boot: fetch the data file ---------------- */
+// throttled progress readout shared by the auto-load, file-picker and drop paths
+let lastLoadUpdate = 0;
+function loadProgress(bytesRead, totalBytes, rows) {
+  const now = performance.now();
+  if (now - lastLoadUpdate < 200) return;
+  lastLoadUpdate = now;
+  const mb = (bytesRead / 1048576).toFixed(0);
+  const pct = totalBytes ? ` · ${(100 * bytesRead / totalBytes).toFixed(0)}%` : '';
+  $('boot-msg').textContent =
+    `Streaming & parsing… ${rows.toLocaleString()} rows kept · ${mb} MB read${pct}`;
+}
+
+async function boot() {
+  overview.resize();
+  detail.resize();
+  try {
+    const resp = await fetch(DATA_FILE);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.body) throw new Error('this browser cannot stream the response');
+    $('boot-msg').textContent = 'Streaming table…';
+    const total = +resp.headers.get('content-length') || 0;
+    const d = await streamParseSpearman(resp.body, total, loadProgress);
+    if (!d.ids.length) throw new Error('no rows passed the quality filter');
+    ingestSpearmanData(d);
+    $('boot-overlay').style.display = 'none';
+    setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${DATA_FILE}. ` +
+      `Click a line in the Detail View to fetch its Gaia epoch photometry.`);
+  } catch (e) {
+    // Likely opened via file:// or the table isn't next to this file — offer manual load
+    $('boot-overlay').querySelector('.spinner').style.display = 'none';
+    $('boot-title').textContent = 'Dataset not auto-loaded';
+    $('boot-msg').innerHTML =
+      `Could not fetch <code>${DATA_FILE}</code> (${e.message}).<br><br>` +
+      `If you opened this file directly from disk, browsers block local file reads. ` +
+      `Either serve the folder with <code>python3 -m http.server 8000</code> and open ` +
+      `<code>http://localhost:8000/index.html</code>, or load the table manually:`;
+    const btn = document.createElement('button');
+    btn.textContent = 'Browse for data table…';
+    btn.addEventListener('click', () => $('spearman-file-input').click());
+    $('boot-overlay').appendChild(btn);
+
+    // also accept drag & drop
+    const ov = $('boot-overlay');
+    ov.addEventListener('dragover', ev => { ev.preventDefault(); ov.classList.add('dragover'); });
+    ov.addEventListener('dragleave', () => ov.classList.remove('dragover'));
+    ov.addEventListener('drop', async ev => {
+      ev.preventDefault();
+      ov.classList.remove('dragover');
+      const file = ev.dataTransfer.files[0];
+      if (!file) return;
+      try {
+        setMessage(`Streaming ${file.name}…`);
+        const d = await streamParseSpearman(file.stream(), file.size, loadProgress);
+        if (!d.ids.length) throw new Error('no rows passed the quality filter');
+        ingestSpearmanData(d);
+        ov.style.display = 'none';
+        setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${file.name}`);
+      } catch (err) {
+        setMessage(`Error loading dropped file: ${err.message}`);
+      }
+    });
+  }
+}
+boot();
+</script>
+</body>
+</html>

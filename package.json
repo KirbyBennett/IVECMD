@@ -1,0 +1,42 @@
+{
+  "name": "itcmd",
+  "version": "1.0.0",
+  "description": "An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulastors and further analysis tools are available once a line has been clicked on.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.kirbybennett.itcmd",
+    "productName": "ITCMD",
+    "asar": false,
+    "mac": {
+      "target": "dmg"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "lists.zip"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KirbyBennett/ITCMD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/KirbyBennett/ITCMD/issues"
+  },
+  "homepage": "https://github.com/KirbyBennett/ITCMD#readme",
+  "devDependencies": {
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "extract-zip": "^2.0.1"
+  }
+}

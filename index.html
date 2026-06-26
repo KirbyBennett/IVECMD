@@ -725,6 +725,10 @@ const THEME = {
 };
 
 const LIST_NAME = 'RANKED';
+// Folder (relative to index.html) that holds all the unzipped data tables.
+// Keep the trailing slash. To load files from next to index.html instead,
+// set this to '' (empty string).
+const DATA_DIR = '';
 const DATA_FILE = `list_${LIST_NAME}_Scatter_Slope_SPEARMAN`;
 const TAP_URL = 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync';
 
@@ -3409,7 +3413,7 @@ async function slEnsureLoaded(L) {
   if (L.loaded || L.loading) return L.loaded;
   L.loading = true; L.missing = false; slRefreshUI();
   try {
-    const resp = await fetch(L.file);
+    const resp = await fetch(DATA_DIR + L.file);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     slParseCatalog(L, await resp.text());
     if (!slIdIndex) slBuildIdIndex();
@@ -3443,7 +3447,7 @@ async function slEnsureSubLoaded(L, sub) {
   if (sub.loaded || sub.loading) return sub.loaded;
   sub.loading = true; sub.missing = false; slRefreshUI();
   try {
-    const resp = await fetch(sub.file);
+    const resp = await fetch(DATA_DIR + sub.file);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const tmp = {};
     slParseCatalog(tmp, await resp.text());   // reuse the catalog parser as-is
@@ -3648,7 +3652,7 @@ async function boot() {
   overview.resize();
   detail.resize();
   try {
-    const resp = await fetch(DATA_FILE);
+    const resp = await fetch(DATA_DIR + DATA_FILE);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     if (!resp.body) throw new Error('this browser cannot stream the response');
     $('boot-msg').textContent = 'Streaming table…';

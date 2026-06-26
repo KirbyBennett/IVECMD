@@ -36,7 +36,8 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
    ```
    http://localhost:8000/index.html
    ```
-4. Once all lists have loaded, press **`I`** to invert the Y-axis.
+4. The diagram opens with the Y-axis already inverted (the conventional CMD
+   orientation). Press **`I`** to toggle it back if you prefer.
 
 ---
 
@@ -55,11 +56,16 @@ Shows the stars within the selected region. Drag to pan, scroll to zoom around t
 - Click on the overview to recenter.
 - Use **`+`** and **`−`** keys to zoom the Detail View in and out; **`0`** resets the zoom.
 - To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold **Shift** for x-only / **Alt** for y-only zoom inside the plot.
+- In the epoch-CMD dialog, the **X −/+** and **Y −/+** buttons in the header zoom each axis on its own without needing the scroll wheel.
 - Dragging the CMD's axis strips pans that axis alone.
 
 ### Filters
 
-Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters.
+Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
+
+### Highlight Lists
+
+Toggle a built-in catalog (Cepheids, RR Lyrae, δ Scuti, …) to highlight its members on both plots, or use **only** to restrict the view to it. Under **Custom IDs**, use **Load ID list…** or **Paste IDs…** to supply your own list of Gaia DR3 source IDs — a bare list (one per line or comma/space separated) or a whole table with a header and extra columns like RA/DEC, which are ignored. Matching sources are highlighted in **white**.
 
 ### Inspecting a Star
 

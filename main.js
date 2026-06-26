@@ -27,6 +27,9 @@ let win
 
 function createWindow() {
   win = new BrowserWindow({ width: 1100, height: 750 })
+  // Drop the reference when the window is gone so it can be GC'd and so the
+  // app doesn't try to talk to a destroyed window.
+  win.on('closed', () => { win = null })
 }
 
 function resolveAsset(requestPath) {
@@ -141,10 +144,15 @@ app.whenReady().then(async () => {
   win.loadURL('app://bundle/index.html')
 })
 
+// Fully quit when the window is closed (including the red traffic-light button
+// on macOS, where the default behavior is to keep the app alive). This makes
+// the red X behave like a real "quit" so no orphaned process lingers.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// Belt-and-suspenders: if the renderer window is closed directly, make sure the
+// whole app tears down rather than sitting headless in the background.
+app.on('before-quit', () => {
+  if (win && !win.isDestroyed()) win.removeAllListeners('closed')
 })

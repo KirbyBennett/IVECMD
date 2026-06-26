@@ -343,6 +343,16 @@ input[type=range]::-moz-range-thumb {
   transition: border-color .12s, color .12s;
 }
 #cmd-links a:hover { border-color: var(--accent); color: var(--accent-hover); }
+#cmd-zoom-controls { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+#cmd-zoom-controls .cmd-zoom-axis {
+  color: var(--muted); font-size: 11px; font-weight: 600;
+  padding: 0 2px 0 6px;
+}
+#cmd-zoom-controls .cmd-zoom-btn {
+  width: 26px; height: 26px; padding: 0;
+  font-size: 15px; line-height: 1; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 
 .spinner {
   width: 42px; height: 42px;
@@ -361,6 +371,18 @@ input[type=range]::-moz-range-thumb {
   color: var(--muted);
 }
 #cmd-plot-wrap { position: relative; }
+
+/* ---------- Custom ID list modal ---------- */
+#custom-modal-inner { width: 520px; max-width: 92vw; }
+#custom-textarea {
+  width: 100%; height: 240px; resize: vertical;
+  background: var(--panel-alt); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; line-height: 1.5;
+}
+#custom-textarea:focus { outline: none; border-color: var(--accent); }
+#custom-textarea::placeholder { color: var(--muted); }
 
 /* ---------- Initial loading / drop zone ---------- */
 #boot-overlay {
@@ -428,7 +450,7 @@ input[type=range]::-moz-range-thumb {
       <input type="range" id="poe-slider" min="0" max="50" step="1" value="10">
       <div class="field-label" id="plx-label">Min parallax: off</div>
       <input type="range" id="plx-slider" min="0" max="20" step="0.1" value="0">
-      <button id="filter-reset-btn" class="small">Clear filters</button>
+      <button id="filter-reset-btn" class="small">Reset Filters</button>
     </div>
 
     <div class="card">
@@ -494,11 +516,17 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button class="sl-list" disabled title="Parameter-based custom lists are not configured yet"><span class="sl-swatch" style="background:#8b949e"></span>Custom…</button>
-        <button class="sl-only small" disabled>only</button>
+        <button id="sl-hl-custom" class="sl-list" disabled title="Load a list of Gaia DR3 source IDs to enable"><span class="sl-swatch" style="background:#ffffff"></span>Custom IDs<span class="sl-count" id="sl-count-custom"></span></button>
+        <button id="sl-only-custom" class="sl-only small" disabled title="Show only the custom IDs">only</button>
+      </div>
+      <div class="sl-row">
+        <button id="sl-custom-load" class="small" style="flex:1" title="Load a text/CSV file of Gaia DR3 source IDs">Load ID list…</button>
+        <button id="sl-custom-paste" class="small" style="flex:1" title="Paste Gaia DR3 source IDs">Paste IDs…</button>
+        <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
       </div>
 
       <button id="sl-clear" class="small" disabled>Clear all lists</button>
+      <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
     </div>
 
     <div class="card">
@@ -605,8 +633,9 @@ input[type=range]::-moz-range-thumb {
       <ul>
         <li><b>Overview Plot:</b> Displays every star in the dataset. Click or drag the green rectangle to change the detail view. Scroll on the overview to grow/shrink the rectangle.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
-        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. Dragging the CMD's axis strips pans that axis alone.</li>
-        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters.</li>
+        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in its header to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
+        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
+        <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
         <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts.</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>5-min high-res grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators).</li>
@@ -662,6 +691,14 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-header">
       <h2 id="cmd-title">CMD</h2>
       <div id="cmd-links"></div>
+      <div id="cmd-zoom-controls" title="Zoom each axis independently. You can also scroll over an axis, or hold Shift (x-only) / Alt (y-only) while scrolling on the plot.">
+        <span class="cmd-zoom-axis">X</span>
+        <button class="small cmd-zoom-btn" id="cmd-zoomx-out" title="Zoom out the color (X) axis">−</button>
+        <button class="small cmd-zoom-btn" id="cmd-zoomx-in" title="Zoom in the color (X) axis">+</button>
+        <span class="cmd-zoom-axis">Y</span>
+        <button class="small cmd-zoom-btn" id="cmd-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button>
+        <button class="small cmd-zoom-btn" id="cmd-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button>
+      </div>
       <button class="small" id="cmd-reset-zoom-btn" style="display:none">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
       <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Folding</button>
@@ -692,6 +729,29 @@ input[type=range]::-moz-range-thumb {
       <div id="phase-loading"><div class="spinner"></div><div id="phase-loading-text">Computing periodograms…</div></div>
     </div>
     <div id="phase-status"></div>
+  </div>
+</div>
+
+<!-- ================= Custom Gaia ID list modal ================= -->
+<div class="modal-backdrop" id="custom-modal">
+  <div class="modal" id="custom-modal-inner">
+    <div class="modal-header">
+      <h2>Custom Gaia DR3 ID list</h2>
+      <button class="small" id="custom-close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="muted" style="line-height:1.55; margin-bottom:12px;">
+        Paste Gaia DR3 source IDs below — one per line, or separated by commas or
+        spaces. A header row and extra columns (such as RA/DEC) are ignored, so you
+        can paste a whole table. Matching sources are highlighted in
+        <b style="color:#fff;">white</b> on both plots.
+      </p>
+      <textarea id="custom-textarea" spellcheck="false" placeholder="6917529027641081856&#10;5085309376076485760&#10;…"></textarea>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button id="custom-apply-btn" style="flex:1">Highlight these IDs</button>
+        <button id="custom-file-btn" class="small">Load from file…</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1003,8 +1063,9 @@ const state = {
   parallax: null, poe: null,     // parallax (mas) and parallax / parallax_error
   cbucket: null, abucket: null,  // per-source color & alpha buckets (Uint8Array)
   visMask: null,                 // Uint8Array, 1 where the source passes the filters
-  // view
-  invertY: false,
+  // view — start with the magnitude (Y) axis inverted so the diagram loads in
+  // the conventional astronomical orientation (brighter/smaller mag at the top).
+  invertY: true,
   thickness: 2,
   showHRRef: false,
   alphaMode: 'sig',              // 'sig' | 'rho' | 'const' | 'comb'
@@ -1015,6 +1076,10 @@ const state = {
   filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minParallax: 0 },
   xColName: 'avg_B_R', yColName: 'avg_G',
 };
+// The filter values present when the app first loads. "Reset Filters" returns
+// every control to exactly these positions (NOT all-zero), so the slider knobs
+// land back where they started rather than fully wide open.
+const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minParallax: 0 };
 
 const overview = new Plot($('overview-canvas'), 'Overview');
 const detail = new Plot($('detail-canvas'), 'Detail View');
@@ -1840,13 +1905,34 @@ function updateSelectionInfo() {
 }
 $('clear-sel-btn').addEventListener('click', clearSelection);
 
-/* ---------------- Gaia DR3 source search ---------------- */
+/* ---------------- Gaia DR3 source search ----------------
+   Robust to pasted decoration: a leading "Gaia DR3"/"DR3"/"source_id ="
+   label, surrounding quotes/whitespace, and stray commas. We pull the longest
+   run of digits out of the input and look it up. Lookup uses the prebuilt
+   id→index map when a catalog has forced it to exist, otherwise a typed-array
+   scan (fast enough for a one-off search and avoids building a big map). */
+function findSourceIndex(qb) {
+  if (slIdIndex) {
+    const gi = slIdIndex.get(qb);
+    return gi === undefined ? -1 : gi;
+  }
+  return state.ids.indexOf(qb);   // ids are stored as BigInt
+}
 function searchSource() {
-  const q = $('search-input').value.trim().replace(/^gaia\s*(e?dr3)?\s*/i, '');
-  if (!q) { setMessage('Enter a Gaia DR3 source ID to search.'); return; }
+  const raw = $('search-input').value;
+  if (!state.ids || state.ids.length === 0) {
+    setMessage('The dataset is still loading — try the search again once it finishes.');
+    return;
+  }
+  // Strip the catalog label words first (so the "3" in "DR3" isn't kept), then
+  // take the longest digit run as the candidate source ID.
+  const stripped = raw.replace(/gaia/ig, ' ').replace(/e?dr3/ig, ' ').replace(/source/ig, ' ');
+  const runs = stripped.match(/\d{3,}/g);
+  const q = runs && runs.length ? runs.sort((a, b) => b.length - a.length)[0] : '';
+  if (!q) { setMessage('Enter a numeric Gaia DR3 source ID to search.'); return; }
   let qb;
-  try { qb = BigInt(q); } catch { setMessage(`'${q}' is not a numeric Gaia DR3 source ID.`); return; }
-  const idx = state.ids.indexOf(qb);   // ids are stored as BigInt
+  try { qb = BigInt(q); } catch { setMessage(`'${raw.trim()}' is not a valid Gaia DR3 source ID.`); return; }
+  const idx = findSourceIndex(qb);
   if (idx === -1) {
     setMessage(`Gaia DR3 ${q} is not in the loaded dataset ` +
       `(${state.ids.length.toLocaleString()} sources). Note: only sources with ` +
@@ -1868,7 +1954,7 @@ function searchSource() {
   if (!state.visIdx.includes(idx)) {
     setMessage(`Found Gaia DR3 ${q} (ρ = ${state.coeff[idx].toFixed(3)}, ` +
       `p = ${state.p[idx].toExponential(2)}) and centered the view, but it is ` +
-      `hidden by the active filters — clear or loosen them to display it.`);
+      `hidden by the active filters — reset or loosen them to display it.`);
     requestRedraw();
     return;
   }
@@ -1950,7 +2036,8 @@ window.addEventListener('keydown', ev => {
   else if (ev.key === 's' || ev.key === 'S') { exportCSV(state.selection, 'selected sources'); }
   else if (ev.key === '/') { ev.preventDefault(); $('search-input').focus(); }
   else if (ev.key === 'Escape') {
-    if ($('mep-modal').classList.contains('open')) closeModal('mep-modal');
+    if ($('custom-modal').classList.contains('open')) closeModal('custom-modal');
+    else if ($('mep-modal').classList.contains('open')) closeModal('mep-modal');
     else if ($('phase-modal').classList.contains('open')) closeModal('phase-modal');
     else if ($('cmd-modal').classList.contains('open')) $('cmd-close-btn').click();
     else if ($('help-modal').classList.contains('open')) { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; }
@@ -1971,6 +2058,8 @@ $('invert-y-btn').addEventListener('click', () => {
   overviewCacheKey = '';
   requestRedraw();
 });
+// Reflect the initial inverted-Y default in the button's pressed appearance.
+$('invert-y-btn').classList.toggle('toggled', state.invertY);
 
 $('reset-view-btn').addEventListener('click', () => {
   setOverviewLimitsLines();
@@ -2018,21 +2107,30 @@ $('plx-slider').addEventListener('input', ev => {
     : `Min parallax: ${state.filter.minParallax.toFixed(2)} mas`;
   scheduleFilters();
 });
-$('filter-reset-btn').addEventListener('click', () => {
-  $('sig-slider').value = 0;
-  $('rho-slider').value = 0;
-  $('poe-slider').value = 0;
-  $('plx-slider').value = 0;
-  state.filter.minLogP = 0;
-  state.filter.minAbsRho = 0;
-  state.filter.minPoe = 0;
-  state.filter.minParallax = 0;
-  $('sig-label').textContent = 'Significance: all (any p)';
-  $('rho-label').textContent = 'Min |ρ|: 0.00';
-  $('poe-label').textContent = 'Min parallax / error: off';
-  $('plx-label').textContent = 'Min parallax: off';
-  setDirFilter('all');   // also calls applyFilters
-});
+// Reset Filters: put every control back exactly where it sits on first load
+// (significance 1e-4, |ρ| 0, parallax/error 10, parallax off, direction All).
+function resetFilters() {
+  $('sig-slider').value = DEFAULT_FILTER.minLogP;
+  $('rho-slider').value = DEFAULT_FILTER.minAbsRho;
+  $('poe-slider').value = DEFAULT_FILTER.minPoe;
+  $('plx-slider').value = DEFAULT_FILTER.minParallax;
+  state.filter.minLogP = DEFAULT_FILTER.minLogP;
+  state.filter.minAbsRho = DEFAULT_FILTER.minAbsRho;
+  state.filter.minPoe = DEFAULT_FILTER.minPoe;
+  state.filter.minParallax = DEFAULT_FILTER.minParallax;
+  $('sig-label').textContent = DEFAULT_FILTER.minLogP === 0
+    ? 'Significance: all (any p)'
+    : `Significance: p ≤ 1e-${DEFAULT_FILTER.minLogP}`;
+  $('rho-label').textContent = `Min |ρ|: ${DEFAULT_FILTER.minAbsRho.toFixed(2)}`;
+  $('poe-label').textContent = DEFAULT_FILTER.minPoe === 0
+    ? 'Min parallax / error: off'
+    : `Min parallax / error: ${DEFAULT_FILTER.minPoe}`;
+  $('plx-label').textContent = DEFAULT_FILTER.minParallax === 0
+    ? 'Min parallax: off'
+    : `Min parallax: ${DEFAULT_FILTER.minParallax.toFixed(2)} mas`;
+  setDirFilter(DEFAULT_FILTER.dir);   // also calls applyFilters
+}
+$('filter-reset-btn').addEventListener('click', resetFilters);
 
 /* ---------------- Help modal ---------------- */
 function openModal(id) { $(id).classList.add('open'); }
@@ -2376,6 +2474,26 @@ window.addEventListener('mouseup', () => {
 });
 cmdCanvas.addEventListener('dblclick', () => { cmdView = null; redrawCMD(); });
 $('cmd-reset-zoom-btn').addEventListener('click', () => { cmdView = null; redrawCMD(); });
+
+// Explicit per-axis zoom buttons in the CMD header: zoom one axis (or both)
+// about the current view center. scale<1 zooms in, scale>1 zooms out.
+function cmdZoomAxis(zoomX, zoomY, scale) {
+  if (!lastCMD) return;
+  const v = cmdView || cmdAutoExtent(lastCMD);
+  const cx = (v.xmin + v.xmax) / 2, cy = (v.ymin + v.ymax) / 2;
+  cmdView = {
+    xmin: zoomX ? cx - (cx - v.xmin) * scale : v.xmin,
+    xmax: zoomX ? cx + (v.xmax - cx) * scale : v.xmax,
+    ymin: zoomY ? cy - (cy - v.ymin) * scale : v.ymin,
+    ymax: zoomY ? cy + (v.ymax - cy) * scale : v.ymax,
+  };
+  redrawCMD();
+}
+const CMD_ZOOM_IN = 0.8, CMD_ZOOM_OUT = 1.25;
+$('cmd-zoomx-in').addEventListener('click',  () => cmdZoomAxis(true,  false, CMD_ZOOM_IN));
+$('cmd-zoomx-out').addEventListener('click', () => cmdZoomAxis(true,  false, CMD_ZOOM_OUT));
+$('cmd-zoomy-in').addEventListener('click',  () => cmdZoomAxis(false, true,  CMD_ZOOM_IN));
+$('cmd-zoomy-out').addEventListener('click', () => cmdZoomAxis(false, true,  CMD_ZOOM_OUT));
 
 async function showEpochCMD(gi) {
   const id = state.ids[gi];
@@ -3345,6 +3463,9 @@ const STAR_LISTS = [
     ] },
   { key: 'blap', label: 'BLAPs', file: 'list_Gaia_DR3_BLAPs', color: '#4d8bff' },
   { key: 'sdbv', label: 'sdBV', file: 'list_Gaia_DR3_rm_sdBV', color: '#22c55e' },
+  // User-supplied list: IDs come from a pasted/loaded file rather than a catalog
+  // file on disk, and members are highlighted in a unique color (white).
+  { key: 'custom', label: 'Custom IDs', file: null, color: '#ffffff', custom: true },
 ];
 for (const L of STAR_LISTS) {
   L.loaded = false; L.loading = false; L.missing = false;
@@ -3410,6 +3531,7 @@ function slParseCatalog(L, text) {
   L.catIds = catIds; L.subtypeById = subtypeById;
 }
 async function slEnsureLoaded(L) {
+  if (L.custom) return L.loaded;   // custom IDs are supplied by the user, never fetched
   if (L.loaded || L.loading) return L.loaded;
   L.loading = true; L.missing = false; slRefreshUI();
   try {
@@ -3623,6 +3745,106 @@ $('sl-clear').addEventListener('click', () => {
   slRefreshUI();
   applyFilters();
 });
+
+/* ---- Custom user-supplied Gaia ID list ----
+   IDs come from a pasted block or a loaded text/CSV file rather than a catalog
+   file. Matching sources are highlighted in white, and the list otherwise
+   behaves like the built-in catalogs ("only" restrict, clear-all, re-index on
+   dataset reload). */
+const customList = STAR_LISTS.find(L => L.custom);
+
+// Pull Gaia DR3 source IDs out of arbitrary text. We split on field separators
+// (whitespace, commas, semicolons) and keep tokens that are pure digits of
+// plausible source-id length. RA/DEC and other floats contain a '.', so they
+// stay as a single token that fails the all-digit test — meaning a full
+// "ID RA DEC" table parses down to just its ID column, and a bare list of IDs
+// (one per line or comma-separated) parses too.
+function parseGaiaIdText(text) {
+  const ids = new Set();
+  for (const tok of text.split(/[\s,;]+/)) {
+    if (/^\d{8,}$/.test(tok)) { try { ids.add(BigInt(tok)); } catch {} }
+  }
+  return ids;
+}
+
+// Custom buttons are only usable once IDs have been supplied.
+function slRefreshCustom() {
+  const loaded = customList.loaded;
+  $('sl-hl-custom').disabled = !loaded;
+  $('sl-only-custom').disabled = !loaded;
+  $('sl-custom-clear').disabled = !loaded;
+}
+
+function applyCustomIds(idSet, sourceLabel) {
+  if (!idSet || idSet.size === 0) {
+    setMessage('No valid Gaia DR3 source IDs were found in the input.');
+    return false;
+  }
+  customList.catIds = idSet;
+  customList.subtypeById = null;
+  if (!slIdIndex && state.ids.length) slBuildIdIndex();
+  slComputeMembers(customList);
+  customList.loaded = true;
+  customList.missing = false;
+  customList.highlight = true;            // show them straight away
+  slRebuildRestrict();
+  slRefreshCustom();
+  invalidateOverviewCache();
+  slRefreshUI();
+  requestRedraw();
+  setMessage(
+    `Custom list${sourceLabel ? ' (' + sourceLabel + ')' : ''}: ${idSet.size.toLocaleString()} IDs supplied, ` +
+    `${customList.members.length.toLocaleString()} present in the dataset and highlighted in white. ` +
+    `Toggle the “Custom IDs” button to show/hide them.`);
+  return true;
+}
+
+function clearCustomIds() {
+  customList.catIds = null;
+  customList.subtypeById = null;
+  customList.members = [];
+  customList.loaded = false;
+  customList.highlight = false;
+  customList.restrict = false;
+  slRebuildRestrict();
+  slRefreshCustom();
+  invalidateOverviewCache();
+  slRefreshUI();
+  applyFilters();                          // a "only" restriction may have changed the view
+  setMessage('Custom ID list cleared.');
+}
+
+function loadCustomFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (applyCustomIds(parseGaiaIdText(String(reader.result || '')), file.name)) closeModal('custom-modal');
+  };
+  reader.onerror = () => setMessage(`Could not read “${file.name}”.`);
+  reader.readAsText(file);
+}
+
+// sidebar controls
+$('sl-custom-load').addEventListener('click', () => $('custom-ids-file-input').click());
+$('sl-custom-paste').addEventListener('click', () => {
+  openModal('custom-modal');
+  setTimeout(() => $('custom-textarea').focus(), 0);
+});
+$('sl-custom-clear').addEventListener('click', clearCustomIds);
+$('custom-ids-file-input').addEventListener('change', ev => {
+  loadCustomFromFile(ev.target.files && ev.target.files[0]);
+  ev.target.value = '';                    // let the same file be picked again
+});
+
+// paste modal controls
+$('custom-close-btn').addEventListener('click', () => closeModal('custom-modal'));
+$('custom-modal').addEventListener('click', ev => { if (ev.target === $('custom-modal')) closeModal('custom-modal'); });
+$('custom-file-btn').addEventListener('click', () => $('custom-ids-file-input').click());
+$('custom-apply-btn').addEventListener('click', () => {
+  applyCustomIds(parseGaiaIdText($('custom-textarea').value), 'pasted');
+});
+
+slRefreshCustom();
 slRefreshUI();
 
 /* ---------------- Resize handling ---------------- */

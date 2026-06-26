@@ -1,6 +1,6 @@
 {
   "name": "itcmd",
-  "version": "1.0.0",
+  "version": "0.1.3",
   "description": "An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulastors and further analysis tools are available once a line has been clicked on.",
   "main": "main.js",
   "scripts": {

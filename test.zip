@@ -1,0 +1,163 @@
+
+
+
+
+<!DOCTYPE html>
+<html class="cover-page" lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="google-site-verification" content="5fPGCLllnWrvFxH9QWI0l1TadV7byeEvfPcyK2VkS_s"/>
+    <meta name="google-site-verification" content="Rp5zp04IKW-s1IbpTOGB7Z6XY60oloZD5C3kTM-AiY4"/>
+
+    
+    
+    <meta name="generator" content="InvenioRDM 15.0"/>
+
+    
+    
+    
+      
+      
+      <title>Zenodo</title>
+      <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico"/>
+          <link rel="apple-touch-icon" sizes="120x120" href="/static/apple-touch-icon-120.png"/>
+          <link rel="apple-touch-icon" sizes="152x152" href="/static/apple-touch-icon-152.png"/>
+          <link rel="apple-touch-icon" sizes="167x167" href="/static/apple-touch-icon-167.png"/>
+          <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon-180.png"/>
+      <link rel="stylesheet" href="/static/dist/css/3526.c3b2db38ff3a2b05af5c.css" />
+      <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+      <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      <![endif]-->
+  </head>
+
+  <body data-invenio-config='{"isMathJaxEnabled": "//cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js?config=TeX-AMS-MML_HTMLorMML"}'  class="ui grid doubling middle center aligned cover-page" itemscope itemtype="http://schema.org/WebPage" data-spy="scroll" data-target=".scrollspy-target">
+  <main class="sixteen wide column centered">
+
+    <div class="ui centered grid container">
+      <div class="sixteen wide mobile fourteen wide tablet ten wide computer centered column">
+        
+          <div class="ui basic very padded segment">
+                <a href="/">
+                  <img class="ui centered medium image"
+                      src="/static/images/invenio-rdm.svg"
+                      alt="Zenodo"/>
+                </a>
+          </div>
+        
+          <div class="container">
+            <div class="row panel-container">
+              
+<div class="ui centered grid container ml-0-mobile mr-0-mobile">
+  <div class="sixteen wide mobile fourteen wide tablet ten wide computer center aligned column p-0">
+    <div class="ui very rounded segments">
+      <div class="ui very padded segment">
+          <h1 class="ui medium primary header rel-mb-1">Log in to account</h1>
+  
+  <div class="ui form">
+    
+      
+<div class="field">
+  <a class="fluid ui basic button large"
+     href="/oauth/login/orcid/?next=/records/20931723/files/lists.zip?download%3D1">
+    <i class="orcid icon"></i> Sign in with ORCID
+  </a>
+</div>
+
+    
+      
+<div class="field">
+  <a class="fluid ui basic button large"
+     href="/oauth/login/github/?next=/records/20931723/files/lists.zip?download%3D1">
+    <i class="github icon"></i> Sign in with GitHub
+  </a>
+</div>
+
+    
+      
+<div class="field">
+  <a class="fluid ui basic button large"
+     href="/oauth/login/openaire_aai/?next=/records/20931723/files/lists.zip?download%3D1">
+    <i class="openaire_aai icon"></i> Sign in with OpenAIRE
+  </a>
+</div>
+
+    
+  </div>
+      <div class="ui horizontal divider">
+        OR
+      </div>
+  
+  
+              <form
+                class="credentials-form"
+                action="/login/" 
+                method="POST" 
+                name="login_user_form"
+              >
+                <input id="next" name="next" type="hidden" value="/records/20931723/files/lists.zip?download=1">
+<input id="csrf_token" name="csrf_token" type="hidden" value="ImEyNTA0NzczYWUzYjc5YTVjOTEzZTg2ZTlhY2U3ZmI4NmU1YWQwYjMi.aj6V5Q.HuXp06GngXUvQslALs3-UX7tDB8">
+                
+
+                
+  <div class="field ">
+    <div class="ui right icon input">
+      <i class="icon user" aria-hidden="true" ></i>
+      <input autofocus="" class="" id="email" name="email" placeholder="Email Address" required type="email" value="">
+    </div>
+  </div>
+
+                
+  <div class="field ">
+    <div class="ui right icon input">
+      <i class="icon lock" aria-hidden="true" ></i>
+      <input class="" id="password" name="password" placeholder="Password" required type="password" value="">
+    </div>
+  </div>
+
+                <button type="submit" class="ui fluid large labeled icon primary button">
+                  <i class="icon sign-in" aria-hidden="true"></i> Log in
+                </button>
+              </form>
+
+      </div>
+
+      <div class="ui secondary segment rel-pt-2 rel-pb-2">
+            <p class="ui small header text-muted">
+              
+                New to Zenodo?
+               
+                <a href="/signup/">Sign up</a>
+            </p>
+            <a href="https://about.zenodo.org/privacy-policy/">Privacy notice</a>
+      </div>
+    </div>
+  <div class="ui one column centered grid">
+    <div class="row">
+      <a class="ui inverted header tiny"
+          href="/lost-password/">Forgot password?</a>
+    </div>
+    <div class="row">
+      <a class="ui inverted header tiny"
+        href="/confirm" class="text-muted">Resend confirmation email</a>
+    </div>
+  </div>
+  </div>
+</div>
+
+            </div>
+          </div>
+      </div>
+    </div>
+    
+    
+  </main>
+    <script src="/static/dist/js/manifest.ec76293c5d6cb855f2fc.js"></script>
+<script src="/static/dist/js/73.d36ab5eb8bad45d9f605.js"></script>
+<script src="/static/dist/js/3526.c83023c3a397510b7cf6.js"></script>
+<script src="/static/dist/js/theme.6554d10424da2308eccc.js"></script>
+  </body>
+</html>

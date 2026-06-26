@@ -7,20 +7,17 @@ const { execFile, spawn } = require('child_process')
 // ============================================================
 //  CONFIG
 // ============================================================
-const ZIP_NAME = 'lists.zip'                               // bundled zip filename
-const DATA_FILENAME = 'list_RANKED_Scatter_Slope_SPEARMAN' // sanity-check file inside lists/
-const DATA_VERSION = '1'                                   // bump whenever lists.zip changes
+const ZIP_NAME      = 'lists.zip'
+const DATA_FILENAME = 'list_RANKED_Scatter_Slope_SPEARMAN'
+const DATA_VERSION  = '1'
 // ============================================================
 
-const zipPath = [
-  path.join(process.resourcesPath || '', ZIP_NAME),
-  path.join(__dirname, ZIP_NAME)
-].find(p => fs.existsSync(p))
+const cacheDir   = path.join(app.getPath('userData'), 'data')
+const dataFile   = path.join(cacheDir, DATA_FILENAME)
+const markerPath = path.join(cacheDir, '.data-version')
 
-const cacheDir      = path.join(app.getPath('userData'), 'data')
-const listsCacheDir = path.join(cacheDir, 'lists')
-const dataFile      = path.join(listsCacheDir, DATA_FILENAME)
-const markerPath    = path.join(cacheDir, '.data-version')
+// Look for the zip in the user's Downloads folder
+const zipPath = path.join(app.getPath('downloads'), ZIP_NAME)
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
@@ -43,13 +40,14 @@ function loadingPage(message) {
     <html><body style="margin:0;height:100vh;display:flex;flex-direction:column;
       align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;
       font-family:-apple-system,sans-serif;text-align:center;padding:0 40px">
-      <div style="font-size:18px;max-width:540px">${message}</div>
+      <div style="font-size:18px;max-width:560px;line-height:1.6">${message}</div>
       <div id="pct" style="font-size:42px;margin-top:16px"></div>
     </body></html>`)
 }
 
 function setPct(text) {
-  if (win) win.webContents.executeJavaScript(
+  if (!win) return
+  win.webContents.executeJavaScript(
     `var e=document.getElementById('pct'); if(e) e.textContent=${JSON.stringify(text)};`
   ).catch(() => {})
 }
@@ -58,12 +56,9 @@ function alreadyExtracted() {
   try {
     return fs.existsSync(dataFile) &&
            fs.readFileSync(markerPath, 'utf8').trim() === DATA_VERSION
-  } catch {
-    return false
-  }
+  } catch { return false }
 }
 
-// Read the zip's total UNCOMPRESSED size (bytes) from its directory — fast.
 function uncompressedBytes(zip) {
   return new Promise((resolve) => {
     execFile('/usr/bin/unzip', ['-l', zip], { maxBuffer: 64 * 1024 * 1024 }, (err, stdout) => {
@@ -75,7 +70,6 @@ function uncompressedBytes(zip) {
   })
 }
 
-// Current size of the destination folder, in bytes.
 function folderBytes(dir) {
   return new Promise((resolve) => {
     execFile('/usr/bin/du', ['-sk', dir], (err, stdout) => {
@@ -86,7 +80,6 @@ function folderBytes(dir) {
   })
 }
 
-// Extract with macOS's native, C-based ditto (far faster than JS unzip).
 function extractNative(zip, destDir) {
   return new Promise((resolve, reject) => {
     fs.mkdirSync(destDir, { recursive: true })
@@ -94,29 +87,37 @@ function extractNative(zip, destDir) {
     let stderr = ''
     child.stderr.on('data', d => { stderr += d })
     child.on('error', reject)
-    child.on('close', code => code === 0 ? resolve() : reject(new Error('ditto exited ' + code + ': ' + stderr)))
+    child.on('close', code =>
+      code === 0 ? resolve() : reject(new Error('ditto exited ' + code + ': ' + stderr)))
   })
 }
 
 app.whenReady().then(async () => {
   protocol.handle('app', (request) => {
-    const reqPath  = decodeURIComponent(new URL(request.url).pathname)
+    const reqPath = decodeURIComponent(new URL(request.url).pathname)
     return net.fetch(url.pathToFileURL(resolveAsset(reqPath)).toString())
   })
 
   createWindow()
 
   if (!alreadyExtracted()) {
-    try {
-      if (!zipPath) throw new Error(`${ZIP_NAME} was not found in the app`)
-      win.loadURL(loadingPage('Preparing data and extracting the dataset. This happens once on first launch.'))
-      await new Promise(r => setTimeout(r, 250)) // let the page render before we poll
+    // Check the zip exists in Downloads before trying anything
+    if (!fs.existsSync(zipPath)) {
+      win.loadURL(loadingPage(
+        `To get started, download <strong>${ZIP_NAME}</strong> and save it to your <strong>Downloads</strong> folder.<br><br>` +
+        `Then reopen the app and it will extract the data automatically.`
+      ))
+      return
+    }
 
-      fs.rmSync(listsCacheDir, { recursive: true, force: true })
+    try {
+      win.loadURL(loadingPage('Preparing data — extracting the dataset. This happens once on first launch.'))
+      await new Promise(r => setTimeout(r, 250))
+
+      fs.rmSync(cacheDir, { recursive: true, force: true })
       fs.mkdirSync(cacheDir, { recursive: true })
 
       const total = await uncompressedBytes(zipPath)
-      // Extract the zip's own top-level lists/ folder into cacheDir.
       const job = extractNative(zipPath, cacheDir)
 
       const poll = setInterval(async () => {
@@ -130,8 +131,9 @@ app.whenReady().then(async () => {
       setPct('100%')
       fs.writeFileSync(markerPath, DATA_VERSION)
     } catch (e) {
-      win.loadURL(loadingPage('Could not prepare the dataset: ' + e.message +
-        '<br><br>Try reopening the app. If it persists, reinstall.'))
+      win.loadURL(loadingPage(
+        'Could not extract the dataset: ' + e.message +
+        '<br><br>Make sure <strong>' + ZIP_NAME + '</strong> is in your Downloads folder and reopen the app.'))
       return
     }
   }

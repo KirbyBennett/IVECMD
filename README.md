@@ -7,7 +7,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 ## Table of Contents
 
 - [Quickstart](#quickstart)
-  - [Downloading .dmg](#downloading-.dmg)
+  - [Downloading the App](#downloading-the-app)
   - [Github repo access](#pulling-github-repo)
 - [How to Use](#how-to-use)
   - [Overview Plot](#overview-plot)
@@ -29,7 +29,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 
 ## Quickstart
 
-### Downloading .dmg
+### Downloading the App
 Downloading the .dmg version of the app is simpler in my opinion because it will run on your machine. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
 
 1. Navigate to the "Releases" tab on the right side of the screen.

@@ -40,9 +40,9 @@ Downloading the .dmg version of the app is simpler in my opinion because it will
   ```
   xattr -dr com.apple.quarantine /Applications/ITCMD.app
   ```
-6. Enjoy exploring the Gaia CMD!
-   **NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
-6. Run the app on your machine!
+6. Run the app on your machine and enjoy exploring the Gaia CMD!
+
+**NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
 
 ### Pulling Github repo
 This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, it is less reccomended because there are more steps to get the code up and running.

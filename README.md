@@ -41,6 +41,7 @@ Downloading the .dmg version of the app is simpler in my opinion because it will
   xattr -dr com.apple.quarantine /Applications/ITCMD.app
   ```
 **NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
+
 6. Run the app on your machine and enjoy exploring the Gaia CMD!
 
 ### Pulling Github repo

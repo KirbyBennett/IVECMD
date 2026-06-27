@@ -1,6 +1,6 @@
 {
   "name": "itcmd",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulastors and further analysis tools are available once a line has been clicked on.",
   "main": "main.js",
   "scripts": {
@@ -10,9 +10,15 @@
   "build": {
     "appId": "com.kirbybennett.itcmd",
     "productName": "ITCMD",
+    "icon": "AppIcon.icns",
     "asar": false,
     "mac": {
-      "target": "dmg"
+      "icon": "AppIcon.icns",
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    },
+    "dmg": {
+      "title": "ITCMD ${version}"
     },
     "files": [
       "main.js",

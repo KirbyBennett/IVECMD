@@ -37,7 +37,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
    http://localhost:8000/index.html
    ```
 4. The diagram opens with the Y-axis already inverted (the conventional CMD
-   orientation). Press **`I`** to toggle it back if you prefer.
+   orientation).
 
 ---
 
@@ -45,7 +45,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 
 ### Overview Plot
 
-Displays every star in the dataset. Click or drag the green rectangle to change the detail view. Scroll on the overview to grow or shrink the rectangle.
+Displays every star in the dataset. Click an empty spot (or drag the green rectangle) to move the detail view. Scroll to zoom the overview about the cursor, use the corner **X**/**Y** buttons to zoom either axis on its own, and drag the background to pan around and explore the whole diagram.
 
 ### Detail View
 
@@ -56,12 +56,12 @@ Shows the stars within the selected region. Drag to pan, scroll to zoom around t
 - Click on the overview to recenter.
 - Use **`+`** and **`−`** keys to zoom the Detail View in and out; **`0`** resets the zoom.
 - To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold **Shift** for x-only / **Alt** for y-only zoom inside the plot.
-- In the epoch-CMD dialog, the **X −/+** and **Y −/+** buttons in the header zoom each axis on its own without needing the scroll wheel.
+- Every interactive plot (Overview, Detail View, and the epoch CMD) has floating **X −/+** and **Y −/+** buttons in its top-right corner that zoom each axis on its own without needing the scroll wheel.
 - Dragging the CMD's axis strips pans that axis alone.
 
 ### Filters
 
-Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
+Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. A parallax-quality cut and a distance range are also available — the min and max distance share a single dual-thumb slider whose thumbs can't pass each other (an inline message appears if they touch). Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
 
 ### Highlight Lists
 
@@ -69,7 +69,7 @@ Toggle a built-in catalog (Cepheids, RR Lyrae, δ Scuti, …) to highlight its m
 
 ### Inspecting a Star
 
-Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or **Reset Zoom**) to restore the full view.
+Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. If VizieR's TAP service is down (it has occasional outages), the app automatically falls back to the ESA Gaia archive for the same data — the CMD status bar notes `data: ESA Gaia archive` when this happens. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or **Reset Zoom**) to restore the full view.
 
 ### Light Curves
 
@@ -85,7 +85,7 @@ Inside the CMD dialog, the **Phase Folding** button:
 
 **Period ×2 / ÷2** re-folds everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries.
 
-The standard grid searches down to 1-hour periods. Tick **5-min high-res grid** to extend the search to 5-minute periods with a much denser frequency grid *(slower — only needed for short-period pulsators)*.
+The standard grid searches down to 1-hour periods. Tick **high-res freq grid** to extend the search to 5-minute periods with a much denser frequency grid *(slower — only needed for short-period pulsators)*.
 
 ### Searching
 
@@ -107,7 +107,6 @@ Enter a filename and use the **Export** card to download the visible, selected, 
 | `F` | Fit all data in the Detail View |
 | `0` | Reset to the default window |
 | `+` / `−` | Zoom the Detail View in / out |
-| `I` | Invert the Y axis |
 | `/` | Focus the search box |
 | `H` | Toggle this help |
 | `S` | Export the current selection |

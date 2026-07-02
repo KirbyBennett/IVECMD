@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net } = require('electron')
+const { app, BrowserWindow, protocol, net, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const url = require('url')
@@ -99,6 +99,24 @@ app.whenReady().then(async () => {
   protocol.handle('app', (request) => {
     const reqPath = decodeURIComponent(new URL(request.url).pathname)
     return net.fetch(url.pathToFileURL(resolveAsset(reqPath)).toString())
+  })
+
+  // Inject permissive CORS headers for the astronomy data services the page
+  // queries. The ESA Gaia archive (the fallback when VizieR is down) sends no
+  // Access-Control-Allow-Origin header at all, and VizieR's outage/error pages
+  // drop theirs too — without this the renderer can never read those responses,
+  // so every failure collapses into an opaque "Failed to fetch".
+  const DATA_HOSTS = new Set(['tapvizier.cds.unistra.fr', 'tapvizier.u-strasbg.fr', 'gea.esac.esa.int'])
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    let host = ''
+    try { host = new URL(details.url).hostname } catch {}
+    if (!DATA_HOSTS.has(host)) return callback({})
+    const responseHeaders = { ...details.responseHeaders }
+    for (const k of Object.keys(responseHeaders)) {
+      if (k.toLowerCase() === 'access-control-allow-origin') delete responseHeaders[k]
+    }
+    responseHeaders['Access-Control-Allow-Origin'] = ['*']
+    callback({ responseHeaders })
   })
 
   createWindow()

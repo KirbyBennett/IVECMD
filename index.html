@@ -202,6 +202,30 @@ input[type=range]::-moz-range-thumb {
   border: none;
 }
 
+/* ---------- Dual-thumb range (min/max distance) ---------- */
+.dual-range { position: relative; height: 22px; margin: 2px 0; }
+.dual-range .track {
+  position: absolute; left: 0; right: 0; top: 8px; height: 6px;
+  border-radius: 3px; background: var(--border);
+}
+.dual-range .track-fill {
+  position: absolute; top: 8px; height: 6px; border-radius: 3px;
+  background: var(--accent);
+}
+/* two native sliders stacked; only their thumbs catch the pointer, so clicks on
+   empty track fall through to whichever thumb sits underneath */
+.dual-range input[type=range] {
+  position: absolute; left: 0; top: 0; width: 100%; height: 22px;
+  margin: 0; background: transparent; pointer-events: none;
+}
+.dual-range input[type=range]::-webkit-slider-thumb {
+  pointer-events: auto; border: 2px solid var(--panel);
+}
+.dual-range input[type=range]::-moz-range-thumb {
+  pointer-events: auto; border: 2px solid var(--panel);
+}
+.range-error { color: #f0883e; font-size: 12px; margin-top: 3px; }
+
 .field-label { color: var(--text); font-size: 13px; }
 .msg { color: var(--text); line-height: 1.45; word-break: break-word; }
 .muted { color: var(--muted); }
@@ -343,16 +367,28 @@ input[type=range]::-moz-range-thumb {
   transition: border-color .12s, color .12s;
 }
 #cmd-links a:hover { border-color: var(--accent); color: var(--accent-hover); }
-#cmd-zoom-controls { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
-#cmd-zoom-controls .cmd-zoom-axis {
-  color: var(--muted); font-size: 11px; font-weight: 600;
-  padding: 0 2px 0 6px;
+/* Floating zoom controls overlaid on each interactive plot. Anchored inside the
+   plot's top-right corner (not a header), so they never shift when other buttons
+   such as "Reset Zoom" appear or disappear, and don't hug the panel's outer edge.
+   The default inset matches the overview/detail plot margins (MARGIN.t 34, r 12);
+   .zoom-overlay-cmd shifts to the CMD's larger margins (M.t 48, r 20). */
+.zoom-overlay {
+  position: absolute; top: 42px; right: 20px;
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 6; width: fit-content;
 }
-#cmd-zoom-controls .cmd-zoom-btn {
+.zoom-overlay-cmd { top: 56px; right: 28px; }
+.zoom-overlay .zrow { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.zoom-overlay .zaxis { color: var(--muted); font-size: 11px; font-weight: 600; padding-right: 2px; }
+.zoom-overlay .zbtn {
   width: 26px; height: 26px; padding: 0;
-  font-size: 15px; line-height: 1; font-weight: 600;
+  font-size: 16px; line-height: 1; font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(22,27,34,0.82); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  transition: border-color .12s, color .12s, background .12s;
 }
+.zoom-overlay .zbtn:hover { border-color: var(--accent); color: var(--accent-hover); background: rgba(33,38,45,0.95); }
 
 .spinner {
   width: 42px; height: 42px;
@@ -448,8 +484,14 @@ input[type=range]::-moz-range-thumb {
       <input type="range" id="rho-slider" min="0" max="0.95" step="0.05" value="0">
       <div class="field-label" id="poe-label">Min parallax / error: 10</div>
       <input type="range" id="poe-slider" min="0" max="50" step="1" value="10">
-      <div class="field-label" id="plx-label">Min parallax: off</div>
-      <input type="range" id="plx-slider" min="0" max="20" step="0.1" value="0">
+      <div class="field-label" id="dist-label">Distance: off</div>
+      <div class="dual-range" id="dist-range">
+        <div class="track"></div>
+        <div class="track-fill" id="dist-fill"></div>
+        <input type="range" id="dmin-slider" min="0" max="10000" step="50" value="0">
+        <input type="range" id="dmax-slider" min="0" max="10000" step="50" value="10000">
+      </div>
+      <div class="range-error" id="dist-error" hidden>Min and max distance are touching — they can't overlap.</div>
       <button id="filter-reset-btn" class="small">Reset Filters</button>
     </div>
 
@@ -580,7 +622,6 @@ input[type=range]::-moz-range-thumb {
 
     <div class="card">
       <div class="section-title">Actions</div>
-      <button id="invert-y-btn">Invert Y-Axis</button>
       <button id="reset-view-btn">Reset View</button>
       <button id="undo-view-btn" disabled>Undo View</button>
       <button id="redo-view-btn" disabled>Redo View</button>
@@ -608,8 +649,20 @@ input[type=range]::-moz-range-thumb {
       <button id="fullscreen-btn" title="Toggle fullscreen">⛶</button>
     </div>
     <div id="plot-panel">
-      <div class="plot-half"><canvas id="overview-canvas"></canvas></div>
-      <div class="plot-half"><canvas id="detail-canvas" tabindex="0"></canvas></div>
+      <div class="plot-half">
+        <canvas id="overview-canvas"></canvas>
+        <div class="zoom-overlay" id="ov-zoom" title="Zoom the overview per axis. You can also scroll to zoom about the cursor, or drag the background to pan and explore.">
+          <div class="zrow"><span class="zaxis">X</span><button class="zbtn" id="ov-zoomx-out" title="Zoom out the color (X) axis">−</button><button class="zbtn" id="ov-zoomx-in" title="Zoom in the color (X) axis">+</button></div>
+          <div class="zrow"><span class="zaxis">Y</span><button class="zbtn" id="ov-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button><button class="zbtn" id="ov-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button></div>
+        </div>
+      </div>
+      <div class="plot-half">
+        <canvas id="detail-canvas" tabindex="0"></canvas>
+        <div class="zoom-overlay" id="dt-zoom" title="Zoom the detail view per axis">
+          <div class="zrow"><span class="zaxis">X</span><button class="zbtn" id="dt-zoomx-out" title="Zoom out the color (X) axis">−</button><button class="zbtn" id="dt-zoomx-in" title="Zoom in the color (X) axis">+</button></div>
+          <div class="zrow"><span class="zaxis">Y</span><button class="zbtn" id="dt-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button><button class="zbtn" id="dt-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button></div>
+        </div>
+      </div>
       <div id="boot-overlay">
         <div class="spinner"></div>
         <h2 id="boot-title">Loading dataset…</h2>
@@ -631,14 +684,14 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-body">
       <h3>Quick start</h3>
       <ul>
-        <li><b>Overview Plot:</b> Displays every star in the dataset. Click or drag the green rectangle to change the detail view. Scroll on the overview to grow/shrink the rectangle.</li>
+        <li><b>Overview Plot:</b> Displays every star in the dataset. Click an empty spot (or drag the green rectangle) to move the detail view. Scroll to zoom about the cursor, use the corner <b>X</b>/<b>Y</b> buttons to zoom either axis, and drag the background to pan around and explore the whole diagram.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
-        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in its header to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
+        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
         <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts.</li>
-        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>5-min high-res grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators).</li>
+        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators).</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV, or either panel as a PNG.</li>
@@ -646,7 +699,7 @@ input[type=range]::-moz-range-thumb {
       <h3>Keyboard shortcuts</h3>
       <ul>
         <li><code>F</code> fit all data in the Detail View · <code>0</code> reset to the default window</li>
-        <li><code>+</code>/<code>−</code> zoom the detail window · <code>I</code> invert the Y axis</li>
+        <li><code>+</code>/<code>−</code> zoom the detail window</li>
         <li><code>/</code> focus the search box · <code>H</code> toggle this help</li>
         <li><code>S</code> export the current selection · <code>Esc</code> clear selection / close dialogs</li>
         <li><code>Ctrl/Cmd+Z</code> undo view · <code>Ctrl/Cmd+Shift+Z</code> redo view</li>
@@ -691,14 +744,6 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-header">
       <h2 id="cmd-title">CMD</h2>
       <div id="cmd-links"></div>
-      <div id="cmd-zoom-controls" title="Zoom each axis independently. You can also scroll over an axis, or hold Shift (x-only) / Alt (y-only) while scrolling on the plot.">
-        <span class="cmd-zoom-axis">X</span>
-        <button class="small cmd-zoom-btn" id="cmd-zoomx-out" title="Zoom out the color (X) axis">−</button>
-        <button class="small cmd-zoom-btn" id="cmd-zoomx-in" title="Zoom in the color (X) axis">+</button>
-        <span class="cmd-zoom-axis">Y</span>
-        <button class="small cmd-zoom-btn" id="cmd-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button>
-        <button class="small cmd-zoom-btn" id="cmd-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button>
-      </div>
       <button class="small" id="cmd-reset-zoom-btn" style="display:none">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
       <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Folding</button>
@@ -707,6 +752,10 @@ input[type=range]::-moz-range-thumb {
     </div>
     <div id="cmd-plot-wrap">
       <canvas id="cmd-canvas"></canvas>
+      <div class="zoom-overlay zoom-overlay-cmd" id="cmd-zoom-controls" title="Zoom each axis independently. You can also scroll over an axis, or hold Shift (x-only) / Alt (y-only) while scrolling on the plot.">
+        <div class="zrow"><span class="zaxis">X</span><button class="zbtn" id="cmd-zoomx-out" title="Zoom out the color (X) axis">−</button><button class="zbtn" id="cmd-zoomx-in" title="Zoom in the color (X) axis">+</button></div>
+        <div class="zrow"><span class="zaxis">Y</span><button class="zbtn" id="cmd-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button><button class="zbtn" id="cmd-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button></div>
+      </div>
       <div id="cmd-loading"><div class="spinner"></div><div id="cmd-loading-text">Querying VizieR…</div></div>
     </div>
     <div id="cmd-status"></div>
@@ -718,7 +767,7 @@ input[type=range]::-moz-range-thumb {
   <div class="modal">
     <div class="modal-header">
       <h2 id="phase-title">Phase Analysis</h2>
-      <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>5-min high-res grid</label>
+      <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>high-res freq grid</label>
       <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
       <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
       <button class="small" id="phase-png-btn">Download PNG</button>
@@ -1073,13 +1122,16 @@ const state = {
   detailIdx: [],                 // visible indices currently inside the detail window
   selection: [],                 // multi-selection (indices)
   hover: -1,
-  filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minParallax: 0 },
+  filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: 10000 },
   xColName: 'avg_B_R', yColName: 'avg_G',
 };
+// Distance (pc) slider span. minDist <= 0 means "no lower bound"; maxDist at the
+// top of the range means "no upper bound" — so the dual slider at its extremes is off.
+const DIST_MAX = 10000;
 // The filter values present when the app first loads. "Reset Filters" returns
 // every control to exactly these positions (NOT all-zero), so the slider knobs
 // land back where they started rather than fully wide open.
-const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minParallax: 0 };
+const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: DIST_MAX };
 
 const overview = new Plot($('overview-canvas'), 'Overview');
 const detail = new Plot($('detail-canvas'), 'Detail View');
@@ -1088,6 +1140,10 @@ detail.xlabelParts = LBL_BPRP; detail.ylabelParts = LBL_GMAG;
 
 let overviewCache = null;        // offscreen canvas with segments pre-rendered
 let overviewCacheKey = '';
+// the tightly-framed data extent the overview fits to; the live overview view
+// (overview.xlim/ylim) can be zoomed/panned away from this for exploration, and
+// the detail rectangle is clamped to it.
+let overviewBase = { xlim: [0, 1], ylim: [0, 1] };
 
 /* ---------------- Data loading: Spearman table ----------------
    The table is read as a chunked byte STREAM and parsed line-by-line, so the
@@ -1343,7 +1399,7 @@ $('alpha-comb').addEventListener('click', () => setAlphaMode('comb'));
 function applyFilters() {
   const f = state.filter;
   const pMax = Math.pow(10, -f.minLogP);
-  const minRho = f.minAbsRho, minPoe = f.minPoe, minPlx = f.minParallax;
+  const minRho = f.minAbsRho, minPoe = f.minPoe, minDist = f.minDist, maxDist = f.maxDist;
   const rset = slRestrictSet;   // catalog "show only" restriction, or null when off
   const n = state.coeff.length;
   // reuse the mask buffer across calls; only reallocate when the dataset changes
@@ -1359,7 +1415,14 @@ function applyFilters() {
     if (minRho > 0 && Math.abs(c) < minRho) continue;
     if (state.p[i] > pMax) continue;
     if (minPoe > 0 && !(state.poe[i] >= minPoe)) continue;
-    if (minPlx > 0 && !(state.parallax[i] >= minPlx)) continue;
+    // distance cut (parsecs), derived from parallax: distance = 1000 / parallax(mas)
+    if (minDist > 0 || maxDist < DIST_MAX) {
+      const plx = state.parallax[i];
+      if (!(plx > 0)) continue;            // need a positive parallax for a distance
+      const dist = 1000 / plx;
+      if (minDist > 0 && dist < minDist) continue;
+      if (maxDist < DIST_MAX && dist > maxDist) continue;
+    }
     vis.push(i);
     mask[i] = 1;
   }
@@ -1375,13 +1438,19 @@ function applyFilters() {
 
 // auto-frame overview to bulk of the data, ignoring outliers (matches Python percentiles)
 function setOverviewLimitsLines() {
-  const xs = Array.from(state.xFull).sort((a, b) => a - b);
-  const ys = Array.from(state.yFull).sort((a, b) => a - b);
+  // Sort copies of the typed arrays directly (numeric default sort) rather than
+  // Array.from(...).sort((a,b)=>a-b): ~6× faster and far less memory on the
+  // multi-million-row catalogs. Runs once at load; Reset View reuses overviewBase.
+  const xs = state.xFull.slice().sort();
+  const ys = state.yFull.slice().sort();
   const loX = percentile(xs, 0.1), hiX = percentile(xs, 99.9);
   const loY = percentile(ys, 0.1), hiY = percentile(ys, 99.9);
-  const padX = 0.55 * (hiX - loX), padY = 0.35 * (hiY - loY);
-  overview.xlim = [loX - 1.25 * padX, hiX + 1.25 * padX];
-  overview.ylim = [loY - 1.25 * padY, hiY + padY];
+  // Frame to the bulk of the data with a small margin so the overview loads
+  // comfortably (not smushed against the edges) yet still zoomed in.
+  const padX = 0.08 * (hiX - loX), padY = 0.08 * (hiY - loY);
+  overview.xlim = [loX - padX, hiX + padX];
+  overview.ylim = [loY - padY, hiY + padY];
+  overviewBase = { xlim: [...overview.xlim], ylim: [...overview.ylim] };
 }
 function fullExtent() {
   let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
@@ -1484,8 +1553,8 @@ function ensureOverviewCache() {
   const dpr = window.devicePixelRatio || 1;
   const f = state.filter;
   const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h,
-    f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minParallax,
-    state.visIdx.length, state.alphaMode, slSignature()].join('|');
+    f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist,
+    state.thickness, state.visIdx.length, state.alphaMode, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
   overviewCacheKey = key;
 
@@ -1495,7 +1564,7 @@ function ensureOverviewCache() {
   const ctx = overviewCache.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  strokeSegmentsBatched(ctx, overview, state.visIdx, r.x, r.y, 1, 2.5);
+  strokeSegmentsBatched(ctx, overview, state.visIdx, r.x, r.y, 1, state.thickness);
   // catalog overlays are baked into the cache so panning the rectangle stays cheap
   slDrawGroups(ctx, overview, r.x, r.y, false);
 }
@@ -1650,7 +1719,7 @@ function updateExportCounts() {
 
 /* ---------------- Overview interactions: drag/recenter/scale rect ---------------- */
 const ovCanvas = $('overview-canvas');
-let dragging = false, dragOffset = [0, 0];
+let ovDrag = null;   // active overview gesture: { mode:'rect'|'bg', ... }
 
 function detailRectData() {
   // rect in data coords (x, y = lower-left in value terms, w, h positive)
@@ -1665,8 +1734,10 @@ function setDetailLimitsFromRect(xMin, xMax, yMin, yMax) {
   requestRedraw();
 }
 function clampRect(rx, ry, rw, rh) {
-  const xlo = Math.min(...overview.xlim), xhi = Math.max(...overview.xlim);
-  const ylo = Math.min(...overview.ylim), yhi = Math.max(...overview.ylim);
+  // clamp the detail rectangle to the framed data extent (not the possibly
+  // zoomed/panned current overview view) so it can roam the whole diagram
+  const xlo = Math.min(...overviewBase.xlim), xhi = Math.max(...overviewBase.xlim);
+  const ylo = Math.min(...overviewBase.ylim), yhi = Math.max(...overviewBase.ylim);
   rx = Math.max(xlo, Math.min(rx, xhi - rw));
   ry = Math.max(ylo, Math.min(ry, yhi - rh));
   return [rx, ry];
@@ -1675,7 +1746,44 @@ function canvasPos(canvas, ev) {
   const b = canvas.getBoundingClientRect();
   return [ev.clientX - b.left, ev.clientY - b.top];
 }
+// Wheel motion for zooming. With Shift held, macOS/Chromium reports the scroll
+// in deltaX and leaves deltaY at 0, which made Shift+scroll (x-only zoom) always
+// zoom OUT — zooming in was impossible. Read whichever axis carries the motion.
+function wheelDelta(ev) {
+  return ev.deltaY !== 0 ? ev.deltaY : ev.deltaX;
+}
 
+// zoom the overview's own view about a data-space point (defaults to center).
+// scale<1 zooms in, scale>1 zooms out. zoomX/zoomY pick which axes to scale.
+// The cache key tracks overview.xlim/ylim, so segments re-render automatically.
+function zoomOverview(scale, cx, cy, zoomX = true, zoomY = true) {
+  const [x0, x1] = overview.xlim, [y0, y1] = overview.ylim;
+  if (cx == null) cx = (x0 + x1) / 2;
+  if (cy == null) cy = (y0 + y1) / 2;
+  if (zoomX) overview.xlim = [cx - (cx - x0) * scale, cx + (x1 - cx) * scale];
+  if (zoomY) overview.ylim = [cy - (cy - y0) * scale, cy + (y1 - cy) * scale];
+  requestRedraw();
+}
+// zoom the detail window per axis about its center (matches the wheel/Shift/Alt
+// zoom on the plot). scale<1 zooms in, scale>1 zooms out.
+function zoomDetailAxis(zoomX, zoomY, scale) {
+  const [x0, x1] = detail.xlim, [y0, y1] = detail.ylim;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const nx0 = zoomX ? cx - (cx - x0) * scale : x0, nx1 = zoomX ? cx + (x1 - cx) * scale : x1;
+  const ny0 = zoomY ? cy - (cy - y0) * scale : y0, ny1 = zoomY ? cy + (y1 - cy) * scale : y1;
+  setDetailLimitsFromRect(Math.min(nx0, nx1), Math.max(nx0, nx1), Math.min(ny0, ny1), Math.max(ny0, ny1));
+  pushHistorySoon();
+}
+function jumpDetailTo(x, y) {
+  const rect = detailRectData();
+  let [nrx, nry] = clampRect(x - rect.w / 2, y - rect.h / 2, rect.w, rect.h);
+  setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+  pushHistory();
+}
+
+// The overview is both a navigator and an explorable map: drag the green
+// rectangle to move the detail window; drag empty space to pan the overview;
+// a plain click on empty space jumps the detail window there.
 ovCanvas.addEventListener('mousedown', ev => {
   if (ev.button !== 0) return;
   const [px, py] = canvasPos(ovCanvas, ev);
@@ -1684,27 +1792,39 @@ ovCanvas.addEventListener('mousedown', ev => {
   const rect = detailRectData();
   const inside = x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
   if (inside) {
-    dragging = true;
-    dragOffset = [x - rect.x, y - rect.y];
+    ovDrag = { mode: 'rect', offset: [x - rect.x, y - rect.y] };
+    ovCanvas.classList.add('dragging');
   } else {
-    let [nrx, nry] = clampRect(x - rect.w / 2, y - rect.h / 2, rect.w, rect.h);
-    setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
-    dragging = true;
-    dragOffset = [x - nrx, y - nry];
+    // decide pan-vs-jump on mouseup based on whether the pointer moved
+    ovDrag = { mode: 'bg', px, py, xlim: [...overview.xlim], ylim: [...overview.ylim],
+               dataX: x, dataY: y, moved: false };
   }
-  ovCanvas.classList.add('dragging');
 });
 window.addEventListener('mousemove', ev => {
-  if (!dragging) return;
+  if (!ovDrag) return;
   const [px, py] = canvasPos(ovCanvas, ev);
-  const x = overview.pxToX(px), y = overview.pxToY(py);
-  const rect = detailRectData();
-  let [nrx, nry] = clampRect(x - dragOffset[0], y - dragOffset[1], rect.w, rect.h);
-  setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+  if (ovDrag.mode === 'rect') {
+    const x = overview.pxToX(px), y = overview.pxToY(py);
+    const rect = detailRectData();
+    let [nrx, nry] = clampRect(x - ovDrag.offset[0], y - ovDrag.offset[1], rect.w, rect.h);
+    setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+  } else {
+    if (!ovDrag.moved && Math.hypot(px - ovDrag.px, py - ovDrag.py) < 4) return;
+    ovDrag.moved = true;
+    ovCanvas.classList.add('dragging');
+    const r = overview.plotRect;
+    const dx = (ovDrag.px - px) * (ovDrag.xlim[1] - ovDrag.xlim[0]) / r.w;
+    const dy = (overview.invertY ? (ovDrag.py - py) : (py - ovDrag.py)) * (ovDrag.ylim[1] - ovDrag.ylim[0]) / r.h;
+    overview.xlim = [ovDrag.xlim[0] + dx, ovDrag.xlim[1] + dx];
+    overview.ylim = [ovDrag.ylim[0] + dy, ovDrag.ylim[1] + dy];
+    requestRedraw();
+  }
 });
 window.addEventListener('mouseup', () => {
-  if (dragging) pushHistory();   // record the completed rectangle move
-  dragging = false;
+  if (!ovDrag) return;
+  if (ovDrag.mode === 'rect') pushHistory();                          // completed rectangle move
+  else if (!ovDrag.moved) jumpDetailTo(ovDrag.dataX, ovDrag.dataY);   // plain click → jump detail
+  ovDrag = null;
   ovCanvas.classList.remove('dragging');
 });
 
@@ -1716,13 +1836,28 @@ function resizeViewRect(scale) {
   setDetailLimitsFromRect(nrx, nrx + nw, nry, nry + nh);
 }
 
+// scroll zooms the overview itself about the cursor (map-style exploration).
+// Same direction convention as the detail/CMD: scroll down = zoom in.
 ovCanvas.addEventListener('wheel', ev => {
   const [px, py] = canvasPos(ovCanvas, ev);
   if (!overview.inPlot(px, py)) return;
   ev.preventDefault();
-  resizeViewRect(ev.deltaY > 0 ? 0.85 : 1.15);
-  pushHistorySoon();
+  const dWheel = wheelDelta(ev);
+  if (dWheel === 0) return;
+  zoomOverview(dWheel > 0 ? 0.85 : 1.15, overview.pxToX(px), overview.pxToY(py));
 }, { passive: false });
+
+// overlay zoom buttons — per-axis (X / Y) on both panels, so x-direction zoom
+// works everywhere. Overview zooms its own view; detail zooms the detail window.
+const PZOOM_IN = 0.8, PZOOM_OUT = 1.25;
+$('ov-zoomx-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, true,  false));
+$('ov-zoomx-out').addEventListener('click', () => zoomOverview(PZOOM_OUT, null, null, true,  false));
+$('ov-zoomy-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, false, true));
+$('ov-zoomy-out').addEventListener('click', () => zoomOverview(PZOOM_OUT, null, null, false, true));
+$('dt-zoomx-in').addEventListener('click',  () => zoomDetailAxis(true,  false, PZOOM_IN));
+$('dt-zoomx-out').addEventListener('click', () => zoomDetailAxis(true,  false, PZOOM_OUT));
+$('dt-zoomy-in').addEventListener('click',  () => zoomDetailAxis(false, true,  PZOOM_IN));
+$('dt-zoomy-out').addEventListener('click', () => zoomDetailAxis(false, true,  PZOOM_OUT));
 
 /* ---------------- Detail interactions: pan, zoom, hover, click-to-CMD ---------------- */
 const dtCanvas = $('detail-canvas');
@@ -1777,7 +1912,9 @@ dtCanvas.addEventListener('wheel', ev => {
   const hit = dtAxisHit(px, py);
   if (!hit) return;
   ev.preventDefault();
-  const scale = ev.deltaY > 0 ? 0.85 : 1.15;
+  const dWheel = wheelDelta(ev);
+  if (dWheel === 0) return;
+  const scale = dWheel > 0 ? 0.85 : 1.15;
   // axis strips zoom one axis; in the plot, Shift = x-only and Alt = y-only
   const zoomX = hit === 'x' || (hit === 'plot' && !ev.altKey);
   const zoomY = hit === 'y' || (hit === 'plot' && !ev.shiftKey);
@@ -2031,7 +2168,6 @@ window.addEventListener('keydown', ev => {
   else if (ev.key === '-') { resizeViewRect(1.25); pushHistorySoon(); }
   else if (ev.key === '0') { setDetailToCenterWindow(0.1); requestRedraw(); pushHistory(); }
   else if (ev.key === 'f' || ev.key === 'F') { setDetailToFullExtent(); pushHistory(); }
-  else if (ev.key === 'i' || ev.key === 'I') { $('invert-y-btn').click(); }
   else if (ev.key === 'h' || ev.key === 'H') { $('help-btn').click(); }
   else if (ev.key === 's' || ev.key === 'S') { exportCSV(state.selection, 'selected sources'); }
   else if (ev.key === '/') { ev.preventDefault(); $('search-input').focus(); }
@@ -2049,20 +2185,16 @@ window.addEventListener('keydown', ev => {
 $('thickness-slider').addEventListener('input', ev => {
   state.thickness = parseFloat(ev.target.value);
   $('slider-label').textContent = `Line thickness ×: ${state.thickness.toFixed(1)}`;
+  overviewCacheKey = '';   // line width is baked into the overview cache → rebuild it
   requestRedraw();
 });
-
-$('invert-y-btn').addEventListener('click', () => {
-  state.invertY = !state.invertY;
-  $('invert-y-btn').classList.toggle('toggled', state.invertY);
-  overviewCacheKey = '';
-  requestRedraw();
-});
-// Reflect the initial inverted-Y default in the button's pressed appearance.
-$('invert-y-btn').classList.toggle('toggled', state.invertY);
 
 $('reset-view-btn').addEventListener('click', () => {
-  setOverviewLimitsLines();
+  // Restore the framing cached at load instead of re-sorting the whole dataset,
+  // which would freeze the UI for seconds on large catalogs (and did so when a
+  // catalog "only" filter was active and the user reset the view).
+  overview.xlim = [...overviewBase.xlim];
+  overview.ylim = [...overviewBase.ylim];
   setDetailToCenterWindow(0.1);
   overviewCacheKey = '';
   requestRedraw();
@@ -2100,24 +2232,57 @@ $('poe-slider').addEventListener('input', ev => {
     : `Min parallax / error: ${state.filter.minPoe}`;
   scheduleFilters();
 });
-$('plx-slider').addEventListener('input', ev => {
-  state.filter.minParallax = parseFloat(ev.target.value);
-  $('plx-label').textContent = state.filter.minParallax === 0
-    ? 'Min parallax: off'
-    : `Min parallax: ${state.filter.minParallax.toFixed(2)} mas`;
+// Dual-thumb distance slider: the two thumbs share one track and may not come
+// closer than DIST_GAP. updateDistUI() refreshes the label and the filled span;
+// the error line shows whenever a thumb was clamped against the other (touching).
+const DIST_GAP = 50;   // one step
+function updateDistUI() {
+  const lo = state.filter.minDist, hi = state.filter.maxDist;
+  const offLo = lo <= 0, offHi = hi >= DIST_MAX;
+  let txt;
+  if (offLo && offHi) txt = 'Distance: off';
+  else if (offHi)     txt = `Distance: ≥ ${lo.toLocaleString()} pc`;
+  else if (offLo)     txt = `Distance: ≤ ${hi.toLocaleString()} pc`;
+  else                txt = `Distance: ${lo.toLocaleString()}–${hi.toLocaleString()} pc`;
+  $('dist-label').textContent = txt;
+  const fill = $('dist-fill');
+  fill.style.left = (lo / DIST_MAX * 100) + '%';
+  fill.style.width = ((hi - lo) / DIST_MAX * 100) + '%';
+}
+$('dmin-slider').addEventListener('input', () => {
+  let lo = parseFloat($('dmin-slider').value);
+  const hi = parseFloat($('dmax-slider').value);
+  const touching = lo > hi - DIST_GAP;
+  if (touching) { lo = hi - DIST_GAP; $('dmin-slider').value = lo; }
+  state.filter.minDist = lo;
+  $('dist-error').hidden = !touching;
+  updateDistUI();
   scheduleFilters();
 });
+$('dmax-slider').addEventListener('input', () => {
+  let hi = parseFloat($('dmax-slider').value);
+  const lo = parseFloat($('dmin-slider').value);
+  const touching = hi < lo + DIST_GAP;
+  if (touching) { hi = lo + DIST_GAP; $('dmax-slider').value = hi; }
+  state.filter.maxDist = hi;
+  $('dist-error').hidden = !touching;
+  updateDistUI();
+  scheduleFilters();
+});
+updateDistUI();   // initial label + fill on load
 // Reset Filters: put every control back exactly where it sits on first load
-// (significance 1e-4, |ρ| 0, parallax/error 10, parallax off, direction All).
+// (significance 1e-4, |ρ| 0, parallax/error 10, distance off, direction All).
 function resetFilters() {
   $('sig-slider').value = DEFAULT_FILTER.minLogP;
   $('rho-slider').value = DEFAULT_FILTER.minAbsRho;
   $('poe-slider').value = DEFAULT_FILTER.minPoe;
-  $('plx-slider').value = DEFAULT_FILTER.minParallax;
+  $('dmin-slider').value = DEFAULT_FILTER.minDist;
+  $('dmax-slider').value = DEFAULT_FILTER.maxDist;
   state.filter.minLogP = DEFAULT_FILTER.minLogP;
   state.filter.minAbsRho = DEFAULT_FILTER.minAbsRho;
   state.filter.minPoe = DEFAULT_FILTER.minPoe;
-  state.filter.minParallax = DEFAULT_FILTER.minParallax;
+  state.filter.minDist = DEFAULT_FILTER.minDist;
+  state.filter.maxDist = DEFAULT_FILTER.maxDist;
   $('sig-label').textContent = DEFAULT_FILTER.minLogP === 0
     ? 'Significance: all (any p)'
     : `Significance: p ≤ 1e-${DEFAULT_FILTER.minLogP}`;
@@ -2125,9 +2290,8 @@ function resetFilters() {
   $('poe-label').textContent = DEFAULT_FILTER.minPoe === 0
     ? 'Min parallax / error: off'
     : `Min parallax / error: ${DEFAULT_FILTER.minPoe}`;
-  $('plx-label').textContent = DEFAULT_FILTER.minParallax === 0
-    ? 'Min parallax: off'
-    : `Min parallax: ${DEFAULT_FILTER.minParallax.toFixed(2)} mas`;
+  $('dist-error').hidden = true;
+  updateDistUI();
   setDirFilter(DEFAULT_FILTER.dir);   // also calls applyFilters
 }
 $('filter-reset-btn').addEventListener('click', resetFilters);
@@ -2210,11 +2374,11 @@ $('spearman-file-input').addEventListener('change', async ev => {
 /* =====================================================
    VizieR TAP + CMD pipeline (ports show_epoch_cmd)
    ===================================================== */
-async function tapQuery(adql, timeoutMs = 300000) {
+async function tapQuery(adql, timeoutMs = 300000, tapUrl = TAP_URL) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const resp = await fetch(TAP_URL, {
+    const resp = await fetch(tapUrl, {
       method: 'POST',
       body: new URLSearchParams({ REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: 'json', QUERY: adql }),
       signal: ctrl.signal,
@@ -2230,6 +2394,95 @@ async function tapQuery(adql, timeoutMs = 300000) {
     return { cols, n: j.data.length };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/* ---------------- ESA Gaia archive fallback ----------------
+   VizieR's TAP service has outages (its load balancer answers 503, which the
+   browser reports as a bare "Failed to fetch"). The same DR3 epoch photometry
+   and parallaxes live on the ESA Gaia archive, so when VizieR fails we retry
+   there before giving up. */
+const ESA_TAP_URL = 'https://gea.esac.esa.int/tap-server/tap/sync';
+const ESA_DATALINK_URL = 'https://gea.esac.esa.int/data-server/data';
+
+// Friendly wording for fetch()'s opaque network TypeError ("Failed to fetch"):
+// there was no HTTP response at all — offline, DNS failure, CORS-stripped
+// outage page, or the service is down.
+function fetchFailText(e) {
+  return (e instanceof TypeError)
+    ? 'no response — the service looks down or unreachable'
+    : (e && e.name === 'AbortError') ? 'timed out' : (e.message || String(e));
+}
+
+/* ESA DataLink epoch photometry (CSV, one row per transit) → the same column
+   names the VizieR I/355/epphot query returns, so everything downstream of the
+   fetch (SNR cut, sigma clipping, fit, phase folding) runs unchanged.
+   Transits flagged rejected_by_photometry are dropped; a band flagged
+   rejected_by_variability has that band's values blanked to NaN. */
+function parseEsaEpochCSV(text) {
+  const lines = text.trim().split('\n');
+  const BANDS = [
+    { rej: 'variability_flag_g_reject',
+      map: { TimeG: 'g_transit_time', FG: 'g_transit_flux', e_FG: 'g_transit_flux_error', RFG: 'g_transit_flux_over_error', Gmag: 'g_transit_mag' } },
+    { rej: 'variability_flag_bp_reject',
+      map: { TimeBP: 'bp_obs_time', FBP: 'bp_flux', e_FBP: 'bp_flux_error', RFBP: 'bp_flux_over_error', BPmag: 'bp_mag' } },
+    { rej: 'variability_flag_rp_reject',
+      map: { TimeRP: 'rp_obs_time', FRP: 'rp_flux', e_FRP: 'rp_flux_error', RFRP: 'rp_flux_over_error', RPmag: 'rp_mag' } },
+  ];
+  const cols = {};
+  for (const b of BANDS) for (const out in b.map) cols[out] = [];
+  if (lines.length < 2 || !lines[0].trim()) return { cols, n: 0 };   // no epochs published
+  const ix = {};
+  lines[0].trim().split(',').forEach((h, i) => { ix[h] = i; });
+  for (const b of BANDS) for (const out in b.map) {
+    if (!(b.map[out] in ix)) throw new Error(`ESA epoch CSV is missing column '${b.map[out]}'`);
+  }
+  const num = v => (v === undefined || v === '' || v === 'null') ? NaN : +v;
+  let n = 0;
+  for (let li = 1; li < lines.length; li++) {
+    if (!lines[li].trim()) continue;
+    const f = lines[li].split(',');
+    if (f[ix['rejected_by_photometry']] === 'true') continue;
+    for (const b of BANDS) {
+      const rejected = f[ix[b.rej]] === 'true';
+      for (const out in b.map) cols[out].push(rejected ? NaN : num(f[ix[b.map[out]]]));
+    }
+    n++;
+  }
+  return { cols, n };
+}
+
+/* Fetch a star's epoch photometry + parallax: VizieR TAP first, ESA Gaia
+   archive when VizieR fails. Throws only when both services fail. */
+async function fetchEpochPhotometry(id, token) {
+  try {
+    const epCols = ['Source', 'RA_ICRS', 'DE_ICRS', 'TimeG', 'FG', 'e_FG', 'RFG', 'Gmag',
+      'TimeBP', 'FBP', 'e_FBP', 'RFBP', 'BPmag', 'TimeRP', 'FRP', 'e_FRP', 'RFRP', 'RPmag'];
+    const epQ = `SELECT ${epCols.map(c => `"${c}"`).join(',')} FROM "I/355/epphot" WHERE "Source"=${id}`;
+    const plxQ = `SELECT TOP 1 "Plx","e_Plx" FROM "I/355/gaiadr3" WHERE "Source"=${id}`;
+    const [ep, plx] = await Promise.all([tapQuery(epQ), tapQuery(plxQ)]);
+    return { ep, plx, source: 'VizieR' };
+  } catch (e1) {
+    if (token !== cmdToken) throw e1;   // stale query — the user moved on, skip the retry
+    const why1 = fetchFailText(e1);
+    $('cmd-loading-text').textContent = `VizieR TAP failed (${why1}) — trying the ESA Gaia archive…`;
+    setMessage(`VizieR TAP failed for ${id} (${why1}); trying the ESA Gaia archive…`);
+    try {
+      const [ep, plxRaw] = await Promise.all([
+        (async () => {
+          const resp = await fetch(`${ESA_DATALINK_URL}?RETRIEVAL_TYPE=EPOCH_PHOTOMETRY&ID=Gaia+DR3+${id}&FORMAT=CSV&DATA_STRUCTURE=INDIVIDUAL`);
+          if (!resp.ok) throw new Error(`ESA DataLink HTTP ${resp.status}`);
+          return parseEsaEpochCSV(await resp.text());
+        })(),
+        tapQuery(`SELECT parallax, parallax_error FROM gaiadr3.gaia_source WHERE source_id=${id}`, 300000, ESA_TAP_URL),
+      ]);
+      const pc = plxRaw.cols;
+      const plx = { n: plxRaw.n, cols: { Plx: pc['parallax'] || [], e_Plx: pc['parallax_error'] || [] } };
+      return { ep, plx, source: 'ESA Gaia archive' };
+    } catch (e2) {
+      throw new Error(`VizieR TAP failed (${why1}) and the ESA Gaia archive fallback also failed ` +
+        `(${fetchFailText(e2)}). Both services may be down right now — try again in a while.`);
+    }
   }
 }
 
@@ -2423,7 +2676,9 @@ cmdCanvas.addEventListener('wheel', ev => {
   const hit = cmdAxisHit(px, py);
   if (!hit) return;
   ev.preventDefault();
-  const scale = ev.deltaY > 0 ? 0.85 : 1.15;
+  const dWheel = wheelDelta(ev);
+  if (dWheel === 0) return;
+  const scale = dWheel > 0 ? 0.85 : 1.15;
   // axis strips zoom one axis; in the plot, Shift = x-only and Alt = y-only
   const zoomX = hit === 'x' || (hit === 'plot' && !ev.altKey);
   const zoomY = hit === 'y' || (hit === 'plot' && !ev.shiftKey);
@@ -2525,13 +2780,9 @@ async function showEpochCMD(gi) {
   setMessage(`Querying Vizier for epoch photometry of ${id}...`);
 
   try {
-    const epCols = ['Source', 'RA_ICRS', 'DE_ICRS', 'TimeG', 'FG', 'e_FG', 'RFG', 'Gmag',
-      'TimeBP', 'FBP', 'e_FBP', 'RFBP', 'BPmag', 'TimeRP', 'FRP', 'e_FRP', 'RFRP', 'RPmag'];
-    const epQ = `SELECT ${epCols.map(c => `"${c}"`).join(',')} FROM "I/355/epphot" WHERE "Source"=${id}`;
-    const plxQ = `SELECT TOP 1 "Plx","e_Plx" FROM "I/355/gaiadr3" WHERE "Source"=${id}`;
-
-    const [ep, plx] = await Promise.all([tapQuery(epQ), tapQuery(plxQ)]);
+    const { ep, plx, source } = await fetchEpochPhotometry(id, token);
     if (token !== cmdToken) return;  // user closed / clicked another star
+    const viaSrc = source === 'VizieR' ? '' : ` | data: ${source}`;
 
     if (!ep.n) {
       setMessage(`No epoch photometry for ${id}.`);
@@ -2656,7 +2907,7 @@ async function showEpochCMD(gi) {
       ` | plx = ${parallaxMas.toFixed(3)} mas (d ≈ ${distancePc.toFixed(0)} pc)` +
       ` | ${n0} epochs, ${ss.kx.length} used` +
       ` (ranks 1/2/3/4: ${nr(1)}/${nr(2)}/${nr(3)}/${nr(4)}, ${snrBadIdx.length} low-SNR)` +
-      ` | slope m = ${m.toFixed(3)}`;
+      ` | slope m = ${m.toFixed(3)}${viaSrc}`;
     setMessage(`CMD shown for ${id} (${n0} epochs, ${ss.kx.length} used, slope m = ${m.toFixed(3)}).`);
   } catch (exc) {
     if (token !== cmdToken) return;
@@ -2835,6 +3086,11 @@ function drawCMD(d) {
   // block the legend from landing on the slope box
   for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
     occupied.push([M.l + 12 + fx * (tw + 20), M.t + 12 + fy * 28]);
+  }
+  // ...and from landing under the floating X/Y zoom buttons overlaid on the
+  // plot's top-right corner (.zoom-overlay-cmd: top 56px, right 28px, ~70×56 px)
+  for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
+    occupied.push([W - 104 + fx * 82, 50 + fy * 68]);
   }
 
   // legend: every rank present, placed where the fewest points sit
@@ -3015,7 +3271,7 @@ function lombScargle(t, y, err, freqs) {
 // shared frequency grid so the per-band periodograms can be multiplied.
 // With the multi-year Gaia baseline the peaks are ~1/T wide, so the grid is
 // heavily oversampled (30 samples across a peak). The standard grid extends to
-// 1-hour periods; the optional high-res grid (toggled by the "5-min high-res grid"
+// 1-hour periods; the optional high-res grid (toggled by the "high-res freq grid"
 // checkbox) extends to 5-minute periods at the same density — that's ~12× more
 // frequencies, so it's opt-in and unnecessary for most systems.
 const PHASE_FMAX_DEFAULT = 24;        // cycles/day → shortest period = 1 hour

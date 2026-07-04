@@ -5,23 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Explorer — Gaia Variability Dataset Viewer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* =====================================================
-   Theme — ported from the PySide6 THEME dict
+   Theme — Clean Graphite (Warm Low)
    ===================================================== */
 :root {
-  --bg: #0d1117;
-  --panel: #161b22;
-  --panel-alt: #21262d;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --border: #30363d;
-  --accent: #58a6ff;
-  --accent-hover: #79c0ff;
-  --green: #3fb950;
-  --red: #f85149;
-  --orange: #d29922;
+  --bg: #101112;              /* page background */
+  --panel: #171718;           /* primary surface (main content, modals) */
+  --panel-alt: #1f2021;       /* secondary surface (sidebar, inputs) */
+  --text: #e9e9e9;            /* primary text */
+  --muted: #9c9fa0;           /* secondary text, labels, captions */
+  --border: #2e2f30;          /* hairlines, dividers, input borders */
+  --accent: #6f93b3;          /* steel-blue accent — links, active states, focus */
+  --accent-hover: #8bacc9;    /* accent hover/active variant */
+  --green: #3fb950;           /* success / positive / "in view" indicator */
+  --red: #f85149;             /* error / negative */
+  --orange: #d29922;          /* warning */
+  --card-bg: rgba(255,255,255,0.045);   /* card fill over panel */
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,20 +32,19 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
 }
 
-body { padding: 14px; }
+body { padding: 0; }
 
 #container {
   display: flex;
-  height: calc(100vh - 28px);
+  height: 100vh;
   min-height: 560px;
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.63);
 }
 
 /* ---------- Sidebar ---------- */
@@ -66,9 +67,10 @@ body { padding: 14px; }
 .subtitle { color: var(--muted); font-size: 14px; padding-bottom: 4px; }
 
 .card {
-  background: rgba(255,255,255,0.03);
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: var(--card-shadow);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -76,6 +78,16 @@ body { padding: 14px; }
   flex-shrink: 0;
 }
 .section-title { font-size: 15px; font-weight: 600; }
+.sub-title {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-top: 1px solid var(--border); padding-top: 10px;
+}
+.sub-title:first-of-type { border-top: none; padding-top: 0; }
+/* the combined Status card keeps the text font of the original View Info panel */
+#status-card, #status-card .sub-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
 /* ---------- Buttons ---------- */
 button {
@@ -93,7 +105,7 @@ button:hover {
   background: var(--accent);
   color: #000;
   border-color: var(--accent-hover);
-  box-shadow: 0 0 25px rgba(88,166,255,0.35);
+  box-shadow: 0 0 25px rgba(111,147,179,0.35);
 }
 button:active { background: var(--accent-hover); }
 button:disabled {
@@ -120,8 +132,12 @@ button.small { padding: 6px 12px; font-size: 12px; }
   border: 1px solid rgba(0,0,0,0.45);
 }
 .sl-count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+/* IBM Plex Mono for IDs, counts, code and numeric inputs (theme: mono for data) */
+.sl-count, #sel-list, #search-input, .legend-ticks {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .sl-list.active, .sl-only.active, .sl-subs .sl-sub.active {
-  border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.10);
+  border-color: var(--accent); color: var(--accent); background: rgba(111,147,179,0.10);
 }
 .sl-list.active:hover, .sl-only.active:hover, .sl-subs .sl-sub.active:hover { color: #000; background: var(--accent); }
 .sl-list.loading { opacity: 0.7; }
@@ -149,11 +165,14 @@ input[type=text]:focus { outline: none; border-color: var(--accent); }
 input[type=text]::placeholder { color: var(--muted); }
 
 .seg-group { display: flex; gap: 6px; }
-.seg-group button { flex: 1; padding: 8px 4px; font-size: 12px; }
+.seg-group button {
+  flex: 1; padding: 8px 4px; font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 .seg-group button.active {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(88,166,255,0.10);
+  background: rgba(111,147,179,0.10);
 }
 .seg-group button.active:hover { color: #000; background: var(--accent); }
 
@@ -278,6 +297,23 @@ input[type=range]::-moz-range-thumb {
 }
 #tooltip .tt-id { color: var(--accent); font-weight: 600; }
 
+/* ---------- Button hover descriptions ---------- */
+#btn-tip {
+  position: fixed;
+  pointer-events: none;
+  display: none;
+  max-width: 260px;
+  background: var(--panel-alt);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  z-index: 300;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
 /* ---------- Color legend ---------- */
 .legend-bar {
   height: 12px; border-radius: 6px;
@@ -339,6 +375,7 @@ input[type=range]::-moz-range-thumb {
 #help-modal code {
   background: var(--panel-alt); border: 1px solid var(--border);
   border-radius: 4px; padding: 1px 5px; font-size: 12px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 #cmd-modal .modal { width: 920px; }
@@ -384,11 +421,11 @@ input[type=range]::-moz-range-thumb {
   width: 26px; height: 26px; padding: 0;
   font-size: 16px; line-height: 1; font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(22,27,34,0.82); color: var(--text);
+  background: rgba(23,23,24,0.82); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
   transition: border-color .12s, color .12s, background .12s;
 }
-.zoom-overlay .zbtn:hover { border-color: var(--accent); color: var(--accent-hover); background: rgba(33,38,45,0.95); }
+.zoom-overlay .zbtn:hover { border-color: var(--accent); color: var(--accent-hover); background: rgba(31,32,33,0.95); }
 
 .spinner {
   width: 42px; height: 42px;
@@ -414,7 +451,7 @@ input[type=range]::-moz-range-thumb {
   width: 100%; height: 240px; resize: vertical;
   background: var(--panel-alt); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 10px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px; line-height: 1.5;
 }
 #custom-textarea:focus { outline: none; border-color: var(--accent); }
@@ -453,30 +490,37 @@ input[type=range]::-moz-range-thumb {
       <div class="subtitle">Visualize and interact with large datasets</div>
     </div>
 
-    <div class="card">
-      <div class="section-title">View Info</div>
+    <div class="card" id="status-card">
+      <div class="section-title">Status</div>
+      <div class="sub-title">View Info</div>
       <div class="msg" id="counts-label">—</div>
       <div class="muted" id="filter-count" style="font-size:12px;">—</div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Messages</div>
+      <div class="sub-title">Messages</div>
       <div class="msg" id="message-label">Enter a file name and click 'Save File' to write the current Detail View points</div>
+      <div class="sub-title">Region Statistics</div>
+      <div class="stat-rows">
+        <div class="stat-row"><span class="muted">Visible sources</span><span id="rs-count">—</span></div>
+        <div class="stat-row"><span class="muted">Median ρ</span><span id="rs-rho">—</span></div>
+        <div class="stat-row"><span class="muted">Median p</span><span id="rs-p">—</span></div>
+        <div class="stat-row"><span class="muted">Fraction bluing</span><span id="rs-blue">—</span></div>
+        <div class="stat-row"><span class="muted">Fraction reddening</span><span id="rs-red">—</span></div>
+        <div class="stat-row"><span class="muted">Mean CMD vector length</span><span id="rs-len">—</span></div>
+      </div>
     </div>
 
     <div class="card">
       <div class="section-title">Search</div>
       <input type="text" id="search-input" placeholder="Gaia DR3 source ID">
-      <button id="search-btn">Search</button>
+      <button id="search-btn" title="Center and highlight this Gaia DR3 source on both plots">Search</button>
     </div>
 
     <div class="card">
       <div class="section-title">Filters</div>
       <div class="field-label">Slope direction</div>
       <div class="seg-group">
-        <button id="dir-all" class="active">All</button>
-        <button id="dir-pos"><span style="color:#5e7ce2">●</span> Bluing</button>
-        <button id="dir-neg"><span style="color:#d65c5c">●</span> Reddening</button>
+        <button id="dir-all" class="active" title="Show stars regardless of slope direction">All</button>
+        <button id="dir-pos" title="Show only blue lines — stars that get bluer as they brighten (ρ &gt; 0)"><span style="color:#5e7ce2">●</span> Blue</button>
+        <button id="dir-neg" title="Show only red lines — stars that get redder as they brighten (ρ &lt; 0)"><span style="color:#d65c5c">●</span> Red</button>
       </div>
       <div class="field-label" id="sig-label">Significance: p ≤ 1e-4</div>
       <input type="range" id="sig-slider" min="0" max="10" step="1" value="4">
@@ -492,7 +536,7 @@ input[type=range]::-moz-range-thumb {
         <input type="range" id="dmax-slider" min="0" max="10000" step="50" value="10000">
       </div>
       <div class="range-error" id="dist-error" hidden>Min and max distance are touching — they can't overlap.</div>
-      <button id="filter-reset-btn" class="small">Reset Filters</button>
+      <button id="filter-reset-btn" class="small" title="Return every filter to its startup value">Reset Filters</button>
     </div>
 
     <div class="card">
@@ -503,7 +547,7 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-cepheid" class="sl-list"><span class="sl-swatch" style="background:#ffd700"></span>Cepheids<span class="sl-count" id="sl-count-cepheid"></span></button>
+        <button id="sl-hl-cepheid" class="sl-list" title="Highlight catalog Cepheids on both plots"><span class="sl-swatch" style="background:#ffd700"></span>Cepheids<span class="sl-count" id="sl-count-cepheid"></span></button>
         <button id="sl-only-cepheid" class="sl-only small" title="Show only Cepheids">only</button>
       </div>
       <div class="sl-subs" id="sl-subs-cepheid" hidden>
@@ -513,7 +557,7 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-rrlyrae" class="sl-list"><span class="sl-swatch" style="background:#22e3e3"></span>RR Lyrae<span class="sl-count" id="sl-count-rrlyrae"></span></button>
+        <button id="sl-hl-rrlyrae" class="sl-list" title="Highlight catalog RR Lyrae on both plots"><span class="sl-swatch" style="background:#22e3e3"></span>RR Lyrae<span class="sl-count" id="sl-count-rrlyrae"></span></button>
         <button id="sl-only-rrlyrae" class="sl-only small" title="Show only RR Lyrae">only</button>
       </div>
       <div class="sl-subs" id="sl-subs-rrlyrae" hidden>
@@ -523,7 +567,7 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-dsct" class="sl-list"><span class="sl-swatch" style="background:#ff8c1a"></span>δ Scuti<span class="sl-count" id="sl-count-dsct"></span></button>
+        <button id="sl-hl-dsct" class="sl-list" title="Highlight catalog δ Scuti stars on both plots"><span class="sl-swatch" style="background:#ff8c1a"></span>δ Scuti<span class="sl-count" id="sl-count-dsct"></span></button>
         <button id="sl-only-dsct" class="sl-only small" title="Show only δ Scuti">only</button>
       </div>
       <div class="sl-subs" id="sl-subs-dsct" hidden>
@@ -531,12 +575,12 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-mira" class="sl-list"><span class="sl-swatch" style="background:#c084fc"></span>Mira<span class="sl-count" id="sl-count-mira"></span></button>
+        <button id="sl-hl-mira" class="sl-list" title="Highlight catalog Mira variables on both plots"><span class="sl-swatch" style="background:#c084fc"></span>Mira<span class="sl-count" id="sl-count-mira"></span></button>
         <button id="sl-only-mira" class="sl-only small" title="Show only Mira">only</button>
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-semireg" class="sl-list"><span class="sl-swatch" style="background:#f472b6"></span>Semiregular<span class="sl-count" id="sl-count-semireg"></span></button>
+        <button id="sl-hl-semireg" class="sl-list" title="Highlight catalog semiregular variables on both plots"><span class="sl-swatch" style="background:#f472b6"></span>Semiregular<span class="sl-count" id="sl-count-semireg"></span></button>
         <button id="sl-only-semireg" class="sl-only small" title="Show only Semiregular">only</button>
       </div>
       <div class="sl-subs" id="sl-subs-semireg" hidden>
@@ -548,12 +592,12 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-blap" class="sl-list"><span class="sl-swatch" style="background:#4d8bff"></span>BLAPs<span class="sl-count" id="sl-count-blap"></span></button>
+        <button id="sl-hl-blap" class="sl-list" title="Highlight catalog BLAPs (blue large-amplitude pulsators) on both plots"><span class="sl-swatch" style="background:#4d8bff"></span>BLAPs<span class="sl-count" id="sl-count-blap"></span></button>
         <button id="sl-only-blap" class="sl-only small" title="Show only BLAPs">only</button>
       </div>
 
       <div class="sl-row">
-        <button id="sl-hl-sdbv" class="sl-list"><span class="sl-swatch" style="background:#22c55e"></span>sdBV<span class="sl-count" id="sl-count-sdbv"></span></button>
+        <button id="sl-hl-sdbv" class="sl-list" title="Highlight catalog sdBV (pulsating subdwarf B) stars on both plots"><span class="sl-swatch" style="background:#22c55e"></span>sdBV<span class="sl-count" id="sl-count-sdbv"></span></button>
         <button id="sl-only-sdbv" class="sl-only small" title="Show only sdBV">only</button>
       </div>
 
@@ -567,19 +611,19 @@ input[type=range]::-moz-range-thumb {
         <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
       </div>
 
-      <button id="sl-clear" class="small" disabled>Clear all lists</button>
+      <button id="sl-clear" class="small" disabled title="Turn off every catalog highlight and restriction">Clear all lists</button>
       <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
     </div>
 
     <div class="card">
       <div class="section-title">Transparency Scaling</div>
       <div class="seg-group">
-        <button id="alpha-sig" class="active">Significance</button>
-        <button id="alpha-rho">|ρ|</button>
+        <button id="alpha-sig" class="active" title="Scale line opacity by statistical significance (−log₁₀ p)">Significance</button>
+        <button id="alpha-rho" title="Scale line opacity by correlation strength |ρ|">|ρ|</button>
       </div>
       <div class="seg-group">
-        <button id="alpha-const">Constant</button>
-        <button id="alpha-comb">Combined</button>
+        <button id="alpha-const" title="Give every line the same opacity">Constant</button>
+        <button id="alpha-comb" title="Scale opacity by significance and |ρ| combined">Combined</button>
       </div>
     </div>
 
@@ -594,19 +638,7 @@ input[type=range]::-moz-range-thumb {
       <div class="section-title">Selected Sources</div>
       <div class="msg" id="sel-count">0 selected</div>
       <div class="muted" id="sel-list" style="font-size:11px; word-break:break-all;"></div>
-      <button id="clear-sel-btn" class="small" disabled>Clear Selection</button>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Region Statistics</div>
-      <div class="stat-rows">
-        <div class="stat-row"><span class="muted">Visible sources</span><span id="rs-count">—</span></div>
-        <div class="stat-row"><span class="muted">Median ρ</span><span id="rs-rho">—</span></div>
-        <div class="stat-row"><span class="muted">Median p</span><span id="rs-p">—</span></div>
-        <div class="stat-row"><span class="muted">Fraction bluing</span><span id="rs-blue">—</span></div>
-        <div class="stat-row"><span class="muted">Fraction reddening</span><span id="rs-red">—</span></div>
-        <div class="stat-row"><span class="muted">Mean CMD vector length</span><span id="rs-len">—</span></div>
-      </div>
+      <button id="clear-sel-btn" class="small" disabled title="Deselect all currently selected stars">Clear Selection</button>
     </div>
 
     <div class="card" id="legend-card">
@@ -622,21 +654,21 @@ input[type=range]::-moz-range-thumb {
 
     <div class="card">
       <div class="section-title">Actions</div>
-      <button id="reset-view-btn">Reset View</button>
-      <button id="undo-view-btn" disabled>Undo View</button>
-      <button id="redo-view-btn" disabled>Redo View</button>
-      <button id="help-btn">Show Help</button>
+      <button id="reset-view-btn" title="Return both plots to their startup view">Reset View</button>
+      <button id="undo-view-btn" disabled title="Go back to the previous view (Ctrl/Cmd+Z)">Undo View</button>
+      <button id="redo-view-btn" disabled title="Reapply the view you undid (Ctrl/Cmd+Shift+Z)">Redo View</button>
+      <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
     </div>
 
     <div class="card">
       <div class="section-title">Export</div>
       <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
       <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
-      <button id="export-visible-btn">Export Visible Sources</button>
-      <button id="export-selected-btn">Export Selected Sources (0)</button>
-      <button id="export-filtered-btn">Export Filtered Sources</button>
-      <button id="export-detail-png-btn">Export Detail View PNG</button>
-      <button id="export-overview-png-btn">Export Overview PNG</button>
+      <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
+      <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
+      <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
+      <button id="export-detail-png-btn" title="Download the Detail View as a PNG image">Export Detail View PNG</button>
+      <button id="export-overview-png-btn" title="Download the Overview plot as a PNG image">Export Overview PNG</button>
     </div>
 
     <input type="file" id="spearman-file-input" hidden>
@@ -679,7 +711,7 @@ input[type=range]::-moz-range-thumb {
   <div class="modal">
     <div class="modal-header">
       <h2>Data Explorer Help</h2>
-      <button class="small" id="help-close-x">✕</button>
+      <button class="small" id="help-close-x" title="Close the help dialog">✕</button>
     </div>
     <div class="modal-body">
       <h3>Quick start</h3>
@@ -744,11 +776,11 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-header">
       <h2 id="cmd-title">CMD</h2>
       <div id="cmd-links"></div>
-      <button class="small" id="cmd-reset-zoom-btn" style="display:none">Reset Zoom</button>
+      <button class="small" id="cmd-reset-zoom-btn" style="display:none" title="Restore the full CMD view">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
       <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Folding</button>
-      <button class="small" id="cmd-png-btn">Download PNG</button>
-      <button class="small" id="cmd-close-btn">✕</button>
+      <button class="small" id="cmd-png-btn" title="Download this CMD as a PNG image">Download PNG</button>
+      <button class="small" id="cmd-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="cmd-plot-wrap">
       <canvas id="cmd-canvas"></canvas>
@@ -770,8 +802,8 @@ input[type=range]::-moz-range-thumb {
       <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>high-res freq grid</label>
       <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
       <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
-      <button class="small" id="phase-png-btn">Download PNG</button>
-      <button class="small" id="phase-close-btn">✕</button>
+      <button class="small" id="phase-png-btn" title="Download the phase plots as a PNG image">Download PNG</button>
+      <button class="small" id="phase-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="phase-plot-wrap">
       <canvas id="phase-canvas"></canvas>
@@ -786,7 +818,7 @@ input[type=range]::-moz-range-thumb {
   <div class="modal" id="custom-modal-inner">
     <div class="modal-header">
       <h2>Custom Gaia DR3 ID list</h2>
-      <button class="small" id="custom-close-btn">✕</button>
+      <button class="small" id="custom-close-btn" title="Close this dialog">✕</button>
     </div>
     <div class="modal-body">
       <p class="muted" style="line-height:1.55; margin-bottom:12px;">
@@ -797,8 +829,8 @@ input[type=range]::-moz-range-thumb {
       </p>
       <textarea id="custom-textarea" spellcheck="false" placeholder="6917529027641081856&#10;5085309376076485760&#10;…"></textarea>
       <div style="display:flex; gap:8px; margin-top:12px;">
-        <button id="custom-apply-btn" style="flex:1">Highlight these IDs</button>
-        <button id="custom-file-btn" class="small">Load from file…</button>
+        <button id="custom-apply-btn" style="flex:1" title="Highlight the pasted IDs on both plots">Highlight these IDs</button>
+        <button id="custom-file-btn" class="small" title="Choose a text/CSV file of Gaia DR3 source IDs">Load from file…</button>
       </div>
     </div>
   </div>
@@ -809,8 +841,8 @@ input[type=range]::-moz-range-thumb {
   <div class="modal">
     <div class="modal-header">
       <h2 id="mep-title">Multi-Epoch Photometry</h2>
-      <button class="small" id="mep-png-btn">Download PNG</button>
-      <button class="small" id="mep-close-btn">✕</button>
+      <button class="small" id="mep-png-btn" title="Download the light curves as a PNG image">Download PNG</button>
+      <button class="small" id="mep-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="mep-plot-wrap">
       <canvas id="mep-canvas"></canvas>
@@ -828,9 +860,9 @@ input[type=range]::-moz-range-thumb {
    ===================================================== */
 
 const THEME = {
-  bg: '#0d1117', panel: '#161b22', panelAlt: '#21262d',
-  text: '#e6edf3', muted: '#8b949e', border: '#30363d',
-  accent: '#58a6ff', accentHover: '#79c0ff', green: '#3fb950',
+  bg: '#101112', panel: '#171718', panelAlt: '#1f2021',
+  text: '#e9e9e9', muted: '#9c9fa0', border: '#2e2f30',
+  accent: '#6f93b3', accentHover: '#8bacc9', green: '#3fb950',
 };
 
 const LIST_NAME = 'RANKED';
@@ -1034,7 +1066,7 @@ class Plot {
     // ticks
     ctx.fillStyle = THEME.muted;
     ctx.strokeStyle = THEME.border;
-    ctx.font = '11px Inter, sans-serif';
+    ctx.font = '11px "IBM Plex Sans", sans-serif';
     const xt = niceTicks(this.xlim[0], this.xlim[1]);
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (const v of xt) {
@@ -1057,7 +1089,7 @@ class Plot {
 
     // title
     ctx.fillStyle = THEME.text;
-    ctx.font = '600 14px Inter, sans-serif';
+    ctx.font = '600 14px "IBM Plex Sans", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.fillText(this.title, r.x + r.w / 2, r.y - 10);
 
@@ -1089,13 +1121,13 @@ function drawMathText(ctx, parts, x, y, size, align = 'center') {
   const sub = Math.round(size * 0.72);
   let total = 0;
   for (const p of parts) {
-    ctx.font = `${p.sub ? sub : size}px Inter, sans-serif`;
+    ctx.font = `${p.sub ? sub : size}px "IBM Plex Sans", sans-serif`;
     total += ctx.measureText(p.t).width;
   }
   let cx = align === 'center' ? x - total / 2 : x;
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   for (const p of parts) {
-    ctx.font = `${p.sub ? sub : size}px Inter, sans-serif`;
+    ctx.font = `${p.sub ? sub : size}px "IBM Plex Sans", sans-serif`;
     ctx.fillText(p.t, cx, y + (p.sub ? size * 0.22 : 0));
     cx += ctx.measureText(p.t).width;
   }
@@ -1662,7 +1694,7 @@ function drawHRTracks(plot, ctx, lw, withLabels) {
   ctx.fillStyle = 'rgba(139,148,158,0.55)';
   ctx.lineWidth = lw;
   ctx.setLineDash([6, 4]);
-  ctx.font = '11px Inter, sans-serif';
+  ctx.font = '11px "IBM Plex Sans", sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   for (const t of HR_TRACKS) {
     ctx.beginPath();
@@ -1849,7 +1881,7 @@ ovCanvas.addEventListener('wheel', ev => {
 
 // overlay zoom buttons — per-axis (X / Y) on both panels, so x-direction zoom
 // works everywhere. Overview zooms its own view; detail zooms the detail window.
-const PZOOM_IN = 0.8, PZOOM_OUT = 1.25;
+const PZOOM_IN = 1 / 1.5, PZOOM_OUT = 1.5;
 $('ov-zoomx-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, true,  false));
 $('ov-zoomx-out').addEventListener('click', () => zoomOverview(PZOOM_OUT, null, null, true,  false));
 $('ov-zoomy-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, false, true));
@@ -2164,8 +2196,8 @@ window.addEventListener('keydown', ev => {
   }
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;  // leave other browser shortcuts alone
 
-  if (ev.key === '+' || ev.key === '=') { resizeViewRect(0.8); pushHistorySoon(); }
-  else if (ev.key === '-') { resizeViewRect(1.25); pushHistorySoon(); }
+  if (ev.key === '+' || ev.key === '=') { resizeViewRect(PZOOM_IN); pushHistorySoon(); }
+  else if (ev.key === '-') { resizeViewRect(PZOOM_OUT); pushHistorySoon(); }
   else if (ev.key === '0') { setDetailToCenterWindow(0.1); requestRedraw(); pushHistory(); }
   else if (ev.key === 'f' || ev.key === 'F') { setDetailToFullExtent(); pushHistory(); }
   else if (ev.key === 'h' || ev.key === 'H') { $('help-btn').click(); }
@@ -2744,7 +2776,7 @@ function cmdZoomAxis(zoomX, zoomY, scale) {
   };
   redrawCMD();
 }
-const CMD_ZOOM_IN = 0.8, CMD_ZOOM_OUT = 1.25;
+const CMD_ZOOM_IN = 1 / 1.5, CMD_ZOOM_OUT = 1.5;
 $('cmd-zoomx-in').addEventListener('click',  () => cmdZoomAxis(true,  false, CMD_ZOOM_IN));
 $('cmd-zoomx-out').addEventListener('click', () => cmdZoomAxis(true,  false, CMD_ZOOM_OUT));
 $('cmd-zoomy-in').addEventListener('click',  () => cmdZoomAxis(false, true,  CMD_ZOOM_IN));
@@ -2991,7 +3023,7 @@ function drawCMD(d) {
   ctx.strokeStyle = THEME.border;
   ctx.strokeRect(M.l + 0.5, M.t + 0.5, pw - 1, ph - 1);
 
-  ctx.font = '11px Inter, sans-serif';
+  ctx.font = '11px "IBM Plex Sans", sans-serif';
   ctx.fillStyle = THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const v of niceTicks(xmin, xmax)) {
@@ -3011,7 +3043,7 @@ function drawCMD(d) {
 
   // labels + title
   ctx.fillStyle = THEME.text;
-  ctx.font = '600 16px Inter, sans-serif';
+  ctx.font = '600 16px "IBM Plex Sans", sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(`Gaia DR3 ${d.id}`, M.l + pw / 2, M.t - 14);
   ctx.fillStyle = THEME.muted;
@@ -3073,7 +3105,7 @@ function drawCMD(d) {
   ctx.restore();
 
   // slope box (top-left, like the skyblue bbox)
-  ctx.font = '600 14px Inter, sans-serif';
+  ctx.font = '600 14px "IBM Plex Sans", sans-serif';
   const slopeTxt = `m = ${d.m.toFixed(2)}`;
   const tw = ctx.measureText(slopeTxt).width;
   ctx.fillStyle = 'rgba(135,206,235,0.25)';
@@ -3107,7 +3139,7 @@ function drawCMD(d) {
   }
   items.push({ marker: 'meanstar', color: '#ffd700', label: 'mean of used points' });
 
-  ctx.font = '12px Inter, sans-serif';
+  ctx.font = '12px "IBM Plex Sans", sans-serif';
   const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + 38;
   const lh = items.length * 20 + 12;
   const pad = 12;
@@ -3308,7 +3340,7 @@ function phasePanel(ctx, r, xlim, ylim, opts = {}) {
   const Y = v => opts.invertY
     ? r.y + (v - ylim[0]) / (ylim[1] - ylim[0]) * r.h
     : r.y + (1 - (v - ylim[0]) / (ylim[1] - ylim[0])) * r.h;
-  ctx.font = '10px Inter, sans-serif';
+  ctx.font = '10px "IBM Plex Sans", sans-serif';
   ctx.fillStyle = THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const v of niceTicks(xlim[0], xlim[1], 5)) {
@@ -3323,19 +3355,19 @@ function phasePanel(ctx, r, xlim, ylim, opts = {}) {
     ctx.fillText(fmtTick(v), r.x - 5, py);
   }
   if (opts.title) {
-    ctx.font = '600 12px Inter, sans-serif';
+    ctx.font = '600 12px "IBM Plex Sans", sans-serif';
     ctx.fillStyle = opts.titleColor || THEME.text;
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
     ctx.fillText(opts.title, r.x + 2, r.y - 5);
   }
   if (opts.note) {
-    ctx.font = '11px Inter, sans-serif';
+    ctx.font = '11px "IBM Plex Sans", sans-serif';
     ctx.fillStyle = PHASE_COLORS.peak;
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
     ctx.fillText(opts.note, r.x + r.w - 2, r.y - 5);
   }
   if (opts.xlabel) {
-    ctx.font = '11px Inter, sans-serif';
+    ctx.font = '11px "IBM Plex Sans", sans-serif';
     ctx.fillStyle = THEME.muted;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(opts.xlabel, r.x + r.w / 2, r.y + r.h + 17);
@@ -3345,7 +3377,7 @@ function phasePanel(ctx, r, xlim, ylim, opts = {}) {
 
 function emptyPhasePanel(ctx, r, title, msg) {
   phasePanel(ctx, r, [0, 1], [0, 1], { title });
-  ctx.font = '12px Inter, sans-serif';
+  ctx.font = '12px "IBM Plex Sans", sans-serif';
   ctx.fillStyle = THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(msg, r.x + r.w / 2, r.y + r.h / 2);
@@ -4178,6 +4210,41 @@ async function boot() {
   }
 }
 boot();
+
+/* ---------------- Button hover descriptions ----------------
+   Every button carries a short description in its title attribute. On hover the
+   title is moved into data-tip (suppressing the browser's slow native tooltip)
+   and shown immediately in a themed bubble anchored under the button. */
+const btnTip = document.createElement('div');
+btnTip.id = 'btn-tip';
+document.body.appendChild(btnTip);
+// subtype catalog buttons share one generated description
+document.querySelectorAll('.sl-subs .sl-sub').forEach(b => {
+  if (!b.title) b.title = `Highlight ${b.textContent.trim()} members on both plots`;
+});
+function hideBtnTip() { btnTip.style.display = 'none'; }
+document.addEventListener('mouseover', ev => {
+  const b = ev.target.closest ? ev.target.closest('button') : null;
+  if (!b) { hideBtnTip(); return; }
+  if (b.title) { b.dataset.tip = b.title; b.removeAttribute('title'); }
+  const text = b.dataset.tip;
+  if (!text) { hideBtnTip(); return; }
+  btnTip.textContent = text;
+  btnTip.style.display = 'block';
+  const r = b.getBoundingClientRect();
+  const tw = btnTip.offsetWidth, th = btnTip.offsetHeight;
+  let x = r.left + r.width / 2 - tw / 2;
+  x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
+  let y = r.bottom + 8;
+  if (y + th > window.innerHeight - 8) y = r.top - th - 8;
+  btnTip.style.left = x + 'px';
+  btnTip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', ev => {
+  if (ev.target.closest && ev.target.closest('button')) hideBtnTip();
+});
+document.addEventListener('scroll', hideBtnTip, true);
+document.addEventListener('click', hideBtnTip, true);
 </script>
 </body>
 </html>

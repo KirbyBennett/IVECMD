@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "itcmd-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8734", "--directory", "/Users/bennettkirby/Desktop/gui_playground/ITCMD"],
+      "port": 8734
+    }
+  ]
+}

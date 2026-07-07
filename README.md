@@ -29,8 +29,8 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 
 ## Quickstart
 
-### Downloading the App
-Downloading the .dmg version of the app is simpler in my opinion because it will run on your machine. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
+### Downloading the App (Recommended)
+Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
 
 1. Navigate to the "Releases" tab on the right side of the screen.
 2. Find the release that you want to download and click the "ITCMD-<version-#>-arm64.dmg" to download the app.

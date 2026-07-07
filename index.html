@@ -643,7 +643,7 @@ input[type=range]::-moz-range-thumb {
         the view centers on it and its epoch CMD opens automatically. No Gaia ID needed.
       </div>
       <div class="seg-group">
-        <button id="ex-cepheid" title="Jump to a well-measured catalog Cepheid and open its color–magnitude diagram">Cepheid</button>
+        <button id="ex-cepheid" title="Jump to RW Cas, a bright well-measured classical Cepheid, and open its color–magnitude diagram">Cepheid</button>
         <button id="ex-rrab" title="Jump to a well-measured RRab RR Lyrae and open its color–magnitude diagram">RRab</button>
       </div>
       <div class="seg-group">
@@ -999,12 +999,6 @@ function nanstd(a) {
   if (!v.length) return NaN;
   const m = v.reduce((s, x) => s + x, 0) / v.length;
   return Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / v.length);
-}
-function std(a) {
-  const n = a.length;
-  if (!n) return NaN;
-  const m = a.reduce((s, x) => s + x, 0) / n;
-  return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / n);
 }
 function linFit(x, y) {  // unweighted OLS, same as the curve_fit(linear_func) usage
   const n = x.length;
@@ -1579,6 +1573,19 @@ function scheduleFilters() {
   requestAnimationFrame(() => { filtersQueued = false; applyFilters(); });
 }
 
+// Re-stroking the entire overview cache (every visible segment) on each slider
+// 'input' event is what makes dragging feel sluggish on big datasets. Slider
+// handlers call this instead: mid-drag frames keep drawing the stale cached
+// bitmap (the detail view, which is what the eye follows, still updates every
+// frame), and the overview re-bakes once, shortly after the drag pauses.
+let overviewDeferTimer = null;
+let overviewDefer = false;
+function deferOverviewRebuild() {
+  overviewDefer = true;
+  clearTimeout(overviewDeferTimer);
+  overviewDeferTimer = setTimeout(() => { overviewDefer = false; requestRedraw(); }, 160);
+}
+
 function redrawAll() {
   overview.invertY = state.invertY;
   detail.invertY = state.invertY;
@@ -1644,6 +1651,7 @@ function ensureOverviewCache() {
     f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist,
     state.thickness, state.visIdx.length, state.alphaMode, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
+  if (overviewDefer && overviewCache) return;   // mid-slider-drag: draw the stale bitmap this frame
   overviewCacheKey = key;
 
   overviewCache = document.createElement('canvas');
@@ -1660,8 +1668,8 @@ function ensureOverviewCache() {
 function drawOverview() {
   overview.begin();
   const ctx = overview.ctx, r = overview.plotRect;
-  drawHRRegions(overview, ctx, false);       // shaded regions sit behind everything
-  drawHRTracks(overview, ctx, 1.2, false);   // reference tracks sit behind the vectors
+  drawHRRegions(overview, ctx);       // shaded regions sit behind everything
+  drawHRTracks(overview, ctx, 1.2);   // reference tracks sit behind the vectors
   ensureOverviewCache();
   ctx.drawImage(overviewCache, r.x, r.y, r.w, r.h);
 
@@ -1681,8 +1689,8 @@ function drawOverview() {
 function drawDetail() {
   detail.begin();
   const ctx = detail.ctx;
-  drawHRRegions(detail, ctx, true);       // shaded regions sit behind everything
-  drawHRTracks(detail, ctx, 1.5, true);   // reference tracks sit behind the vectors
+  drawHRRegions(detail, ctx);       // shaded regions sit behind everything
+  drawHRTracks(detail, ctx, 1.5);   // reference tracks sit behind the vectors
   const xlo = Math.min(...detail.xlim), xhi = Math.max(...detail.xlim);
   const ylo = Math.min(...detail.ylim), yhi = Math.max(...detail.ylim);
   const idx = [];
@@ -1696,6 +1704,7 @@ function drawDetail() {
   strokeSegmentsBatched(ctx, detail, idx, 0, 0, 1, mult);
   // catalog overlays: redraw member segments in each list's color, on top
   slDrawGroups(ctx, detail, 0, 0, true);
+  drawHRLabels(detail, ctx);   // reference names last, so lines never cover them
   // selection rings: green, like the Qt version; hover ring: glowing gold
   const ring = (i, color, lw, glow) => {
     const cx = state.xFull[i], cy = state.yFull[i];
@@ -1721,9 +1730,8 @@ function drawDetail() {
 }
 
 /* ---------------- HR diagram reference overlay ----------------
-   Hardcoded approximations in (G_BP−G_RP, absolute G). Replace at runtime
-   with real tracks (e.g. parsed isochrone files) via loadReferenceTracks(). */
-let HR_TRACKS = [
+   Hardcoded approximations in (G_BP−G_RP, absolute G). */
+const HR_TRACKS = [
   {
     name: 'Main Sequence',
     points: [[-0.40, -3.0], [-0.20, -1.1], [0.00, 0.6], [0.20, 1.7], [0.40, 2.7],
@@ -1741,19 +1749,12 @@ let HR_TRACKS = [
              [0.60, 12.8], [0.90, 13.8], [1.20, 14.8], [1.50, 15.7]],
   },
 ];
-function loadReferenceTracks(tracks) {  // future hook for external track files
-  HR_TRACKS = tracks;
-  requestRedraw();
-}
-function drawHRTracks(plot, ctx, lw, withLabels) {
+function drawHRTracks(plot, ctx, lw) {
   if (!state.showHRRef) return;
   ctx.save();
   ctx.strokeStyle = 'rgba(139,148,158,0.30)';
-  ctx.fillStyle = 'rgba(139,148,158,0.75)';
   ctx.lineWidth = lw;
   ctx.setLineDash([6, 4]);
-  ctx.font = '11px "IBM Plex Sans", sans-serif';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   for (const t of HR_TRACKS) {
     ctx.beginPath();
     t.points.forEach(([x, y], k) => {
@@ -1761,10 +1762,6 @@ function drawHRTracks(plot, ctx, lw, withLabels) {
       k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
     });
     ctx.stroke();
-    if (withLabels) {
-      const [mx, my] = t.points[Math.floor(t.points.length / 2)];
-      ctx.fillText(t.name, plot.xToPx(mx) + 6, plot.yToPx(my) - 4);
-    }
   }
   ctx.restore();
 }
@@ -1780,7 +1777,7 @@ $('hr-ref-checkbox').addEventListener('change', ev => {
    bright Cepheids — tilting redward with luminosity. Toggling the pulsator
    catalogs lights up real stars inside it. Points run blue edge bottom→top,
    then red edge top→bottom, forming one closed polygon. */
-let HR_REGIONS = [
+const HR_REGIONS = [
   {
     name: 'Instability strip',
     fill: 'rgba(210,153,34,0.10)',
@@ -1791,11 +1788,7 @@ let HR_REGIONS = [
              [1.45, -5.5], [1.15, -3.5], [0.95, -1.5], [0.85, 0.0], [0.75, 1.5], [0.65, 3.0]],
   },
 ];
-function loadReferenceRegions(regions) {  // future hook for external region files
-  HR_REGIONS = regions;
-  requestRedraw();
-}
-function drawHRRegions(plot, ctx, withLabels) {
+function drawHRRegions(plot, ctx) {
   if (!state.showInstabilityStrip) return;
   ctx.save();
   for (const rg of HR_REGIONS) {
@@ -1811,11 +1804,25 @@ function drawHRRegions(plot, ctx, withLabels) {
     ctx.lineWidth = 1.2;
     ctx.setLineDash([5, 4]);
     ctx.stroke();
-    if (withLabels) {
-      ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+// Track/region names are drawn in a separate pass, after the data segments,
+// so the wording on the plot always stays legible on top of the lines.
+function drawHRLabels(plot, ctx) {
+  ctx.save();
+  ctx.font = '11px "IBM Plex Sans", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  if (state.showHRRef) {
+    ctx.fillStyle = 'rgba(139,148,158,0.75)';
+    for (const t of HR_TRACKS) {
+      const [mx, my] = t.points[Math.floor(t.points.length / 2)];
+      ctx.fillText(t.name, plot.xToPx(mx) + 6, plot.yToPx(my) - 4);
+    }
+  }
+  if (state.showInstabilityStrip) {
+    for (const rg of HR_REGIONS) {
       ctx.fillStyle = rg.text;
-      ctx.font = '11px "IBM Plex Sans", sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
       ctx.fillText(rg.name, plot.xToPx(rg.label[0]) + 6, plot.yToPx(rg.label[1]) - 4);
     }
   }
@@ -2338,7 +2345,9 @@ window.addEventListener('keydown', ev => {
 $('thickness-slider').addEventListener('input', ev => {
   state.thickness = parseFloat(ev.target.value);
   $('slider-label').textContent = `Line thickness ×: ${state.thickness.toFixed(1)}`;
-  overviewCacheKey = '';   // line width is baked into the overview cache → rebuild it
+  // thickness is baked into the overview cache (it's part of the cache key);
+  // defer that rebuild so dragging stays smooth — the detail updates live
+  deferOverviewRebuild();
   requestRedraw();
 });
 
@@ -2371,11 +2380,13 @@ $('sig-slider').addEventListener('input', ev => {
   $('sig-label').textContent = state.filter.minLogP === 0
     ? 'Significance: all (any p)'
     : `Significance: p ≤ 1e-${state.filter.minLogP}`;
+  deferOverviewRebuild();
   scheduleFilters();
 });
 $('rho-slider').addEventListener('input', ev => {
   state.filter.minAbsRho = parseFloat(ev.target.value);
   $('rho-label').textContent = `Min |ρ|: ${state.filter.minAbsRho.toFixed(2)}`;
+  deferOverviewRebuild();
   scheduleFilters();
 });
 $('poe-slider').addEventListener('input', ev => {
@@ -2383,6 +2394,7 @@ $('poe-slider').addEventListener('input', ev => {
   $('poe-label').textContent = state.filter.minPoe === 0
     ? 'Min parallax / error: off'
     : `Min parallax / error: ${state.filter.minPoe}`;
+  deferOverviewRebuild();
   scheduleFilters();
 });
 // Dual-thumb distance slider: the two thumbs share one track and may not come
@@ -2410,6 +2422,7 @@ $('dmin-slider').addEventListener('input', () => {
   state.filter.minDist = lo;
   $('dist-error').hidden = !touching;
   updateDistUI();
+  deferOverviewRebuild();
   scheduleFilters();
 });
 $('dmax-slider').addEventListener('input', () => {
@@ -2420,6 +2433,7 @@ $('dmax-slider').addEventListener('input', () => {
   state.filter.maxDist = hi;
   $('dist-error').hidden = !touching;
   updateDistUI();
+  deferOverviewRebuild();
   scheduleFilters();
 });
 updateDistUI();   // initial label + fill on load
@@ -4097,10 +4111,6 @@ function slSignature() {
 }
 // draw each group's member segments; (ox,oy) offsets for the offscreen cache,
 // clipWindow restricts to the detail window. Honors the active visibility mask.
-// When several lists are toggled at once, each group also gets its own dash
-// pattern as a secondary cue, so overlapping catalogs stay tellable apart even
-// where their hues are similar (color is never the only encoding).
-const SL_DASHES = [[], [7, 4], [2, 3], [10, 3, 2, 3]];
 function slDrawGroups(ctx, plot, ox, oy, clipWindow) {
   const groups = slHighlightGroups();
   if (!groups.length) return;
@@ -4112,13 +4122,12 @@ function slDrawGroups(ctx, plot, ox, oy, clipWindow) {
   }
   ctx.save();
   ctx.lineCap = 'round';
-  ctx.lineWidth = clipWindow ? 2.6 : 1.8;
+  // follow the Line thickness slider like the regular lines do (1px floor);
+  // matches the previous fixed 2.6 / 1.8 widths at the default thickness 2.0
+  ctx.lineWidth = clipWindow ? 1 + 0.8 * state.thickness : 1 + 0.4 * state.thickness;
   const seg = [0, 0, 0, 0];
-  const multi = groups.length > 1;
-  for (let gi = 0; gi < groups.length; gi++) {
-    const g = groups[gi];
+  for (const g of groups) {
     ctx.strokeStyle = g.color;
-    ctx.setLineDash(multi ? SL_DASHES[gi % SL_DASHES.length] : []);
     for (const i of g.idx) {
       if (mask && !mask[i]) continue;
       if (clipWindow) {
@@ -4324,10 +4333,11 @@ slRefreshUI();
 /* ---------------- Curated example stars ----------------
    One-click classroom presets: each button jumps to a well-measured member of
    a catalog and opens its epoch CMD, removing the need to know any Gaia IDs.
-   "Well-measured" = the member with the smallest Spearman p, preferring stars
+   The Cepheid example is pinned to RW Cas, a bright classical Cepheid; the
+   other classes pick the member with the smallest Spearman p, preferring stars
    that pass the active filters (the catalog file loads lazily on first use). */
 const EXAMPLE_STARS = [
-  { btn: 'ex-cepheid', key: 'cepheid', label: 'Cepheid' },
+  { btn: 'ex-cepheid', key: 'cepheid', label: 'Cepheid (RW Cas)', id: 508915489570374272n },
   { btn: 'ex-rrab',    key: 'rrlyrae', subtype: 'RRab', label: 'RRab RR Lyrae' },
   { btn: 'ex-mira',    key: 'mira',    label: 'Mira' },
   { btn: 'ex-dsct',    key: 'dsct',    label: 'δ Scuti' },
@@ -4337,18 +4347,23 @@ async function showExampleStar(ex) {
     setMessage('The dataset is still loading — try the example again once it finishes.');
     return;
   }
-  const L = STAR_LISTS.find(l => l.key === ex.key);
-  if (!L.loaded && !(await slEnsureLoaded(L))) return;   // bail if the catalog file is missing
-  let pool = ex.subtype ? (L.membersBySubtype[ex.subtype] || []) : L.members;
-  if (!pool.length) pool = L.members;                    // subtype column absent → any member
-  if (!pool.length) {
-    setMessage(`No ${ex.label} from the catalog is present in the loaded dataset.`);
-    return;
+  // pinned example (RW Cas): resolve its ID directly; fall back to the
+  // catalog's best-measured member if it isn't in the loaded dataset
+  let best = ex.id !== undefined ? findSourceIndex(ex.id) : -1;
+  if (best < 0) {
+    const L = STAR_LISTS.find(l => l.key === ex.key);
+    if (!L.loaded && !(await slEnsureLoaded(L))) return;   // bail if the catalog file is missing
+    let pool = ex.subtype ? (L.membersBySubtype[ex.subtype] || []) : L.members;
+    if (!pool.length) pool = L.members;                    // subtype column absent → any member
+    if (!pool.length) {
+      setMessage(`No ${ex.label} from the catalog is present in the loaded dataset.`);
+      return;
+    }
+    const passing = state.visMask ? pool.filter(i => state.visMask[i]) : pool;
+    const pick = passing.length ? passing : pool;
+    best = pick[0];
+    for (const i of pick) if (state.p[i] < state.p[best]) best = i;
   }
-  const passing = state.visMask ? pool.filter(i => state.visMask[i]) : pool;
-  const pick = passing.length ? passing : pool;
-  let best = pick[0];
-  for (const i of pick) if (state.p[i] < state.p[best]) best = i;
   // center the detail window on the star (keeping its size), select it, open the CMD
   const cx = state.xFull[best], cy = state.yFull[best];
   const w = Math.abs(detail.xlim[1] - detail.xlim[0]);

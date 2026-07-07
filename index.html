@@ -15,7 +15,7 @@
   --panel: #171718;           /* primary surface (main content, modals) */
   --panel-alt: #1f2021;       /* secondary surface (sidebar, inputs) */
   --text: #e9e9e9;            /* primary text */
-  --muted: #9c9fa0;           /* secondary text, labels, captions */
+  --muted: #a8abad;           /* secondary text, labels, captions (≥7:1 on both panels, so 11–12px labels clear WCAG AA) */
   --border: #2e2f30;          /* hairlines, dividers, input borders */
   --accent: #6f93b3;          /* steel-blue accent — links, active states, focus */
   --accent-hover: #8bacc9;    /* accent hover/active variant */
@@ -177,10 +177,15 @@ input[type=text]::placeholder { color: var(--muted); }
 .seg-group button.active:hover { color: #000; background: var(--accent); }
 
 label.check {
+  position: relative;
   display: flex; align-items: center; gap: 8px;
   cursor: pointer; user-select: none;
 }
-label.check input { display: none; }
+/* visually hidden but still focusable, so the toggles work by keyboard */
+label.check input {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; margin: 0; pointer-events: none;
+}
 label.check .box {
   width: 16px; height: 16px;
   border-radius: 4px;
@@ -205,6 +210,22 @@ input[type=range] {
   background: var(--border);
   outline: none;
 }
+
+/* ---------- Keyboard focus ----------
+   Visible focus ring for keyboard users (mouse clicks don't trigger it). */
+button:focus-visible,
+input[type=range]:focus-visible,
+canvas:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+label.check input:focus-visible + .box {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+/* the dialog container is focused programmatically on open — no ring there */
+.modal:focus { outline: none; }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 18px; height: 18px;
@@ -496,7 +517,7 @@ input[type=range]::-moz-range-thumb {
       <div class="msg" id="counts-label">—</div>
       <div class="muted" id="filter-count" style="font-size:12px;">—</div>
       <div class="sub-title">Messages</div>
-      <div class="msg" id="message-label">Enter a file name and click 'Save File' to write the current Detail View points</div>
+      <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or either plot as a PNG</div>
       <div class="sub-title">Region Statistics</div>
       <div class="stat-rows">
         <div class="stat-row"><span class="muted">Visible sources</span><span id="rs-count">—</span></div>
@@ -584,10 +605,10 @@ input[type=range]::-moz-range-thumb {
         <button id="sl-only-semireg" class="sl-only small" title="Show only Semiregular">only</button>
       </div>
       <div class="sl-subs" id="sl-subs-semireg" hidden>
-        <button class="sl-sub small" data-sub="SRA"><span class="sl-swatch" style="background:#38bdf8"></span>SRA<span class="sl-count" id="sl-count-SRA"></span></button>
+        <button class="sl-sub small" data-sub="SRA"><span class="sl-swatch" style="background:#f4a261"></span>SRA<span class="sl-count" id="sl-count-SRA"></span></button>
         <button class="sl-sub small" data-sub="SRB"><span class="sl-swatch" style="background:#fb7185"></span>SRB<span class="sl-count" id="sl-count-SRB"></span></button>
         <button class="sl-sub small" data-sub="SRC"><span class="sl-swatch" style="background:#a855f7"></span>SRC<span class="sl-count" id="sl-count-SRC"></span></button>
-        <button class="sl-sub small" data-sub="SRD"><span class="sl-swatch" style="background:#2dd4bf"></span>SRD<span class="sl-count" id="sl-count-SRD"></span></button>
+        <button class="sl-sub small" data-sub="SRD"><span class="sl-swatch" style="background:#b08968"></span>SRD<span class="sl-count" id="sl-count-SRD"></span></button>
         <button class="sl-sub small" data-sub="SRS"><span class="sl-swatch" style="background:#e11d48"></span>SRS<span class="sl-count" id="sl-count-SRS"></span></button>
       </div>
 
@@ -616,6 +637,22 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
+      <div class="section-title">Example Stars</div>
+      <div class="muted" style="font-size:12px; line-height:1.5;">
+        New to the diagram? Jump straight to a well-measured star of each class —
+        the view centers on it and its epoch CMD opens automatically. No Gaia ID needed.
+      </div>
+      <div class="seg-group">
+        <button id="ex-cepheid" title="Jump to a well-measured catalog Cepheid and open its color–magnitude diagram">Cepheid</button>
+        <button id="ex-rrab" title="Jump to a well-measured RRab RR Lyrae and open its color–magnitude diagram">RRab</button>
+      </div>
+      <div class="seg-group">
+        <button id="ex-mira" title="Jump to a well-measured Mira variable and open its color–magnitude diagram">Mira</button>
+        <button id="ex-dsct" title="Jump to a well-measured δ Scuti star and open its color–magnitude diagram">δ Scuti</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="section-title">Transparency Scaling</div>
       <div class="seg-group">
         <button id="alpha-sig" class="active" title="Scale line opacity by statistical significance (−log₁₀ p)">Significance</button>
@@ -632,6 +669,7 @@ input[type=range]::-moz-range-thumb {
       <div class="field-label" id="slider-label">Line thickness ×: 2.0</div>
       <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
       <label class="check"><input type="checkbox" id="hr-ref-checkbox"><span class="box"></span>Show HR diagram reference lines</label>
+      <label class="check"><input type="checkbox" id="strip-checkbox"><span class="box"></span>Show instability strip</label>
     </div>
 
     <div class="card">
@@ -648,7 +686,8 @@ input[type=range]::-moz-range-thumb {
       <div class="muted" id="legend-desc" style="font-size:12px; line-height:1.5;">
         Each line is one star. Color encodes the Spearman correlation between its
         color and brightness across epochs; opacity scales with statistical
-        significance (−log<sub>10</sub> p).
+        significance (−log<sub>10</sub> p). Bluing and reddening lines also tilt in
+        opposite directions, so the sign is readable without color.
       </div>
     </div>
 
@@ -677,7 +716,7 @@ input[type=range]::-moz-range-thumb {
   <!-- ================= Main area ================= -->
   <main id="main-area">
     <div id="title-bar">
-      <div id="window-title">Dataset Viewer</div>
+      <div id="window-title">Data Explorer</div>
       <button id="fullscreen-btn" title="Toggle fullscreen">⛶</button>
     </div>
     <div id="plot-panel">
@@ -708,9 +747,9 @@ input[type=range]::-moz-range-thumb {
 
 <!-- ================= Help modal ================= -->
 <div class="modal-backdrop" id="help-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1">
     <div class="modal-header">
-      <h2>Data Explorer Help</h2>
+      <h2 id="help-title">Data Explorer Help</h2>
       <button class="small" id="help-close-x" title="Close the help dialog">✕</button>
     </div>
     <div class="modal-body">
@@ -735,6 +774,7 @@ input[type=range]::-moz-range-thumb {
         <li><code>/</code> focus the search box · <code>H</code> toggle this help</li>
         <li><code>S</code> export the current selection · <code>Esc</code> clear selection / close dialogs</li>
         <li><code>Ctrl/Cmd+Z</code> undo view · <code>Ctrl/Cmd+Shift+Z</code> redo view</li>
+        <li>While a dialog is open, only <code>Esc</code> (and <code>H</code> for this help) stay active — the rest pause so they can't act on the plots underneath.</li>
       </ul>
       <h3>What am I looking at?</h3>
       <p>
@@ -772,7 +812,7 @@ input[type=range]::-moz-range-thumb {
 
 <!-- ================= CMD modal ================= -->
 <div class="modal-backdrop" id="cmd-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cmd-title" tabindex="-1">
     <div class="modal-header">
       <h2 id="cmd-title">CMD</h2>
       <div id="cmd-links"></div>
@@ -796,7 +836,7 @@ input[type=range]::-moz-range-thumb {
 
 <!-- ================= Phase analysis modal ================= -->
 <div class="modal-backdrop" id="phase-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="phase-title" tabindex="-1">
     <div class="modal-header">
       <h2 id="phase-title">Phase Analysis</h2>
       <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>high-res freq grid</label>
@@ -815,9 +855,9 @@ input[type=range]::-moz-range-thumb {
 
 <!-- ================= Custom Gaia ID list modal ================= -->
 <div class="modal-backdrop" id="custom-modal">
-  <div class="modal" id="custom-modal-inner">
+  <div class="modal" id="custom-modal-inner" role="dialog" aria-modal="true" aria-labelledby="custom-title" tabindex="-1">
     <div class="modal-header">
-      <h2>Custom Gaia DR3 ID list</h2>
+      <h2 id="custom-title">Custom Gaia DR3 ID list</h2>
       <button class="small" id="custom-close-btn" title="Close this dialog">✕</button>
     </div>
     <div class="modal-body">
@@ -838,7 +878,7 @@ input[type=range]::-moz-range-thumb {
 
 <!-- ================= Multi-epoch photometry modal ================= -->
 <div class="modal-backdrop" id="mep-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mep-title" tabindex="-1">
     <div class="modal-header">
       <h2 id="mep-title">Multi-Epoch Photometry</h2>
       <button class="small" id="mep-png-btn" title="Download the light curves as a PNG image">Download PNG</button>
@@ -859,11 +899,17 @@ input[type=range]::-moz-range-thumb {
    CMD pipeline (sigma clip, SNR cut, std-slope clip, fit).
    ===================================================== */
 
-const THEME = {
-  bg: '#101112', panel: '#171718', panelAlt: '#1f2021',
-  text: '#e9e9e9', muted: '#9c9fa0', border: '#2e2f30',
-  accent: '#6f93b3', accentHover: '#8bacc9', green: '#3fb950',
-};
+/* Canvas theme colors are read from the CSS custom properties in :root, so the
+   palette is defined once in the stylesheet and the plots stay in sync with it. */
+const THEME = (() => {
+  const cs = getComputedStyle(document.documentElement);
+  const v = name => cs.getPropertyValue(name).trim();
+  return {
+    bg: v('--bg'), panel: v('--panel'), panelAlt: v('--panel-alt'),
+    text: v('--text'), muted: v('--muted'), border: v('--border'),
+    accent: v('--accent'), accentHover: v('--accent-hover'), green: v('--green'),
+  };
+})();
 
 const LIST_NAME = 'RANKED';
 // Folder (relative to index.html) that holds all the unzipped data tables.
@@ -1002,6 +1048,14 @@ const $ = id => document.getElementById(id);
 const messageLabel = $('message-label');
 const countsLabel = $('counts-label');
 function setMessage(text) { messageLabel.textContent = text; }
+
+// One app name everywhere; the main-area heading and the tab title pick up the
+// name of whichever dataset is currently loaded (auto-fetch, browse, or drop).
+const APP_NAME = 'Data Explorer';
+function setWindowTitle(dataset) {
+  $('window-title').textContent = dataset ? `${APP_NAME} — ${dataset}` : APP_NAME;
+  document.title = dataset ? `${APP_NAME} — ${dataset}` : `${APP_NAME} — Gaia Variability Dataset Viewer`;
+}
 
 /* ---------------- Plot class ----------------
    Handles HiDPI canvas sizing, data<->pixel transforms,
@@ -1149,6 +1203,7 @@ const state = {
   invertY: true,
   thickness: 2,
   showHRRef: false,
+  showInstabilityStrip: false,
   alphaMode: 'sig',              // 'sig' | 'rho' | 'const' | 'comb'
   visIdx: [],                    // indices passing the active filters
   detailIdx: [],                 // visible indices currently inside the detail window
@@ -1419,7 +1474,8 @@ function setAlphaMode(mode) {
   overviewCacheKey = '';
   $('legend-desc').innerHTML =
     `Each line is one star. Color encodes the Spearman correlation between its ` +
-    `color and brightness across epochs; ${LEGEND_DESC[mode]}.`;
+    `color and brightness across epochs; ${LEGEND_DESC[mode]}. Bluing and ` +
+    `reddening lines also tilt in opposite directions, so the sign is readable without color.`;
   requestRedraw();
 }
 $('alpha-sig').addEventListener('click', () => setAlphaMode('sig'));
@@ -1604,6 +1660,7 @@ function ensureOverviewCache() {
 function drawOverview() {
   overview.begin();
   const ctx = overview.ctx, r = overview.plotRect;
+  drawHRRegions(overview, ctx, false);       // shaded regions sit behind everything
   drawHRTracks(overview, ctx, 1.2, false);   // reference tracks sit behind the vectors
   ensureOverviewCache();
   ctx.drawImage(overviewCache, r.x, r.y, r.w, r.h);
@@ -1624,6 +1681,7 @@ function drawOverview() {
 function drawDetail() {
   detail.begin();
   const ctx = detail.ctx;
+  drawHRRegions(detail, ctx, true);       // shaded regions sit behind everything
   drawHRTracks(detail, ctx, 1.5, true);   // reference tracks sit behind the vectors
   const xlo = Math.min(...detail.xlim), xhi = Math.max(...detail.xlim);
   const ylo = Math.min(...detail.ylim), yhi = Math.max(...detail.ylim);
@@ -1691,7 +1749,7 @@ function drawHRTracks(plot, ctx, lw, withLabels) {
   if (!state.showHRRef) return;
   ctx.save();
   ctx.strokeStyle = 'rgba(139,148,158,0.30)';
-  ctx.fillStyle = 'rgba(139,148,158,0.55)';
+  ctx.fillStyle = 'rgba(139,148,158,0.75)';
   ctx.lineWidth = lw;
   ctx.setLineDash([6, 4]);
   ctx.font = '11px "IBM Plex Sans", sans-serif';
@@ -1712,6 +1770,59 @@ function drawHRTracks(plot, ctx, lw, withLabels) {
 }
 $('hr-ref-checkbox').addEventListener('change', ev => {
   state.showHRRef = ev.target.checked;
+  requestRedraw();
+});
+
+/* ---------------- Shaded reference regions ----------------
+   Same idea as HR_TRACKS but filled polygons in (G_BP−G_RP, absolute G).
+   Ships with a textbook-level approximation of the classical instability
+   strip — δ Scuti near the main sequence, up through the RR Lyrae gap, to the
+   bright Cepheids — tilting redward with luminosity. Toggling the pulsator
+   catalogs lights up real stars inside it. Points run blue edge bottom→top,
+   then red edge top→bottom, forming one closed polygon. */
+let HR_REGIONS = [
+  {
+    name: 'Instability strip',
+    fill: 'rgba(210,153,34,0.10)',
+    edge: 'rgba(210,153,34,0.45)',
+    text: 'rgba(210,153,34,0.85)',
+    label: [0.95, -0.8],
+    points: [[0.20, 3.0], [0.35, 1.5], [0.45, 0.0], [0.55, -1.5], [0.70, -3.5], [0.85, -5.5],
+             [1.45, -5.5], [1.15, -3.5], [0.95, -1.5], [0.85, 0.0], [0.75, 1.5], [0.65, 3.0]],
+  },
+];
+function loadReferenceRegions(regions) {  // future hook for external region files
+  HR_REGIONS = regions;
+  requestRedraw();
+}
+function drawHRRegions(plot, ctx, withLabels) {
+  if (!state.showInstabilityStrip) return;
+  ctx.save();
+  for (const rg of HR_REGIONS) {
+    ctx.beginPath();
+    rg.points.forEach(([x, y], k) => {
+      const px = plot.xToPx(x), py = plot.yToPx(y);
+      k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    });
+    ctx.closePath();
+    ctx.fillStyle = rg.fill;
+    ctx.fill();
+    ctx.strokeStyle = rg.edge;
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+    if (withLabels) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = rg.text;
+      ctx.font = '11px "IBM Plex Sans", sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(rg.name, plot.xToPx(rg.label[0]) + 6, plot.yToPx(rg.label[1]) - 4);
+    }
+  }
+  ctx.restore();
+}
+$('strip-checkbox').addEventListener('change', ev => {
+  state.showInstabilityStrip = ev.target.checked;
   requestRedraw();
 });
 
@@ -2189,6 +2300,24 @@ window.addEventListener('keydown', ev => {
   const t = ev.target.tagName;
   if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;  // not while typing
 
+  if (ev.key === 'Escape') {
+    if ($('custom-modal').classList.contains('open')) closeModal('custom-modal');
+    else if ($('mep-modal').classList.contains('open')) closeModal('mep-modal');
+    else if ($('phase-modal').classList.contains('open')) closeModal('phase-modal');
+    else if ($('cmd-modal').classList.contains('open')) $('cmd-close-btn').click();
+    else if ($('help-modal').classList.contains('open')) $('help-btn').click();
+    else clearSelection();
+    return;
+  }
+  // While a dialog is open the remaining shortcuts would act on the plots
+  // underneath it (toggle help behind the CMD, export mid-inspection, undo the
+  // view invisibly, …) — pause them all. H still closes the help dialog itself.
+  const openBackdrop = document.querySelector('.modal-backdrop.open');
+  if (openBackdrop) {
+    if ((ev.key === 'h' || ev.key === 'H') && openBackdrop.id === 'help-modal') $('help-btn').click();
+    return;
+  }
+
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
     ev.preventDefault();
     ev.shiftKey ? redoView() : undoView();
@@ -2203,14 +2332,6 @@ window.addEventListener('keydown', ev => {
   else if (ev.key === 'h' || ev.key === 'H') { $('help-btn').click(); }
   else if (ev.key === 's' || ev.key === 'S') { exportCSV(state.selection, 'selected sources'); }
   else if (ev.key === '/') { ev.preventDefault(); $('search-input').focus(); }
-  else if (ev.key === 'Escape') {
-    if ($('custom-modal').classList.contains('open')) closeModal('custom-modal');
-    else if ($('mep-modal').classList.contains('open')) closeModal('mep-modal');
-    else if ($('phase-modal').classList.contains('open')) closeModal('phase-modal');
-    else if ($('cmd-modal').classList.contains('open')) $('cmd-close-btn').click();
-    else if ($('help-modal').classList.contains('open')) { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; }
-    else clearSelection();
-  }
 });
 
 /* ---------------- Sidebar controls ---------------- */
@@ -2328,11 +2449,48 @@ function resetFilters() {
 }
 $('filter-reset-btn').addEventListener('click', resetFilters);
 
+/* ---------------- Modal open/close & focus management ----------------
+   Opening a dialog remembers the trigger, moves focus onto the dialog
+   (tabindex="-1" on .modal), and closing hands focus back to the trigger.
+   A Tab trap on each backdrop keeps keyboard focus inside the open dialog. */
+const modalReturnFocus = new Map();   // backdrop id → element to refocus on close
+function openModal(id) {
+  const bd = $(id);
+  if (bd.classList.contains('open')) return;
+  modalReturnFocus.set(id, document.activeElement);
+  bd.classList.add('open');
+  const dlg = bd.querySelector('.modal');
+  if (dlg) dlg.focus();
+}
+function closeModal(id) {
+  const bd = $(id);
+  if (!bd.classList.contains('open')) return;
+  bd.classList.remove('open');
+  const back = modalReturnFocus.get(id);
+  modalReturnFocus.delete(id);
+  if (back && back.focus && document.contains(back)) back.focus();
+}
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('keydown', ev => {
+    if (ev.key !== 'Tab') return;
+    const focusables = [...bd.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    if (!focusables.length) { ev.preventDefault(); return; }
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (ev.shiftKey && (active === first || !bd.contains(active) || active === bd.querySelector('.modal'))) {
+      ev.preventDefault(); last.focus();
+    } else if (!ev.shiftKey && active === last) {
+      ev.preventDefault(); first.focus();
+    }
+  });
+});
+
 /* ---------------- Help modal ---------------- */
-function openModal(id) { $(id).classList.add('open'); }
-function closeModal(id) { $(id).classList.remove('open'); }
 $('help-btn').addEventListener('click', () => {
-  const open = $('help-modal').classList.toggle('open');
+  const open = !$('help-modal').classList.contains('open');
+  if (open) openModal('help-modal'); else closeModal('help-modal');
   $('help-btn').textContent = open ? 'Hide Help' : 'Show Help';
 });
 for (const id of ['help-close-btn', 'help-close-x']) {
@@ -2348,29 +2506,39 @@ $('fullscreen-btn').addEventListener('click', () => {
   else document.documentElement.requestFullscreen();
 });
 
-/* ---------------- Exports ---------------- */
+/* ---------------- Exports ----------------
+   The CSV is streamed into incremental Blob parts (one part per chunk of rows)
+   rather than one indices.map(...).join('\n') string — "Export Filtered
+   Sources" over millions of rows would otherwise rebuild exactly the kind of
+   multi-GB string the streaming loader was engineered to avoid. Blob parts
+   live off the JS heap, so peak memory stays at one chunk of text. */
 function exportCSV(indices, what) {
   const name = $('filename-input').value.trim();
   if (!name) { setMessage('Please enter a file name first'); return; }
   if (!indices.length) { setMessage(`No ${what} to save.`); return; }
   const filename = name.toLowerCase().endsWith('.csv') ? name : `${name}.csv`;
   const withStats = $('stats-checkbox').checked;
-  let header, rows;
-  if (withStats) {
-    header = `ID,${state.xColName},${state.yColName},Spearman_coeff,Spearman_p`;
-    rows = indices.map(i =>
-      `${state.ids[i]},${state.xFull[i]},${state.yFull[i]},${state.coeff[i]},${state.p[i]}`);
-  } else {
-    header = `${state.xColName},${state.yColName}`;
-    rows = indices.map(i => `${state.xFull[i]},${state.yFull[i]}`);
+  const header = withStats
+    ? `ID,${state.xColName},${state.yColName},Spearman_coeff,Spearman_p`
+    : `${state.xColName},${state.yColName}`;
+  const parts = [header + '\n'];
+  const CHUNK = 100000;   // rows per Blob part (a few MB of text each)
+  let rows = [];
+  for (let k = 0; k < indices.length; k++) {
+    const i = indices[k];
+    rows.push(withStats
+      ? `${state.ids[i]},${state.xFull[i]},${state.yFull[i]},${state.coeff[i]},${state.p[i]}`
+      : `${state.xFull[i]},${state.yFull[i]}`);
+    if (rows.length === CHUNK) { parts.push(rows.join('\n') + '\n'); rows.length = 0; }
   }
-  const blob = new Blob([header + '\n' + rows.join('\n') + '\n'], { type: 'text/csv' });
+  if (rows.length) parts.push(rows.join('\n') + '\n');
+  const blob = new Blob(parts, { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
-  setMessage(`[${timestamp()}] Saved ${rows.length.toLocaleString()} ${what} to '${filename}' with columns (${state.xColName}, ${state.yColName})`);
+  setMessage(`[${timestamp()}] Saved ${indices.length.toLocaleString()} ${what} to '${filename}' with columns (${state.xColName}, ${state.yColName})`);
 }
 function exportCanvasPNG(canvas, defName) {
   const base = $('filename-input').value.trim().replace(/\.csv$/i, '');
@@ -2397,6 +2565,7 @@ $('spearman-file-input').addEventListener('change', async ev => {
     if (!d.ids.length) throw new Error('no rows passed the quality filter');
     ingestSpearmanData(d);
     $('boot-overlay').style.display = 'none';
+    setWindowTitle(file.name);
     setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${file.name}`);
   } catch (e) {
     setMessage(`Error loading Spearman table: ${e.message}`);
@@ -2823,8 +2992,16 @@ async function showEpochCMD(gi) {
     }
     if (!plx.n || !Number.isFinite(plx.cols['Plx'][0])) throw new Error('no parallax in Gaia DR3');
     const parallaxMas = plx.cols['Plx'][0];
+    // A negative or zero DR3 parallax has no distance, so no distance modulus —
+    // reject it here rather than plotting a meaningless |distance| GMAG. (The
+    // main-table parallax filters don't protect this path: the CMD re-queries
+    // the archive fresh for each star.)
+    if (!(parallaxMas > 0)) {
+      throw new Error(`its DR3 parallax is ${parallaxMas.toFixed(4)} mas (non-positive), ` +
+        `so no distance — and no absolute magnitude — can be derived`);
+    }
     const distancePc = 1 / (parallaxMas / 1000);
-    const distMod = 5 * (Math.log10(Math.abs(distancePc)) - 1);
+    const distMod = 5 * (Math.log10(distancePc) - 1);
 
     // derived columns
     const n0 = ep.n, c = ep.cols;
@@ -3743,10 +3920,12 @@ const STAR_LISTS = [
   { key: 'mira', label: 'Mira', file: 'list_Gaia_DR3_Mira', color: '#c084fc' },
   { key: 'semireg', label: 'Semiregular', file: 'list_Gaia_DR3_Semiregular', color: '#f472b6',
     subs: [
-      { id: 'SRA', label: 'SRA', file: 'list_Gaia_DR3_Semiregular_SRA', color: '#38bdf8' },
+      // SRA/SRD retinted away from CepII blue (#3b82f6) and RRc emerald (#34d399),
+      // which they were nearly indistinguishable from when toggled together
+      { id: 'SRA', label: 'SRA', file: 'list_Gaia_DR3_Semiregular_SRA', color: '#f4a261' },
       { id: 'SRB', label: 'SRB', file: 'list_Gaia_DR3_Semiregular_SRB', color: '#fb7185' },
       { id: 'SRC', label: 'SRC', file: 'list_Gaia_DR3_Semiregular_SRC', color: '#a855f7' },
-      { id: 'SRD', label: 'SRD', file: 'list_Gaia_DR3_Semiregular_SRD', color: '#2dd4bf' },
+      { id: 'SRD', label: 'SRD', file: 'list_Gaia_DR3_Semiregular_SRD', color: '#b08968' },
       { id: 'SRS', label: 'SRS', file: 'list_Gaia_DR3_Semiregular_SRS', color: '#e11d48' },
     ] },
   { key: 'blap', label: 'BLAPs', file: 'list_Gaia_DR3_BLAPs', color: '#4d8bff' },
@@ -3918,6 +4097,10 @@ function slSignature() {
 }
 // draw each group's member segments; (ox,oy) offsets for the offscreen cache,
 // clipWindow restricts to the detail window. Honors the active visibility mask.
+// When several lists are toggled at once, each group also gets its own dash
+// pattern as a secondary cue, so overlapping catalogs stay tellable apart even
+// where their hues are similar (color is never the only encoding).
+const SL_DASHES = [[], [7, 4], [2, 3], [10, 3, 2, 3]];
 function slDrawGroups(ctx, plot, ox, oy, clipWindow) {
   const groups = slHighlightGroups();
   if (!groups.length) return;
@@ -3931,8 +4114,11 @@ function slDrawGroups(ctx, plot, ox, oy, clipWindow) {
   ctx.lineCap = 'round';
   ctx.lineWidth = clipWindow ? 2.6 : 1.8;
   const seg = [0, 0, 0, 0];
-  for (const g of groups) {
+  const multi = groups.length > 1;
+  for (let gi = 0; gi < groups.length; gi++) {
+    const g = groups[gi];
     ctx.strokeStyle = g.color;
+    ctx.setLineDash(multi ? SL_DASHES[gi % SL_DASHES.length] : []);
     for (const i of g.idx) {
       if (mask && !mask[i]) continue;
       if (clipWindow) {
@@ -4135,6 +4321,51 @@ $('custom-apply-btn').addEventListener('click', () => {
 slRefreshCustom();
 slRefreshUI();
 
+/* ---------------- Curated example stars ----------------
+   One-click classroom presets: each button jumps to a well-measured member of
+   a catalog and opens its epoch CMD, removing the need to know any Gaia IDs.
+   "Well-measured" = the member with the smallest Spearman p, preferring stars
+   that pass the active filters (the catalog file loads lazily on first use). */
+const EXAMPLE_STARS = [
+  { btn: 'ex-cepheid', key: 'cepheid', label: 'Cepheid' },
+  { btn: 'ex-rrab',    key: 'rrlyrae', subtype: 'RRab', label: 'RRab RR Lyrae' },
+  { btn: 'ex-mira',    key: 'mira',    label: 'Mira' },
+  { btn: 'ex-dsct',    key: 'dsct',    label: 'δ Scuti' },
+];
+async function showExampleStar(ex) {
+  if (!state.ids || !state.ids.length) {
+    setMessage('The dataset is still loading — try the example again once it finishes.');
+    return;
+  }
+  const L = STAR_LISTS.find(l => l.key === ex.key);
+  if (!L.loaded && !(await slEnsureLoaded(L))) return;   // bail if the catalog file is missing
+  let pool = ex.subtype ? (L.membersBySubtype[ex.subtype] || []) : L.members;
+  if (!pool.length) pool = L.members;                    // subtype column absent → any member
+  if (!pool.length) {
+    setMessage(`No ${ex.label} from the catalog is present in the loaded dataset.`);
+    return;
+  }
+  const passing = state.visMask ? pool.filter(i => state.visMask[i]) : pool;
+  const pick = passing.length ? passing : pool;
+  let best = pick[0];
+  for (const i of pick) if (state.p[i] < state.p[best]) best = i;
+  // center the detail window on the star (keeping its size), select it, open the CMD
+  const cx = state.xFull[best], cy = state.yFull[best];
+  const w = Math.abs(detail.xlim[1] - detail.xlim[0]);
+  const h = Math.abs(detail.ylim[1] - detail.ylim[0]);
+  setDetailLimitsFromRect(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2);
+  pushHistory();
+  state.selection = [best];
+  updateSelectionInfo();
+  requestRedraw();
+  setMessage(`Example ${ex.label}: Gaia DR3 ${state.ids[best]} ` +
+    `(ρ = ${state.coeff[best].toFixed(3)}, p = ${state.p[best].toExponential(2)}).`);
+  showEpochCMD(best);
+}
+for (const ex of EXAMPLE_STARS) {
+  $(ex.btn).addEventListener('click', () => showExampleStar(ex));
+}
+
 /* ---------------- Resize handling ---------------- */
 function handleResize() {
   overview.resize();
@@ -4171,6 +4402,7 @@ async function boot() {
     if (!d.ids.length) throw new Error('no rows passed the quality filter');
     ingestSpearmanData(d);
     $('boot-overlay').style.display = 'none';
+    setWindowTitle(DATA_FILE);
     setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${DATA_FILE}. ` +
       `Click a line in the Detail View to fetch its Gaia epoch photometry.`);
   } catch (e) {
@@ -4202,6 +4434,7 @@ async function boot() {
         if (!d.ids.length) throw new Error('no rows passed the quality filter');
         ingestSpearmanData(d);
         ov.style.display = 'none';
+        setWindowTitle(file.name);
         setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources from ${file.name}`);
       } catch (err) {
         setMessage(`Error loading dropped file: ${err.message}`);

@@ -45,7 +45,7 @@ Downloading the .dmg version of the app is less work in the long run. The setup 
 6. Run the app on your machine and enjoy exploring the Gaia CMD!
 
 ### Pulling Github repo
-This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, it is less reccomended because there are more steps to get the code up and running.
+This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, there are more steps to get the code up and running.
 
 1. Go to the Zenodo page and download the .
 2. Open a terminal and run:

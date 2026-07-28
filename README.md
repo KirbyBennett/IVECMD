@@ -7,6 +7,8 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 ## Table of Contents
 
 - [Quickstart](#quickstart)
+  - [Downloading the App](#downloading-the-app)
+  - [Github repo access](#pulling-github-repo)
 - [How to Use](#how-to-use)
   - [Overview Plot](#overview-plot)
   - [Detail View](#detail-view)
@@ -27,7 +29,25 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 
 ## Quickstart
 
-1. Unpack the `.zip` file to gain access to the data lists.
+### Downloading the App (Recommended)
+Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
+
+1. Navigate to the "Releases" tab on the right side of the screen.
+2. Find the release that you want to download and click the "ITCMD-<version-#>-arm64.dmg" to download the app.
+3. Open the .dmg file on you computer. Normally, this will end up in the downloads folder.
+4. Drag the app icon over to the applications folder.
+5. Open a terminal and run this command to allow the app to run on your machine.
+  ```
+  xattr -dr com.apple.quarantine /Applications/ITCMD.app
+  ```
+**NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
+
+6. Run the app on your machine and enjoy exploring the Gaia CMD!
+
+### Pulling Github repo
+This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, there are more steps to get the code up and running.
+
+1. Go to the Zenodo page and download the .
 2. Open a terminal and run:
    ```bash
    python3 -m http.server 8000
@@ -37,7 +57,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
    http://localhost:8000/index.html
    ```
 4. The diagram opens with the Y-axis already inverted (the conventional CMD
-   orientation).
+   orientation). Enjoy exploring the Gaia CMD!
 
 ---
 

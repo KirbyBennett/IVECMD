@@ -45,7 +45,7 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 
 ### Overview Plot
 
-Displays every star in the dataset. Click an empty spot (or drag the green rectangle) to move the detail view. Scroll to zoom the overview about the cursor, use the corner **X**/**Y** buttons to zoom either axis on its own, and drag the background to pan around and explore the whole diagram.
+A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View and follows it as you pan and zoom the Detail View — it can even slide off the edge of the overview. Use **Center Detail View** in the Actions card to bring it back to the middle.
 
 ### Detail View
 
@@ -53,10 +53,9 @@ Shows the stars within the selected region. Drag to pan, scroll to zoom around t
 
 ### Zooming
 
-- Click on the overview to recenter.
 - Use **`+`** and **`−`** keys to zoom the Detail View in and out; **`0`** resets the zoom.
 - To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold **Shift** for x-only / **Alt** for y-only zoom inside the plot.
-- Every interactive plot (Overview, Detail View, and the epoch CMD) has floating **X −/+** and **Y −/+** buttons in its top-right corner that zoom each axis on its own without needing the scroll wheel.
+- The Detail View and the epoch CMD have floating **X −/+** and **Y −/+** buttons in their top-right corners that zoom each axis on its own without needing the scroll wheel.
 - Dragging the CMD's axis strips pans that axis alone.
 
 ### Filters
@@ -73,7 +72,7 @@ Click any line in the Detail View. The app queries VizieR live for that star's G
 
 ### Light Curves
 
-The **Light Curves** button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts.
+The **Light Curves** button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (**Shift** x-only, **Alt** y-only), and double-click to reset that panel. The same applies to each periodogram and folded panel in the Phase Folding dialog.
 
 ### Phase Folding
 

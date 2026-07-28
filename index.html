@@ -299,8 +299,7 @@ input[type=range]::-moz-range-thumb {
 .plot-half { flex: 1; min-width: 0; position: relative; }
 .plot-half canvas { width: 100%; height: 100%; display: block; }
 #detail-canvas { cursor: crosshair; }
-#overview-canvas { cursor: grab; }
-#overview-canvas.dragging { cursor: grabbing; }
+#overview-canvas { cursor: default; }
 
 /* ---------- Tooltip ---------- */
 #tooltip {
@@ -530,6 +529,15 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
+      <div class="section-title">Actions</div>
+      <button id="reset-view-btn" title="Return both plots to their startup view">Reset View</button>
+      <button id="center-detail-btn" title="Bring the detail view region (the green rectangle) back to the center of the overview">Center Detail View</button>
+      <button id="undo-view-btn" disabled title="Go back to the previous view (Ctrl/Cmd+Z)">Undo View</button>
+      <button id="redo-view-btn" disabled title="Reapply the view you undid (Ctrl/Cmd+Shift+Z)">Redo View</button>
+      <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
+    </div>
+
+    <div class="card">
       <div class="section-title">Search</div>
       <input type="text" id="search-input" placeholder="Gaia DR3 source ID">
       <button id="search-btn" title="Center and highlight this Gaia DR3 source on both plots">Search</button>
@@ -679,6 +687,17 @@ input[type=range]::-moz-range-thumb {
       <button id="clear-sel-btn" class="small" disabled title="Deselect all currently selected stars">Clear Selection</button>
     </div>
 
+    <div class="card">
+      <div class="section-title">Export</div>
+      <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
+      <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
+      <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
+      <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
+      <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
+      <button id="export-detail-png-btn" title="Download the Detail View as a PNG image">Export Detail View PNG</button>
+      <button id="export-overview-png-btn" title="Download the Overview plot as a PNG image">Export Overview PNG</button>
+    </div>
+
     <div class="card" id="legend-card">
       <div class="section-title">Color Legend</div>
       <div class="legend-bar" id="legend-bar"></div>
@@ -689,25 +708,6 @@ input[type=range]::-moz-range-thumb {
         significance (−log<sub>10</sub> p). Bluing and reddening lines also tilt in
         opposite directions, so the sign is readable without color.
       </div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Actions</div>
-      <button id="reset-view-btn" title="Return both plots to their startup view">Reset View</button>
-      <button id="undo-view-btn" disabled title="Go back to the previous view (Ctrl/Cmd+Z)">Undo View</button>
-      <button id="redo-view-btn" disabled title="Reapply the view you undid (Ctrl/Cmd+Shift+Z)">Redo View</button>
-      <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Export</div>
-      <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
-      <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
-      <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
-      <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
-      <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
-      <button id="export-detail-png-btn" title="Download the Detail View as a PNG image">Export Detail View PNG</button>
-      <button id="export-overview-png-btn" title="Download the Overview plot as a PNG image">Export Overview PNG</button>
     </div>
 
     <input type="file" id="spearman-file-input" hidden>
@@ -722,10 +722,6 @@ input[type=range]::-moz-range-thumb {
     <div id="plot-panel">
       <div class="plot-half">
         <canvas id="overview-canvas"></canvas>
-        <div class="zoom-overlay" id="ov-zoom" title="Zoom the overview per axis. You can also scroll to zoom about the cursor, or drag the background to pan and explore.">
-          <div class="zrow"><span class="zaxis">X</span><button class="zbtn" id="ov-zoomx-out" title="Zoom out the color (X) axis">−</button><button class="zbtn" id="ov-zoomx-in" title="Zoom in the color (X) axis">+</button></div>
-          <div class="zrow"><span class="zaxis">Y</span><button class="zbtn" id="ov-zoomy-out" title="Zoom out the magnitude (Y) axis">−</button><button class="zbtn" id="ov-zoomy-in" title="Zoom in the magnitude (Y) axis">+</button></div>
-        </div>
       </div>
       <div class="plot-half">
         <canvas id="detail-canvas" tabindex="0"></canvas>
@@ -755,14 +751,14 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-body">
       <h3>Quick start</h3>
       <ul>
-        <li><b>Overview Plot:</b> Displays every star in the dataset. Click an empty spot (or drag the green rectangle) to move the detail view. Scroll to zoom about the cursor, use the corner <b>X</b>/<b>Y</b> buttons to zoom either axis, and drag the background to pan around and explore the whole diagram.</li>
+        <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View and follows it as you pan and zoom — it can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
-        <li><b>Zooming:</b> Click on the overview to recenter. Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
+        <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
-        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts.</li>
-        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators).</li>
+        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (<code>Shift</code> x-only, <code>Alt</code> y-only), and double-click to reset that panel.</li>
+        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators). Each periodogram and folded panel is interactive: drag to pan, scroll to zoom (<code>Shift</code> x-only, <code>Alt</code> y-only), double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV, or either panel as a PNG.</li>
@@ -1867,10 +1863,11 @@ function updateExportCounts() {
   $('export-filtered-btn').textContent = `Export Filtered Sources (${state.visIdx.length.toLocaleString()})`;
 }
 
-/* ---------------- Overview interactions: drag/recenter/scale rect ---------------- */
-const ovCanvas = $('overview-canvas');
-let ovDrag = null;   // active overview gesture: { mode:'rect'|'bg', ... }
-
+/* ---------------- Overview: static map of the filtered data ----------------
+   The overview itself is not interactive — it only re-renders when the filters
+   (or display settings) change. The green rectangle mirrors the Detail View,
+   which is moved by panning/zooming the detail plot or the Center Detail View
+   action. */
 function detailRectData() {
   // rect in data coords (x, y = lower-left in value terms, w, h positive)
   const x = Math.min(...detail.xlim), w = Math.abs(detail.xlim[1] - detail.xlim[0]);
@@ -1883,15 +1880,6 @@ function setDetailLimitsFromRect(xMin, xMax, yMin, yMax) {
   detail.ylim = [yMin, yMax];
   requestRedraw();
 }
-function clampRect(rx, ry, rw, rh) {
-  // clamp the detail rectangle to the framed data extent (not the possibly
-  // zoomed/panned current overview view) so it can roam the whole diagram
-  const xlo = Math.min(...overviewBase.xlim), xhi = Math.max(...overviewBase.xlim);
-  const ylo = Math.min(...overviewBase.ylim), yhi = Math.max(...overviewBase.ylim);
-  rx = Math.max(xlo, Math.min(rx, xhi - rw));
-  ry = Math.max(ylo, Math.min(ry, yhi - rh));
-  return [rx, ry];
-}
 function canvasPos(canvas, ev) {
   const b = canvas.getBoundingClientRect();
   return [ev.clientX - b.left, ev.clientY - b.top];
@@ -1903,17 +1891,6 @@ function wheelDelta(ev) {
   return ev.deltaY !== 0 ? ev.deltaY : ev.deltaX;
 }
 
-// zoom the overview's own view about a data-space point (defaults to center).
-// scale<1 zooms in, scale>1 zooms out. zoomX/zoomY pick which axes to scale.
-// The cache key tracks overview.xlim/ylim, so segments re-render automatically.
-function zoomOverview(scale, cx, cy, zoomX = true, zoomY = true) {
-  const [x0, x1] = overview.xlim, [y0, y1] = overview.ylim;
-  if (cx == null) cx = (x0 + x1) / 2;
-  if (cy == null) cy = (y0 + y1) / 2;
-  if (zoomX) overview.xlim = [cx - (cx - x0) * scale, cx + (x1 - cx) * scale];
-  if (zoomY) overview.ylim = [cy - (cy - y0) * scale, cy + (y1 - cy) * scale];
-  requestRedraw();
-}
 // zoom the detail window per axis about its center (matches the wheel/Shift/Alt
 // zoom on the plot). scale<1 zooms in, scale>1 zooms out.
 function zoomDetailAxis(zoomX, zoomY, scale) {
@@ -1924,86 +1901,24 @@ function zoomDetailAxis(zoomX, zoomY, scale) {
   setDetailLimitsFromRect(Math.min(nx0, nx1), Math.max(nx0, nx1), Math.min(ny0, ny1), Math.max(ny0, ny1));
   pushHistorySoon();
 }
+// the detail rectangle may roam anywhere, including past the overview's framed
+// extent — the Center Detail View action brings it back when it wanders off
 function jumpDetailTo(x, y) {
   const rect = detailRectData();
-  let [nrx, nry] = clampRect(x - rect.w / 2, y - rect.h / 2, rect.w, rect.h);
+  const nrx = x - rect.w / 2, nry = y - rect.h / 2;
   setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
   pushHistory();
 }
-
-// The overview is both a navigator and an explorable map: drag the green
-// rectangle to move the detail window; drag empty space to pan the overview;
-// a plain click on empty space jumps the detail window there.
-ovCanvas.addEventListener('mousedown', ev => {
-  if (ev.button !== 0) return;
-  const [px, py] = canvasPos(ovCanvas, ev);
-  if (!overview.inPlot(px, py)) return;
-  const x = overview.pxToX(px), y = overview.pxToY(py);
-  const rect = detailRectData();
-  const inside = x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
-  if (inside) {
-    ovDrag = { mode: 'rect', offset: [x - rect.x, y - rect.y] };
-    ovCanvas.classList.add('dragging');
-  } else {
-    // decide pan-vs-jump on mouseup based on whether the pointer moved
-    ovDrag = { mode: 'bg', px, py, xlim: [...overview.xlim], ylim: [...overview.ylim],
-               dataX: x, dataY: y, moved: false };
-  }
-});
-window.addEventListener('mousemove', ev => {
-  if (!ovDrag) return;
-  const [px, py] = canvasPos(ovCanvas, ev);
-  if (ovDrag.mode === 'rect') {
-    const x = overview.pxToX(px), y = overview.pxToY(py);
-    const rect = detailRectData();
-    let [nrx, nry] = clampRect(x - ovDrag.offset[0], y - ovDrag.offset[1], rect.w, rect.h);
-    setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
-  } else {
-    if (!ovDrag.moved && Math.hypot(px - ovDrag.px, py - ovDrag.py) < 4) return;
-    ovDrag.moved = true;
-    ovCanvas.classList.add('dragging');
-    const r = overview.plotRect;
-    const dx = (ovDrag.px - px) * (ovDrag.xlim[1] - ovDrag.xlim[0]) / r.w;
-    const dy = (overview.invertY ? (ovDrag.py - py) : (py - ovDrag.py)) * (ovDrag.ylim[1] - ovDrag.ylim[0]) / r.h;
-    overview.xlim = [ovDrag.xlim[0] + dx, ovDrag.xlim[1] + dx];
-    overview.ylim = [ovDrag.ylim[0] + dy, ovDrag.ylim[1] + dy];
-    requestRedraw();
-  }
-});
-window.addEventListener('mouseup', () => {
-  if (!ovDrag) return;
-  if (ovDrag.mode === 'rect') pushHistory();                          // completed rectangle move
-  else if (!ovDrag.moved) jumpDetailTo(ovDrag.dataX, ovDrag.dataY);   // plain click → jump detail
-  ovDrag = null;
-  ovCanvas.classList.remove('dragging');
-});
 
 function resizeViewRect(scale) {
   const rect = detailRectData();
   const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
   const nw = rect.w * scale, nh = rect.h * scale;
-  let [nrx, nry] = clampRect(cx - nw / 2, cy - nh / 2, nw, nh);
-  setDetailLimitsFromRect(nrx, nrx + nw, nry, nry + nh);
+  setDetailLimitsFromRect(cx - nw / 2, cx + nw / 2, cy - nh / 2, cy + nh / 2);
 }
 
-// scroll zooms the overview itself about the cursor (map-style exploration).
-// Same direction convention as the detail/CMD: scroll down = zoom in.
-ovCanvas.addEventListener('wheel', ev => {
-  const [px, py] = canvasPos(ovCanvas, ev);
-  if (!overview.inPlot(px, py)) return;
-  ev.preventDefault();
-  const dWheel = wheelDelta(ev);
-  if (dWheel === 0) return;
-  zoomOverview(dWheel > 0 ? 0.85 : 1.15, overview.pxToX(px), overview.pxToY(py));
-}, { passive: false });
-
-// overlay zoom buttons — per-axis (X / Y) on both panels, so x-direction zoom
-// works everywhere. Overview zooms its own view; detail zooms the detail window.
+// per-axis (X / Y) zoom buttons overlaid on the detail plot
 const PZOOM_IN = 1 / 1.5, PZOOM_OUT = 1.5;
-$('ov-zoomx-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, true,  false));
-$('ov-zoomx-out').addEventListener('click', () => zoomOverview(PZOOM_OUT, null, null, true,  false));
-$('ov-zoomy-in').addEventListener('click',  () => zoomOverview(PZOOM_IN,  null, null, false, true));
-$('ov-zoomy-out').addEventListener('click', () => zoomOverview(PZOOM_OUT, null, null, false, true));
 $('dt-zoomx-in').addEventListener('click',  () => zoomDetailAxis(true,  false, PZOOM_IN));
 $('dt-zoomx-out').addEventListener('click', () => zoomDetailAxis(true,  false, PZOOM_OUT));
 $('dt-zoomy-in').addEventListener('click',  () => zoomDetailAxis(false, true,  PZOOM_IN));
@@ -2361,6 +2276,13 @@ $('reset-view-btn').addEventListener('click', () => {
   overviewCacheKey = '';
   requestRedraw();
   pushHistory();
+});
+
+// bring a detail window that wandered off the overview back to its middle,
+// keeping the current zoom level (width/height) of the window
+$('center-detail-btn').addEventListener('click', () => {
+  jumpDetailTo((overviewBase.xlim[0] + overviewBase.xlim[1]) / 2,
+               (overviewBase.ylim[0] + overviewBase.ylim[1]) / 2);
 });
 
 /* ---------------- Filter controls ---------------- */
@@ -3404,6 +3326,88 @@ let lastEpoch = null;
 const phaseModal = $('phase-modal');
 const phaseCanvas = $('phase-canvas');
 
+/* ---- per-panel interactive views (light-curve & phase panels) ----
+   Every small panel in the Multi-Epoch Photometry and Phase Analysis dialogs
+   pans (drag), zooms (scroll about the cursor; Shift = x-only, Alt = y-only)
+   and resets (double-click) independently. Each draw pass registers the
+   panels' rects + current limits in panelRects; user overrides persist in
+   panelViews until the panel is reset or the dialog reopens. */
+const panelViews = { phase: new Map(), mep: new Map() };
+const panelRects = { phase: [], mep: [] };
+// when a panel drag releases over the modal backdrop, the browser still fires a
+// click on the backdrop — which would close the dialog mid-gesture. The close
+// handlers ignore clicks that land right after a drag ends.
+let panelDragEnd = 0;
+
+function makePanelsInteractive(canvas, store, redraw) {
+  let drag = null;
+  const panelAt = (px, py) => panelRects[store].find(p =>
+    px >= p.r.x && px <= p.r.x + p.r.w && py >= p.r.y && py <= p.r.y + p.r.h);
+  // pixel → data-space, honoring the panel's y-orientation
+  const dataXY = (p, px, py) => [
+    p.xlim[0] + (px - p.r.x) / p.r.w * (p.xlim[1] - p.xlim[0]),
+    p.invertY
+      ? p.ylim[0] + (py - p.r.y) / p.r.h * (p.ylim[1] - p.ylim[0])
+      : p.ylim[0] + (p.r.y + p.r.h - py) / p.r.h * (p.ylim[1] - p.ylim[0]),
+  ];
+  canvas.addEventListener('mousedown', ev => {
+    if (ev.button !== 0) return;
+    const [px, py] = canvasPos(canvas, ev);
+    const p = panelAt(px, py);
+    if (!p) return;
+    ev.preventDefault();
+    drag = { p, px, py, xlim: [...p.xlim], ylim: [...p.ylim] };
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', ev => {
+    if (!drag) return;
+    const [px, py] = canvasPos(canvas, ev);
+    const p = drag.p;
+    const dx = (drag.px - px) * (drag.xlim[1] - drag.xlim[0]) / p.r.w;
+    const dy = (p.invertY ? (drag.py - py) : (py - drag.py)) * (drag.ylim[1] - drag.ylim[0]) / p.r.h;
+    panelViews[store].set(p.key, {
+      xlim: [drag.xlim[0] + dx, drag.xlim[1] + dx],
+      ylim: [drag.ylim[0] + dy, drag.ylim[1] + dy],
+    });
+    redraw();
+  });
+  canvas.addEventListener('mousemove', ev => {
+    if (drag) return;
+    const [px, py] = canvasPos(canvas, ev);
+    canvas.style.cursor = panelAt(px, py) ? 'grab' : 'default';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag = null;
+    panelDragEnd = Date.now();
+    canvas.style.cursor = 'grab';
+  });
+  canvas.addEventListener('wheel', ev => {
+    const [px, py] = canvasPos(canvas, ev);
+    const p = panelAt(px, py);
+    if (!p) return;   // outside every panel: let the dialog scroll normally
+    ev.preventDefault();
+    const dW = wheelDelta(ev);
+    if (dW === 0) return;
+    const s = dW > 0 ? 0.85 : 1.15;   // scroll down = zoom in (app-wide convention)
+    const zoomX = !ev.altKey, zoomY = !ev.shiftKey;   // Shift = x-only, Alt = y-only
+    const [cx, cy] = dataXY(p, px, py);
+    panelViews[store].set(p.key, {
+      xlim: zoomX ? [cx - (cx - p.xlim[0]) * s, cx + (p.xlim[1] - cx) * s] : [...p.xlim],
+      ylim: zoomY ? [cy - (cy - p.ylim[0]) * s, cy + (p.ylim[1] - cy) * s] : [...p.ylim],
+    });
+    redraw();
+  }, { passive: false });
+  canvas.addEventListener('dblclick', ev => {
+    const [px, py] = canvasPos(canvas, ev);
+    const p = panelAt(px, py);
+    if (!p) return;
+    panelViews[store].delete(p.key);
+    redraw();
+  });
+}
+const PANEL_HINT = 'drag a panel to pan · scroll to zoom (Shift x-only, Alt y-only) · double-click to reset';
+
 // soft pastel palette for the phase-analysis window
 const PHASE_COLORS = {
   G: '#b8d8c7',         // soft mint
@@ -3574,18 +3578,23 @@ function emptyPhasePanel(ctx, r, title, msg) {
   ctx.fillText(msg, r.x + r.w / 2, r.y + r.h / 2);
 }
 
-function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel) {
+function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel, key) {
   const pmax = Math.max(power[argmaxArr(power)], 1e-6);
-  const xlim = [0, freqs[freqs.length - 1]];
-  const ylim = [0, pmax * 1.12];
+  let xlim = [0, freqs[freqs.length - 1]];
+  let ylim = [0, pmax * 1.12];
+  const view = key ? panelViews.phase.get(key) : null;
+  if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
+  if (key) panelRects.phase.push({ key, r, xlim, ylim, invertY: false });
   const P = 1 / freqs[peakI];
   const [X, Y] = phasePanel(ctx, r, xlim, ylim,
     { title, titleColor: color, note: `P = ${fmtPeriod(P)}`, xlabel });
-  // per-pixel max decimation keeps narrow peaks visible
+  // per-pixel max decimation (across the visible x-range) keeps narrow peaks visible
   const bins = new Float64Array(Math.max(2, Math.ceil(r.w)));
+  const span = xlim[1] - xlim[0];
   for (let i = 0; i < freqs.length; i++) {
-    const px = Math.min(bins.length - 1,
-      Math.max(0, Math.floor((freqs[i] - xlim[0]) / (xlim[1] - xlim[0]) * (bins.length - 1))));
+    const frac = (freqs[i] - xlim[0]) / span;
+    if (frac < 0 || frac > 1) continue;   // outside a zoomed-in view
+    const px = Math.min(bins.length - 1, Math.max(0, Math.floor(frac * (bins.length - 1))));
     if (power[i] > bins[px]) bins[px] = power[i];
   }
   ctx.save();
@@ -3615,7 +3624,11 @@ function drawFoldedPanel(ctx, r, s, period, color, title, opts = {}) {
     hi = Math.max(hi, s.m[i] + s.e[i]);
   }
   const pad = 0.08 * (hi - lo || 1);
-  const [X, Y] = phasePanel(ctx, r, [0, 2], [lo - pad, hi + pad],
+  let xlim = [0, 2], ylim = [lo - pad, hi + pad];
+  const view = opts.key ? panelViews.phase.get(opts.key) : null;
+  if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
+  if (opts.key) panelRects.phase.push({ key: opts.key, r, xlim, ylim, invertY: !!opts.invertY });
+  const [X, Y] = phasePanel(ctx, r, xlim, ylim,
     { title, titleColor: color, invertY: opts.invertY, xlabel: opts.xlabel, note: opts.note });
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
@@ -3706,12 +3719,13 @@ function drawPhase() {
     w: colW, h: rowH,
   });
 
+  panelRects.phase = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
   pd.bands.forEach((b, row) => {
     if (b.power) {
       drawPeriodogramPanel(ctx, rectAt(row, 0), pd.freqs, b.power, b.peakI, b.color,
-        `${b.label} periodogram (${b.s.t.length} epochs)`);
+        `${b.label} periodogram (${b.s.t.length} epochs)`, undefined, `pg-${b.label}`);
       drawFoldedPanel(ctx, rectAt(row, 1), b.s, b.period * f, b.color,
-        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`, { invertY: true });
+        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`, { invertY: true, key: `fold-${b.label}` });
     } else {
       emptyPhasePanel(ctx, rectAt(row, 0), `${b.label} periodogram`,
         `not enough epochs (${b.s.t.length})`);
@@ -3720,10 +3734,10 @@ function drawPhase() {
   });
 
   drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.combined,
-    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]');
+    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]', 'pg-comb');
   if (d.color.t.length >= 3) {
     drawFoldedPanel(ctx, rectAt(3, 1), d.color, pd.combPeriod * f, PHASE_COLORS.color,
-      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`, { invertY: false, xlabel: 'phase' });
+      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`, { invertY: false, xlabel: 'phase', key: 'fold-color' });
   } else {
     emptyPhasePanel(ctx, rectAt(3, 1), 'BP−RP folded', 'not enough simultaneous BP/RP epochs');
   }
@@ -3735,7 +3749,8 @@ function drawPhase() {
     (f !== 1 ? ` | folds drawn at ×${f} the peak periods` : '') +
     ` | grid: ${pd.freqs.length.toLocaleString()} frequencies up to ${phaseFmax()} c/d ` +
     `(P ≥ ${phaseHighRes ? '5 min' : '1 h'}), ${PHASE_OVERSAMPLE}× oversampled` +
-    (phaseHighRes ? ' [high-res]' : '');
+    (phaseHighRes ? ' [high-res]' : '') +
+    ` | ${PANEL_HINT}`;
 }
 
 function computeAndDrawPhase() {
@@ -3746,6 +3761,7 @@ function computeAndDrawPhase() {
 $('cmd-phase-btn').addEventListener('click', () => {
   if (!lastEpoch) return;
   phaseFactor = 1;   // every fresh open starts at the GLS peak periods
+  panelViews.phase.clear();   // fresh open → every panel back to its auto-fit view
   $('phase-title').textContent = `Phase Analysis — Gaia DR3 ${lastEpoch.id}`;
   $('phase-status').textContent = '';
   $('phase-loading').style.display = 'flex';
@@ -3762,7 +3778,9 @@ $('cmd-phase-btn').addEventListener('click', () => {
   }, 40);
 });
 $('phase-close-btn').addEventListener('click', () => closeModal('phase-modal'));
-phaseModal.addEventListener('click', ev => { if (ev.target === phaseModal) closeModal('phase-modal'); });
+phaseModal.addEventListener('click', ev => {
+  if (ev.target === phaseModal && Date.now() - panelDragEnd > 200) closeModal('phase-modal');
+});
 $('phase-png-btn').addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = phaseCanvas.toDataURL('image/png');
@@ -3789,6 +3807,7 @@ $('phase-hires-chk').addEventListener('change', ev => {
   if (!lastEpoch || !phaseModal.classList.contains('open')) return;
   phaseData = null;   // invalidate cached periodograms; forces a recompute
   phaseFactor = 1;    // peaks may shift to short-period harmonics; start at GLS peak
+  panelViews.phase.clear();   // the frequency axis changes drastically with the grid
   $('phase-loading-text').textContent = phaseHighRes
     ? 'Computing high-res periodograms…' : 'Computing periodograms…';
   $('phase-loading').style.display = 'flex';
@@ -3801,6 +3820,8 @@ $('phase-hires-chk').addEventListener('change', ev => {
     }
   }, 40);
 });
+// per-panel pan/zoom on the 4×2 phase grid; redraw is the light (fold-only) pass
+makePanelsInteractive(phaseCanvas, 'phase', () => { if (phaseData) drawPhase(); });
 
 /* =====================================================
    Multi-epoch photometry: light curves per band + color
@@ -3835,6 +3856,7 @@ function drawMEP() {
   const mL = 64, mR = 20, topPad = 34, rowGap = 46, botPad = 42, n = rows.length;
   const rowH = (H - topPad - botPad - rowGap * (n - 1)) / n;
 
+  panelRects.mep = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
   rows.forEach((row, i) => {
     const r = { x: mL, y: topPad + i * (rowH + rowGap), w: W - mL - mR, h: rowH };
     if (!row.s.t.length) {
@@ -3847,7 +3869,11 @@ function drawMEP() {
       hi = Math.max(hi, row.s.m[k] + row.s.e[k]);
     }
     const pad = 0.1 * (hi - lo || 1);
-    const [X, Y] = phasePanel(ctx, r, [tmin, tmax], [lo - pad, hi + pad], {
+    let xlim = [tmin, tmax], ylim = [lo - pad, hi + pad];
+    const view = panelViews.mep.get(row.label);
+    if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
+    panelRects.mep.push({ key: row.label, r, xlim, ylim, invertY: row.invertY });
+    const [X, Y] = phasePanel(ctx, r, xlim, ylim, {
       title: `${row.label} (${row.s.t.length} epochs)`,
       titleColor: row.color,
       invertY: row.invertY,
@@ -3872,11 +3898,12 @@ function drawMEP() {
 
   $('mep-status').textContent =
     rows.map(r => `${r.label}: ${r.s.t.length}`).join(' · ') +
-    ` epochs | baseline ${baseline.toFixed(1)} d`;
+    ` epochs | baseline ${baseline.toFixed(1)} d | ${PANEL_HINT}`;
 }
 
 $('cmd-mep-btn').addEventListener('click', () => {
   if (!lastEpoch) return;
+  panelViews.mep.clear();   // fresh open → every panel back to its auto-fit view
   $('mep-title').textContent = `Multi-Epoch Photometry — Gaia DR3 ${lastEpoch.id}`;
   openModal('mep-modal');
   try {
@@ -3885,8 +3912,15 @@ $('cmd-mep-btn').addEventListener('click', () => {
     $('mep-status').textContent = `Could not draw light curves: ${e.message}`;
   }
 });
+// per-panel pan/zoom on the stacked light curves
+makePanelsInteractive(mepCanvas, 'mep', () => {
+  if (!lastEpoch) return;
+  try { drawMEP(); } catch (e) { $('mep-status').textContent = `Could not draw light curves: ${e.message}`; }
+});
 $('mep-close-btn').addEventListener('click', () => closeModal('mep-modal'));
-mepModal.addEventListener('click', ev => { if (ev.target === mepModal) closeModal('mep-modal'); });
+mepModal.addEventListener('click', ev => {
+  if (ev.target === mepModal && Date.now() - panelDragEnd > 200) closeModal('mep-modal');
+});
 $('mep-png-btn').addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = mepCanvas.toDataURL('image/png');
@@ -4461,22 +4495,24 @@ boot();
 
 /* ---------------- Button hover descriptions ----------------
    Every button carries a short description in its title attribute. On hover the
-   title is moved into data-tip (suppressing the browser's slow native tooltip)
-   and shown immediately in a themed bubble anchored under the button. */
+   title is moved into data-tip (suppressing the browser's slow native tooltip);
+   the themed bubble appears under the button only after the pointer has rested
+   on it for a couple of seconds, so quick clicks never see it. */
 const btnTip = document.createElement('div');
 btnTip.id = 'btn-tip';
 document.body.appendChild(btnTip);
+const BTN_TIP_DELAY = 2000;   // ms of uninterrupted hover before the bubble shows
+let btnTipTimer = null;
 // subtype catalog buttons share one generated description
 document.querySelectorAll('.sl-subs .sl-sub').forEach(b => {
   if (!b.title) b.title = `Highlight ${b.textContent.trim()} members on both plots`;
 });
-function hideBtnTip() { btnTip.style.display = 'none'; }
-document.addEventListener('mouseover', ev => {
-  const b = ev.target.closest ? ev.target.closest('button') : null;
-  if (!b) { hideBtnTip(); return; }
-  if (b.title) { b.dataset.tip = b.title; b.removeAttribute('title'); }
-  const text = b.dataset.tip;
-  if (!text) { hideBtnTip(); return; }
+function hideBtnTip() {
+  clearTimeout(btnTipTimer);
+  btnTipTimer = null;
+  btnTip.style.display = 'none';
+}
+function showBtnTip(b, text) {
   btnTip.textContent = text;
   btnTip.style.display = 'block';
   const r = b.getBoundingClientRect();
@@ -4487,6 +4523,16 @@ document.addEventListener('mouseover', ev => {
   if (y + th > window.innerHeight - 8) y = r.top - th - 8;
   btnTip.style.left = x + 'px';
   btnTip.style.top = y + 'px';
+}
+document.addEventListener('mouseover', ev => {
+  const b = ev.target.closest ? ev.target.closest('button') : null;
+  hideBtnTip();
+  if (!b) return;
+  if (b.title) { b.dataset.tip = b.title; b.removeAttribute('title'); }
+  const text = b.dataset.tip;
+  if (!text) return;
+  // mouseout/click/scroll clear this timer, so it only fires while still hovering
+  btnTipTimer = setTimeout(() => { if (b.isConnected) showBtnTip(b, text); }, BTN_TIP_DELAY);
 });
 document.addEventListener('mouseout', ev => {
   if (ev.target.closest && ev.target.closest('button')) hideBtnTip();

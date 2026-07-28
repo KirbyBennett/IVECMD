@@ -27,6 +27,12 @@ let win
 
 function createWindow() {
   win = new BrowserWindow({ width: 1100, height: 750 })
+  // External links (SIMBAD / VizieR, opened with target=_blank) become child
+  // windows; without this override Electron gives them a cramped default size.
+  win.webContents.setWindowOpenHandler(() => ({
+    action: 'allow',
+    overrideBrowserWindowOptions: { width: 1400, height: 950 },
+  }))
   // Drop the reference when the window is gone so it can be GC'd and so the
   // app doesn't try to talk to a destroyed window.
   win.on('closed', () => { win = null })

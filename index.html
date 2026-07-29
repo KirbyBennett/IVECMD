@@ -751,13 +751,13 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-body">
       <h3>Quick start</h3>
       <ul>
-        <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View and follows it as you pan and zoom — it can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
+        <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View — drag it around the overview to move the Detail View, and it also follows along as you pan and zoom the Detail View itself. It can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
-        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (<code>Shift</code> x-only, <code>Alt</code> y-only), and double-click to reset that panel.</li>
+        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (<code>Shift</code> x-only, <code>Alt</code> y-only), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Folding dialog).</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators). Each periodogram and folded panel is interactive: drag to pan, scroll to zoom (<code>Shift</code> x-only, <code>Alt</code> y-only), double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
@@ -838,6 +838,7 @@ input[type=range]::-moz-range-thumb {
       <label class="check" id="phase-hires-label" style="font-size:12px; white-space:nowrap; flex:0 0 auto;" title="Extend the periodogram down to 5-minute periods with a much denser grid. Slower — only needed for short-period pulsators; off is fine for most systems."><input type="checkbox" id="phase-hires-chk"><span class="box"></span>high-res freq grid</label>
       <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
       <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
+      <button class="small" id="phase-reset-btn" title="Return every periodogram and folded panel to its auto-fit view">Reset Views</button>
       <button class="small" id="phase-png-btn" title="Download the phase plots as a PNG image">Download PNG</button>
       <button class="small" id="phase-close-btn" title="Close this dialog">✕</button>
     </div>
@@ -877,6 +878,7 @@ input[type=range]::-moz-range-thumb {
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mep-title" tabindex="-1">
     <div class="modal-header">
       <h2 id="mep-title">Multi-Epoch Photometry</h2>
+      <button class="small" id="mep-reset-btn" title="Return every light-curve panel to its auto-fit view">Reset Views</button>
       <button class="small" id="mep-png-btn" title="Download the light curves as a PNG image">Download PNG</button>
       <button class="small" id="mep-close-btn" title="Close this dialog">✕</button>
     </div>
@@ -1042,9 +1044,31 @@ function setMessage(text) { messageLabel.textContent = text; }
 // One app name everywhere; the main-area heading and the tab title pick up the
 // name of whichever dataset is currently loaded (auto-fetch, browse, or drop).
 const APP_NAME = 'Data Explorer';
+
+// The version shown in the window title comes from package.json — the same
+// field that names the built DMG, so there's nothing to keep in sync by hand.
+// Electron hands it over on the app:// URL; when the folder is served over
+// plain HTTP instead, the package.json next to this file supplies it. If
+// neither is available (opened straight off disk) the title just omits it.
+let APP_VERSION = new URLSearchParams(location.search).get('v') || '';
+let currentDataset = '';
 function setWindowTitle(dataset) {
+  currentDataset = dataset || '';
+  const name = APP_VERSION ? `${APP_NAME} v${APP_VERSION}` : APP_NAME;
   $('window-title').textContent = dataset ? `${APP_NAME} — ${dataset}` : APP_NAME;
-  document.title = dataset ? `${APP_NAME} — ${dataset}` : `${APP_NAME} — Gaia Variability Dataset Viewer`;
+  document.title = dataset ? `${name} — ${dataset}` : `${name} — Gaia Variability Dataset Viewer`;
+}
+if (APP_VERSION) {
+  setWindowTitle('');                    // show the version before any data loads
+} else {
+  fetch('package.json')
+    .then(r => (r.ok ? r.json() : null))
+    .then(pkg => {
+      if (!pkg || !pkg.version) return;
+      APP_VERSION = pkg.version;
+      setWindowTitle(currentDataset);    // re-title, keeping whatever loaded meanwhile
+    })
+    .catch(() => {});                    // no package.json served: title stays version-less
 }
 
 /* ---------------- Plot class ----------------
@@ -1864,10 +1888,11 @@ function updateExportCounts() {
 }
 
 /* ---------------- Overview: static map of the filtered data ----------------
-   The overview itself is not interactive — it only re-renders when the filters
-   (or display settings) change. The green rectangle mirrors the Detail View,
-   which is moved by panning/zooming the detail plot or the Center Detail View
-   action. */
+   The overview itself is not interactive — no pan, zoom, or click-to-jump; it
+   only re-renders when the filters (or display settings) change. The one
+   exception is the green rectangle mirroring the Detail View: it can be picked
+   up and dragged to move the Detail View, and it also follows the Detail View
+   as that plot is panned/zoomed (or recentered via Center Detail View). */
 function detailRectData() {
   // rect in data coords (x, y = lower-left in value terms, w, h positive)
   const x = Math.min(...detail.xlim), w = Math.abs(detail.xlim[1] - detail.xlim[0]);
@@ -1923,6 +1948,46 @@ $('dt-zoomx-in').addEventListener('click',  () => zoomDetailAxis(true,  false, P
 $('dt-zoomx-out').addEventListener('click', () => zoomDetailAxis(true,  false, PZOOM_OUT));
 $('dt-zoomy-in').addEventListener('click',  () => zoomDetailAxis(false, true,  PZOOM_IN));
 $('dt-zoomy-out').addEventListener('click', () => zoomDetailAxis(false, true,  PZOOM_OUT));
+
+/* ---- dragging the green rectangle on the (otherwise static) overview ---- */
+const ovCanvas = $('overview-canvas');
+let ovRectDrag = null;   // grab offset within the rect, in data coords
+
+function ovRectHit(px, py) {
+  if (!overview.inPlot(px, py)) return false;
+  const x = overview.pxToX(px), y = overview.pxToY(py);
+  const rect = detailRectData();
+  return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
+ovCanvas.addEventListener('mousemove', ev => {
+  if (ovRectDrag) return;
+  const [px, py] = canvasPos(ovCanvas, ev);
+  ovCanvas.style.cursor = ovRectHit(px, py) ? 'grab' : 'default';
+});
+ovCanvas.addEventListener('mousedown', ev => {
+  if (ev.button !== 0) return;
+  const [px, py] = canvasPos(ovCanvas, ev);
+  if (!ovRectHit(px, py)) return;   // empty overview space stays inert
+  const rect = detailRectData();
+  ovRectDrag = { offset: [overview.pxToX(px) - rect.x, overview.pxToY(py) - rect.y] };
+  ovCanvas.style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', ev => {
+  if (!ovRectDrag) return;
+  const [px, py] = canvasPos(ovCanvas, ev);
+  const rect = detailRectData();
+  // unclamped on purpose: the rectangle may be dragged (or pushed) off the
+  // framed extent — Center Detail View brings it back
+  const nrx = overview.pxToX(px) - ovRectDrag.offset[0];
+  const nry = overview.pxToY(py) - ovRectDrag.offset[1];
+  setDetailLimitsFromRect(nrx, nrx + rect.w, nry, nry + rect.h);
+});
+window.addEventListener('mouseup', () => {
+  if (!ovRectDrag) return;
+  ovRectDrag = null;
+  ovCanvas.style.cursor = 'default';
+  pushHistory();   // record the completed rectangle move for Undo View
+});
 
 /* ---------------- Detail interactions: pan, zoom, hover, click-to-CMD ---------------- */
 const dtCanvas = $('detail-canvas');
@@ -3406,7 +3471,7 @@ function makePanelsInteractive(canvas, store, redraw) {
     redraw();
   });
 }
-const PANEL_HINT = 'drag a panel to pan · scroll to zoom (Shift x-only, Alt y-only) · double-click to reset';
+const PANEL_HINT = 'drag a panel to pan · scroll to zoom (Shift x-only, Alt y-only) · double-click to reset a panel · Reset Views resets all';
 
 // soft pastel palette for the phase-analysis window
 const PHASE_COLORS = {
@@ -3822,6 +3887,12 @@ $('phase-hires-chk').addEventListener('change', ev => {
 });
 // per-panel pan/zoom on the 4×2 phase grid; redraw is the light (fold-only) pass
 makePanelsInteractive(phaseCanvas, 'phase', () => { if (phaseData) drawPhase(); });
+// Reset Views: drop every panel override at once (double-click resets one panel)
+$('phase-reset-btn').addEventListener('click', () => {
+  if (!phaseData) return;
+  panelViews.phase.clear();
+  drawPhase();
+});
 
 /* =====================================================
    Multi-epoch photometry: light curves per band + color
@@ -3915,6 +3986,12 @@ $('cmd-mep-btn').addEventListener('click', () => {
 // per-panel pan/zoom on the stacked light curves
 makePanelsInteractive(mepCanvas, 'mep', () => {
   if (!lastEpoch) return;
+  try { drawMEP(); } catch (e) { $('mep-status').textContent = `Could not draw light curves: ${e.message}`; }
+});
+// Reset Views: drop every panel override at once (double-click resets one panel)
+$('mep-reset-btn').addEventListener('click', () => {
+  if (!lastEpoch) return;
+  panelViews.mep.clear();
   try { drawMEP(); } catch (e) { $('mep-status').textContent = `Could not draw light curves: ${e.message}`; }
 });
 $('mep-close-btn').addEventListener('click', () => closeModal('mep-modal'));

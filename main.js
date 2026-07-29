@@ -165,7 +165,10 @@ app.whenReady().then(async () => {
     }
   }
 
-  win.loadURL('app://bundle/index.html')
+  // Pass the packaged version through so the window title can show it. The
+  // app:// handler keys off the pathname only, so the query string is ignored
+  // when the file is resolved.
+  win.loadURL(`app://bundle/index.html?v=${encodeURIComponent(app.getVersion())}`)
 })
 
 // Fully quit when the window is closed (including the red traffic-light button

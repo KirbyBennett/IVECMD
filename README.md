@@ -65,7 +65,7 @@ This method allows you to edit the code on your own machine through a browser. T
 
 ### Overview Plot
 
-A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View and follows it as you pan and zoom the Detail View — it can even slide off the edge of the overview. Use **Center Detail View** in the Actions card to bring it back to the middle.
+A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View — drag it around the overview to move the Detail View, and it also follows along as you pan and zoom the Detail View itself. It can even slide off the edge of the overview; use **Center Detail View** in the Actions card to bring it back to the middle.
 
 ### Detail View
 
@@ -92,7 +92,7 @@ Click any line in the Detail View. The app queries VizieR live for that star's G
 
 ### Light Curves
 
-The **Light Curves** button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (**Shift** x-only, **Alt** y-only), and double-click to reset that panel. The same applies to each periodogram and folded panel in the Phase Folding dialog.
+The **Light Curves** button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (**Shift** x-only, **Alt** y-only), and double-click to reset that panel. **Reset Views** in the dialog header returns every panel to its auto-fit view at once. The same applies to each periodogram and folded panel in the Phase Folding dialog.
 
 ### Phase Folding
 

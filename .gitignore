@@ -3,5 +3,8 @@ dist/
 lists.zip
 test.txt
 test.zip
-'CMD Icon.html'
+CMD Icon.html
 .DS_Store
+.claude
+AppIcon.html
+package-lock.json

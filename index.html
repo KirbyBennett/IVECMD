@@ -1593,19 +1593,6 @@ function scheduleFilters() {
   requestAnimationFrame(() => { filtersQueued = false; applyFilters(); });
 }
 
-// Re-stroking the entire overview cache (every visible segment) on each slider
-// 'input' event is what makes dragging feel sluggish on big datasets. Slider
-// handlers call this instead: mid-drag frames keep drawing the stale cached
-// bitmap (the detail view, which is what the eye follows, still updates every
-// frame), and the overview re-bakes once, shortly after the drag pauses.
-let overviewDeferTimer = null;
-let overviewDefer = false;
-function deferOverviewRebuild() {
-  overviewDefer = true;
-  clearTimeout(overviewDeferTimer);
-  overviewDeferTimer = setTimeout(() => { overviewDefer = false; requestRedraw(); }, 160);
-}
-
 function redrawAll() {
   overview.invertY = state.invertY;
   detail.invertY = state.invertY;
@@ -1671,7 +1658,8 @@ function ensureOverviewCache() {
     f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist,
     state.thickness, state.visIdx.length, state.alphaMode, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
-  if (overviewDefer && overviewCache) return;   // mid-slider-drag: draw the stale bitmap this frame
+  // No deferral: any filter/display change re-bakes the cache on the very next
+  // frame, so the overview tracks slider drags live (rAF-coalesced upstream).
   overviewCacheKey = key;
 
   overviewCache = document.createElement('canvas');
@@ -2325,9 +2313,8 @@ window.addEventListener('keydown', ev => {
 $('thickness-slider').addEventListener('input', ev => {
   state.thickness = parseFloat(ev.target.value);
   $('slider-label').textContent = `Line thickness ×: ${state.thickness.toFixed(1)}`;
-  // thickness is baked into the overview cache (it's part of the cache key);
-  // defer that rebuild so dragging stays smooth — the detail updates live
-  deferOverviewRebuild();
+  // thickness is part of the overview cache key, so this re-bakes the overview
+  // live (at most once per frame, coalesced by requestRedraw)
   requestRedraw();
 });
 
@@ -2367,13 +2354,11 @@ $('sig-slider').addEventListener('input', ev => {
   $('sig-label').textContent = state.filter.minLogP === 0
     ? 'Significance: all (any p)'
     : `Significance: p ≤ 1e-${state.filter.minLogP}`;
-  deferOverviewRebuild();
   scheduleFilters();
 });
 $('rho-slider').addEventListener('input', ev => {
   state.filter.minAbsRho = parseFloat(ev.target.value);
   $('rho-label').textContent = `Min |ρ|: ${state.filter.minAbsRho.toFixed(2)}`;
-  deferOverviewRebuild();
   scheduleFilters();
 });
 $('poe-slider').addEventListener('input', ev => {
@@ -2381,7 +2366,6 @@ $('poe-slider').addEventListener('input', ev => {
   $('poe-label').textContent = state.filter.minPoe === 0
     ? 'Min parallax / error: off'
     : `Min parallax / error: ${state.filter.minPoe}`;
-  deferOverviewRebuild();
   scheduleFilters();
 });
 // Dual-thumb distance slider: the two thumbs share one track and may not come
@@ -2409,7 +2393,6 @@ $('dmin-slider').addEventListener('input', () => {
   state.filter.minDist = lo;
   $('dist-error').hidden = !touching;
   updateDistUI();
-  deferOverviewRebuild();
   scheduleFilters();
 });
 $('dmax-slider').addEventListener('input', () => {
@@ -2420,7 +2403,6 @@ $('dmax-slider').addEventListener('input', () => {
   state.filter.maxDist = hi;
   $('dist-error').hidden = !touching;
   updateDistUI();
-  deferOverviewRebuild();
   scheduleFilters();
 });
 updateDistUI();   // initial label + fill on load

@@ -767,7 +767,7 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-body">
       <h3>Quick start</h3>
       <ul>
-        <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View — drag it around the overview to move the Detail View, and it also follows along as you pan and zoom the Detail View itself. It can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
+        <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View — drag it around the overview to move the Detail View, scroll anywhere on the overview to grow or shrink it (zooming the Detail View out or in), and it also follows along as you pan and zoom the Detail View itself. It can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
@@ -1966,6 +1966,17 @@ window.addEventListener('mouseup', () => {
   ovCanvas.style.cursor = 'default';
   pushHistory();   // record the completed rectangle move for Undo View
 });
+// scrolling on the overview resizes the green rectangle about its center,
+// which zooms the Detail View in/out (same scale steps as the detail wheel)
+ovCanvas.addEventListener('wheel', ev => {
+  const [px, py] = canvasPos(ovCanvas, ev);
+  if (!overview.inPlot(px, py)) return;
+  ev.preventDefault();
+  const dWheel = wheelDelta(ev);
+  if (dWheel === 0) return;
+  resizeViewRect(dWheel > 0 ? 0.85 : 1.15);
+  pushHistorySoon();
+}, { passive: false });
 
 /* ---------------- Detail interactions: pan, zoom, hover, click-to-CMD ---------------- */
 const dtCanvas = $('detail-canvas');

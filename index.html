@@ -344,11 +344,6 @@ input[type=range]::-moz-range-thumb {
   font-size: 11px; color: var(--muted);
 }
 
-/* ---------- Region statistics ---------- */
-.stat-rows { display: flex; flex-direction: column; gap: 6px; }
-.stat-row { display: flex; justify-content: space-between; font-size: 12px; }
-.stat-row span:last-child { font-variant-numeric: tabular-nums; color: var(--text); }
-
 /* ---------- Modals ---------- */
 .modal-backdrop {
   position: fixed; inset: 0;
@@ -517,15 +512,6 @@ input[type=range]::-moz-range-thumb {
       <div class="muted" id="filter-count" style="font-size:12px;">—</div>
       <div class="sub-title">Messages</div>
       <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or either plot as a PNG</div>
-      <div class="sub-title">Region Statistics</div>
-      <div class="stat-rows">
-        <div class="stat-row"><span class="muted">Visible sources</span><span id="rs-count">—</span></div>
-        <div class="stat-row"><span class="muted">Median ρ</span><span id="rs-rho">—</span></div>
-        <div class="stat-row"><span class="muted">Median p</span><span id="rs-p">—</span></div>
-        <div class="stat-row"><span class="muted">Fraction bluing</span><span id="rs-blue">—</span></div>
-        <div class="stat-row"><span class="muted">Fraction reddening</span><span id="rs-red">—</span></div>
-        <div class="stat-row"><span class="muted">Mean CMD vector length</span><span id="rs-len">—</span></div>
-      </div>
     </div>
 
     <div class="card">
@@ -565,6 +551,14 @@ input[type=range]::-moz-range-thumb {
         <input type="range" id="dmax-slider" min="0" max="10000" step="50" value="10000">
       </div>
       <div class="range-error" id="dist-error" hidden>Min and max distance are touching — they can't overlap.</div>
+      <div class="field-label" id="glat-label" title="Cut on |b|, the angular distance from the galactic plane. Raise the min to exclude the crowded plane; lower the max to keep only sources near it.">Galactic latitude |b|: off</div>
+      <div class="dual-range" id="glat-range" title="Cut on |b|, the angular distance from the galactic plane. Raise the min to exclude the crowded plane; lower the max to keep only sources near it.">
+        <div class="track"></div>
+        <div class="track-fill" id="glat-fill"></div>
+        <input type="range" id="bmin-slider" min="0" max="90" step="1" value="0">
+        <input type="range" id="bmax-slider" min="0" max="90" step="1" value="90">
+      </div>
+      <div class="range-error" id="glat-error" hidden>Min and max |b| are touching — they can't overlap.</div>
       <button id="filter-reset-btn" class="small" title="Return every filter to its startup value">Reset Filters</button>
     </div>
 
@@ -661,18 +655,6 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
-      <div class="section-title">Transparency Scaling</div>
-      <div class="seg-group">
-        <button id="alpha-sig" class="active" title="Scale line opacity by statistical significance (−log₁₀ p)">Significance</button>
-        <button id="alpha-rho" title="Scale line opacity by correlation strength |ρ|">|ρ|</button>
-      </div>
-      <div class="seg-group">
-        <button id="alpha-const" title="Give every line the same opacity">Constant</button>
-        <button id="alpha-comb" title="Scale opacity by significance and |ρ| combined">Combined</button>
-      </div>
-    </div>
-
-    <div class="card">
       <div class="section-title">Display</div>
       <div class="field-label" id="slider-label">Line thickness ×: 2.0</div>
       <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
@@ -754,11 +736,11 @@ input[type=range]::-moz-range-thumb {
         <li><b>Overview Plot:</b> A fixed map of every star that passes the active filters. The green rectangle marks the region shown in the Detail View — drag it around the overview to move the Detail View, and it also follows along as you pan and zoom the Detail View itself. It can even slide off the edge of the overview; use <b>Center Detail View</b> in the Actions card to bring it back to the middle.</li>
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
-        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
+        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
-        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, scroll to zoom about the cursor (<code>Shift</code> x-only, <code>Alt</code> y-only), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Folding dialog).</li>
-        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Folding</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators). Each periodogram and folded panel is interactive: drag to pan, scroll to zoom (<code>Shift</code> x-only, <code>Alt</code> y-only), double-click to reset.</li>
+        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
+        <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV, or either panel as a PNG.</li>
@@ -814,7 +796,7 @@ input[type=range]::-moz-range-thumb {
       <div id="cmd-links"></div>
       <button class="small" id="cmd-reset-zoom-btn" style="display:none" title="Restore the full CMD view">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
-      <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Folding</button>
+      <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Fold</button>
       <button class="small" id="cmd-png-btn" title="Download this CMD as a PNG image">Download PNG</button>
       <button class="small" id="cmd-close-btn" title="Close this dialog">✕</button>
     </div>
@@ -1210,6 +1192,7 @@ const state = {
   coeff: null, p: null, dBR: null, dG: null,
   xFull: null, yFull: null,      // segment centers (avg_B_R / avg_G)
   parallax: null, poe: null,     // parallax (mas) and parallax / parallax_error
+  glat: null,                    // galactic latitude b (deg); NaN without RA/DEC
   cbucket: null, abucket: null,  // per-source color & alpha buckets (Uint8Array)
   visMask: null,                 // Uint8Array, 1 where the source passes the filters
   // view — start with the magnitude (Y) axis inverted so the diagram loads in
@@ -1218,21 +1201,38 @@ const state = {
   thickness: 2,
   showHRRef: false,
   showInstabilityStrip: false,
-  alphaMode: 'sig',              // 'sig' | 'rho' | 'const' | 'comb'
   visIdx: [],                    // indices passing the active filters
   detailIdx: [],                 // visible indices currently inside the detail window
   selection: [],                 // multi-selection (indices)
   hover: -1,
-  filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: 10000 },
+  filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: 10000,
+            minGlat: 0, maxGlat: 90 },
   xColName: 'avg_B_R', yColName: 'avg_G',
 };
 // Distance (pc) slider span. minDist <= 0 means "no lower bound"; maxDist at the
 // top of the range means "no upper bound" — so the dual slider at its extremes is off.
 const DIST_MAX = 10000;
+// Absolute galactic latitude |b| (deg) slider span; thumbs at 0 and 90 = off.
+const GLAT_MAX = 90;
 // The filter values present when the app first loads. "Reset Filters" returns
 // every control to exactly these positions (NOT all-zero), so the slider knobs
 // land back where they started rather than fully wide open.
-const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: DIST_MAX };
+const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: DIST_MAX,
+                         minGlat: 0, maxGlat: GLAT_MAX };
+
+/* Equatorial (ICRS/J2000) → galactic latitude b, in degrees. North galactic
+   pole at α = 192.85948°, δ = +27.12825°. Only b is needed here — the filter
+   and readouts care about distance from the plane, not position along it. */
+const D2R = Math.PI / 180;
+const NGP_RA = 192.85948 * D2R;
+const SIN_NGP_DEC = Math.sin(27.12825 * D2R), COS_NGP_DEC = Math.cos(27.12825 * D2R);
+function galacticLatitude(raDeg, decDeg) {
+  const dec = decDeg * D2R;
+  const sb = SIN_NGP_DEC * Math.sin(dec) +
+             COS_NGP_DEC * Math.cos(dec) * Math.cos(raDeg * D2R - NGP_RA);
+  return Math.asin(sb > 1 ? 1 : sb < -1 ? -1 : sb) / D2R;
+}
+const fmtGlat = b => `${b >= 0 ? '+' : ''}${b.toFixed(2)}°`;
 
 const overview = new Plot($('overview-canvas'), 'Overview');
 const detail = new Plot($('detail-canvas'), 'Detail View');
@@ -1436,8 +1436,15 @@ function ingestSpearmanData(d) {
 
   const n = state.coeff.length;
   state.cbucket = new Uint8Array(n);          // color bucket from ρ (fixed for the dataset)
-  state.abucket = new Uint8Array(n);          // alpha bucket (recomputed per opacity mode)
+  state.abucket = new Uint8Array(n);          // alpha bucket (significance-scaled)
   for (let i = 0; i < n; i++) state.cbucket[i] = colorBucket(state.coeff[i]);
+  // galactic latitude per source, for the |b| filter and the b readouts
+  state.glat = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const raV = state.ra[i], decV = state.dec[i];
+    state.glat[i] = (Number.isFinite(raV) && Number.isFinite(decV))
+      ? galacticLatitude(raV, decV) : NaN;
+  }
   state.visMask = null;
   computeAlphas();
 
@@ -1456,52 +1463,23 @@ function ingestSpearmanData(d) {
   updateHistoryButtons();
 }
 
-/* ---------------- Transparency scaling modes ----------------
-   Opacity arrays are recomputed only on mode change or data load. */
+/* ---------------- Line opacity ----------------
+   Opacity always scales with statistical significance (−log₁₀ p);
+   recomputed only on data load. */
 function computeAlphas() {
-  const n = state.coeff.length, mode = state.alphaMode;
+  const n = state.coeff.length;
   for (let i = 0; i < n; i++) {
-    const logp = -Math.log10(Math.max(state.p[i], 1e-10));  // 0..10
-    let a;
-    switch (mode) {
-      case 'rho':   a = Math.abs(state.coeff[i]); break;
-      case 'const': a = 0.6; break;
-      case 'comb':  a = Math.abs(state.coeff[i]) * logp / 10; break;
-      default:      a = logp / 10;                            // 'sig'
-    }
+    const a = -Math.log10(Math.max(state.p[i], 1e-10)) / 10;  // 0..1
     state.abucket[i] = alphaBucket(a < 0.1 ? 0.1 : a > 1 ? 1 : a);
   }
 }
-
-const LEGEND_DESC = {
-  sig: 'opacity scales with statistical significance (−log<sub>10</sub> p)',
-  rho: 'opacity scales with correlation strength |ρ|',
-  const: 'all lines share a constant opacity',
-  comb: 'opacity scales with |ρ| × −log<sub>10</sub> p (strength × significance)',
-};
-function setAlphaMode(mode) {
-  state.alphaMode = mode;
-  for (const [id, m] of [['alpha-sig', 'sig'], ['alpha-rho', 'rho'], ['alpha-const', 'const'], ['alpha-comb', 'comb']]) {
-    $(id).classList.toggle('active', m === mode);
-  }
-  computeAlphas();
-  overviewCacheKey = '';
-  $('legend-desc').innerHTML =
-    `Each line is one star. Color encodes the Spearman correlation between its ` +
-    `color and brightness across epochs; ${LEGEND_DESC[mode]}. Bluing and ` +
-    `reddening lines also tilt in opposite directions, so the sign is readable without color.`;
-  requestRedraw();
-}
-$('alpha-sig').addEventListener('click', () => setAlphaMode('sig'));
-$('alpha-rho').addEventListener('click', () => setAlphaMode('rho'));
-$('alpha-const').addEventListener('click', () => setAlphaMode('const'));
-$('alpha-comb').addEventListener('click', () => setAlphaMode('comb'));
 
 /* ---------------- Filters ---------------- */
 function applyFilters() {
   const f = state.filter;
   const pMax = Math.pow(10, -f.minLogP);
   const minRho = f.minAbsRho, minPoe = f.minPoe, minDist = f.minDist, maxDist = f.maxDist;
+  const minGlat = f.minGlat, maxGlat = f.maxGlat;
   const rset = slRestrictSet;   // catalog "show only" restriction, or null when off
   const n = state.coeff.length;
   // reuse the mask buffer across calls; only reallocate when the dataset changes
@@ -1524,6 +1502,13 @@ function applyFilters() {
       const dist = 1000 / plx;
       if (minDist > 0 && dist < minDist) continue;
       if (maxDist < DIST_MAX && dist > maxDist) continue;
+    }
+    // galactic-plane cut on |b| (degrees); needs RA/DEC for a latitude
+    if (minGlat > 0 || maxGlat < GLAT_MAX) {
+      const ab = Math.abs(state.glat[i]);
+      if (!Number.isFinite(ab)) continue;
+      if (minGlat > 0 && ab < minGlat) continue;
+      if (maxGlat < GLAT_MAX && ab > maxGlat) continue;
     }
     vis.push(i);
     mask[i] = 1;
@@ -1655,8 +1640,8 @@ function ensureOverviewCache() {
   const dpr = window.devicePixelRatio || 1;
   const f = state.filter;
   const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h,
-    f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist,
-    state.thickness, state.visIdx.length, state.alphaMode, slSignature()].join('|');
+    f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist, f.minGlat, f.maxGlat,
+    state.thickness, state.visIdx.length, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
   // No deferral: any filter/display change re-bakes the cache on the very next
   // frame, so the overview tracks slider drags live (rAF-coalesced upstream).
@@ -1723,7 +1708,7 @@ function drawDetail() {
     ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.beginPath();
-    ctx.ellipse(detail.xToPx(cx), detail.yToPx(cy), Math.max(7, r.w * 0.012), Math.max(7, r.h * 0.012), 0, 0, 2 * Math.PI);
+    ctx.ellipse(detail.xToPx(cx), detail.yToPx(cy), Math.max(5, r.w * 0.007), Math.max(5, r.h * 0.007), 0, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.restore();
   };
@@ -1732,7 +1717,6 @@ function drawDetail() {
 
   countsLabel.textContent = `Detail View: ${idx.length.toLocaleString()} lines in window`;
   state.detailIdx = idx;
-  scheduleRegionStats();
   updateExportCounts();
   detail.end();
 }
@@ -1840,34 +1824,6 @@ $('strip-checkbox').addEventListener('change', ev => {
   state.showInstabilityStrip = ev.target.checked;
   requestRedraw();
 });
-
-/* ---------------- Region statistics (debounced) ---------------- */
-let statsTimer = null;
-function scheduleRegionStats() {
-  clearTimeout(statsTimer);
-  statsTimer = setTimeout(updateRegionStats, 120);
-}
-function updateRegionStats() {
-  const idx = state.detailIdx;
-  const set = (id, v) => { $(id).textContent = v; };
-  set('rs-count', idx.length.toLocaleString());
-  if (!idx.length) {
-    for (const id of ['rs-rho', 'rs-p', 'rs-blue', 'rs-red', 'rs-len']) set(id, '—');
-    return;
-  }
-  const coeffs = idx.map(i => state.coeff[i]);
-  const ps = idx.map(i => state.p[i]);
-  let nBlue = 0, nRed = 0, lenSum = 0;
-  for (const i of idx) {
-    if (state.coeff[i] > 0) nBlue++; else if (state.coeff[i] < 0) nRed++;
-    lenSum += Math.hypot(state.dBR[i], state.dG[i]);
-  }
-  set('rs-rho', nanmedian(coeffs).toFixed(3));
-  set('rs-p', nanmedian(ps).toExponential(2));
-  set('rs-blue', `${(100 * nBlue / idx.length).toFixed(1)}%`);
-  set('rs-red', `${(100 * nRed / idx.length).toFixed(1)}%`);
-  set('rs-len', `${(lenSum / idx.length).toFixed(3)} mag`);
-}
 
 function updateExportCounts() {
   $('export-visible-btn').textContent = `Export Visible Sources (${state.detailIdx.length.toLocaleString()})`;
@@ -2094,8 +2050,10 @@ dtCanvas.addEventListener('mousemove', ev => {
   const close = i >= 0 && Math.hypot(state.xFull[i] - x, state.yFull[i] - y) <= 0.025 * Math.hypot(xr, yr);
   if (close) {
     if (state.hover !== i) { state.hover = i; requestRedraw(); }
+    const bV = state.glat[i];
     tooltip.innerHTML = `<span class="tt-id">Gaia DR3 ${state.ids[i]}</span><br>` +
-      `ρ = ${state.coeff[i].toFixed(3)} &nbsp;|&nbsp; p = ${state.p[i].toExponential(2)}<br>` +
+      `ρ = ${state.coeff[i].toFixed(3)} &nbsp;|&nbsp; p = ${state.p[i].toExponential(2)}` +
+      (Number.isFinite(bV) ? ` &nbsp;|&nbsp; b = ${fmtGlat(bV)}` : '') + `<br>` +
       `<span style="color:${THEME.muted}">click for epoch CMD</span>`;
     tooltip.style.display = 'block';
     tooltip.style.left = (ev.clientX + 14) + 'px';
@@ -2406,19 +2364,61 @@ $('dmax-slider').addEventListener('input', () => {
   scheduleFilters();
 });
 updateDistUI();   // initial label + fill on load
+// Dual-thumb galactic-latitude slider: same pattern as the distance slider,
+// but on |b|, so the cut is symmetric about the galactic plane.
+const GLAT_GAP = 1;   // one step
+function updateGlatUI() {
+  const lo = state.filter.minGlat, hi = state.filter.maxGlat;
+  const offLo = lo <= 0, offHi = hi >= GLAT_MAX;
+  let txt;
+  if (offLo && offHi) txt = 'Galactic latitude |b|: off';
+  else if (offHi)     txt = `Galactic latitude: |b| ≥ ${lo}°`;
+  else if (offLo)     txt = `Galactic latitude: |b| ≤ ${hi}°`;
+  else                txt = `Galactic latitude: ${lo}° ≤ |b| ≤ ${hi}°`;
+  $('glat-label').textContent = txt;
+  const fill = $('glat-fill');
+  fill.style.left = (lo / GLAT_MAX * 100) + '%';
+  fill.style.width = ((hi - lo) / GLAT_MAX * 100) + '%';
+}
+$('bmin-slider').addEventListener('input', () => {
+  let lo = parseFloat($('bmin-slider').value);
+  const hi = parseFloat($('bmax-slider').value);
+  const touching = lo > hi - GLAT_GAP;
+  if (touching) { lo = hi - GLAT_GAP; $('bmin-slider').value = lo; }
+  state.filter.minGlat = lo;
+  $('glat-error').hidden = !touching;
+  updateGlatUI();
+  scheduleFilters();
+});
+$('bmax-slider').addEventListener('input', () => {
+  let hi = parseFloat($('bmax-slider').value);
+  const lo = parseFloat($('bmin-slider').value);
+  const touching = hi < lo + GLAT_GAP;
+  if (touching) { hi = lo + GLAT_GAP; $('bmax-slider').value = hi; }
+  state.filter.maxGlat = hi;
+  $('glat-error').hidden = !touching;
+  updateGlatUI();
+  scheduleFilters();
+});
+updateGlatUI();   // initial label + fill on load
 // Reset Filters: put every control back exactly where it sits on first load
-// (significance 1e-4, |ρ| 0, parallax/error 10, distance off, direction All).
+// (significance 1e-4, |ρ| 0, parallax/error 10, distance off, galactic |b| off,
+// direction All).
 function resetFilters() {
   $('sig-slider').value = DEFAULT_FILTER.minLogP;
   $('rho-slider').value = DEFAULT_FILTER.minAbsRho;
   $('poe-slider').value = DEFAULT_FILTER.minPoe;
   $('dmin-slider').value = DEFAULT_FILTER.minDist;
   $('dmax-slider').value = DEFAULT_FILTER.maxDist;
+  $('bmin-slider').value = DEFAULT_FILTER.minGlat;
+  $('bmax-slider').value = DEFAULT_FILTER.maxGlat;
   state.filter.minLogP = DEFAULT_FILTER.minLogP;
   state.filter.minAbsRho = DEFAULT_FILTER.minAbsRho;
   state.filter.minPoe = DEFAULT_FILTER.minPoe;
   state.filter.minDist = DEFAULT_FILTER.minDist;
   state.filter.maxDist = DEFAULT_FILTER.maxDist;
+  state.filter.minGlat = DEFAULT_FILTER.minGlat;
+  state.filter.maxGlat = DEFAULT_FILTER.maxGlat;
   $('sig-label').textContent = DEFAULT_FILTER.minLogP === 0
     ? 'Significance: all (any p)'
     : `Significance: p ≤ 1e-${DEFAULT_FILTER.minLogP}`;
@@ -2427,7 +2427,9 @@ function resetFilters() {
     ? 'Min parallax / error: off'
     : `Min parallax / error: ${DEFAULT_FILTER.minPoe}`;
   $('dist-error').hidden = true;
+  $('glat-error').hidden = true;
   updateDistUI();
+  updateGlatUI();
   setDirFilter(DEFAULT_FILTER.dir);   // also calls applyFilters
 }
 $('filter-reset-btn').addEventListener('click', resetFilters);
@@ -2956,7 +2958,10 @@ async function showEpochCMD(gi) {
   mkLink('SIMBAD ↗', `https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Gaia+DR3+${id}`);
   mkLink('VizieR ↗', `https://vizier.cds.unistra.fr/viz-bin/VizieR-4?-source=I/355/gaiadr3&Source=${id}`);
 
-  const raDec = Number.isFinite(state.ra[gi]) ? ` | RA ${state.ra[gi].toFixed(5)}°, Dec ${state.dec[gi].toFixed(5)}°` : '';
+  const raDec = Number.isFinite(state.ra[gi])
+    ? ` | RA ${state.ra[gi].toFixed(5)}°, Dec ${state.dec[gi].toFixed(5)}°` +
+      (Number.isFinite(state.glat[gi]) ? `, b ${fmtGlat(state.glat[gi])}` : '')
+    : '';
   $('cmd-status').textContent = `ρ = ${state.coeff[gi].toFixed(3)}, p = ${state.p[gi].toExponential(2)}${raDec}`;
   $('cmd-loading').style.display = 'flex';
   $('cmd-loading-text').textContent = `Querying VizieR for epoch photometry of ${id}…`;
@@ -3433,11 +3438,14 @@ function makePanelsInteractive(canvas, store, redraw) {
     const [px, py] = canvasPos(canvas, ev);
     const p = panelAt(px, py);
     if (!p) return;   // outside every panel: let the dialog scroll normally
+    // zooming is gated behind Shift/Ctrl: a plain scroll over a panel scrolls
+    // the dialog instead of zooming a plot by accident
+    if (!ev.shiftKey && !ev.ctrlKey) return;
     ev.preventDefault();
     const dW = wheelDelta(ev);
     if (dW === 0) return;
     const s = dW > 0 ? 0.85 : 1.15;   // scroll down = zoom in (app-wide convention)
-    const zoomX = !ev.altKey, zoomY = !ev.shiftKey;   // Shift = x-only, Alt = y-only
+    const zoomX = !ev.altKey, zoomY = !ev.shiftKey;   // Ctrl = both axes, Shift = x-only, Ctrl+Alt = y-only
     const [cx, cy] = dataXY(p, px, py);
     panelViews[store].set(p.key, {
       xlim: zoomX ? [cx - (cx - p.xlim[0]) * s, cx + (p.xlim[1] - cx) * s] : [...p.xlim],
@@ -3453,7 +3461,7 @@ function makePanelsInteractive(canvas, store, redraw) {
     redraw();
   });
 }
-const PANEL_HINT = 'drag a panel to pan · scroll to zoom (Shift x-only, Alt y-only) · double-click to reset a panel · Reset Views resets all';
+const PANEL_HINT = 'drag a panel to pan · hold Shift or Ctrl + scroll to zoom (Ctrl both axes, Shift x-only, Ctrl+Alt y-only) · double-click to reset a panel · Reset Views resets all';
 
 // soft pastel palette for the phase-analysis window
 const PHASE_COLORS = {
@@ -3809,6 +3817,9 @@ $('cmd-phase-btn').addEventListener('click', () => {
   if (!lastEpoch) return;
   phaseFactor = 1;   // every fresh open starts at the GLS peak periods
   panelViews.phase.clear();   // fresh open → every panel back to its auto-fit view
+  // the high-res grid is opt-in per open — it never stays on from the last session
+  $('phase-hires-chk').checked = false;
+  if (phaseHighRes) { phaseHighRes = false; phaseData = null; }
   $('phase-title').textContent = `Phase Analysis — Gaia DR3 ${lastEpoch.id}`;
   $('phase-status').textContent = '';
   $('phase-loading').style.display = 'flex';

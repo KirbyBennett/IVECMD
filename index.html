@@ -143,12 +143,36 @@ button.small { padding: 6px 12px; font-size: 12px; }
 .sl-list.loading { opacity: 0.7; }
 .sl-list.missing .sl-count { color: var(--orange); }
 .sl-subs { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 6px; }
+.sl-subs[hidden] { display: none; }
 .sl-subs .sl-sub {
   flex: 1 1 auto; min-width: max-content;
   display: flex; align-items: center; gap: 6px; padding: 6px;
 }
 .sl-subs .sl-sub.loading { opacity: 0.7; }
 .sl-subs .sl-sub.missing .sl-count { color: var(--orange); }
+
+/* Collapsible drawer holding the preset radial-pulsator catalogs */
+.sl-drawer summary {
+  list-style: none;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; user-select: none;
+  transition: background .14s cubic-bezier(.33,1,.68,1), color .14s, border-color .14s;
+}
+.sl-drawer summary::-webkit-details-marker { display: none; }
+.sl-drawer summary:hover { background: var(--accent); color: #000; border-color: var(--accent-hover); }
+.sl-drawer-caret { transition: transform .14s ease; font-size: 11px; }
+.sl-drawer[open] .sl-drawer-caret { transform: rotate(90deg); }
+.sl-drawer-badge {
+  margin-left: auto; color: var(--accent); font-size: 11px; font-weight: 400;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.sl-drawer summary:hover .sl-drawer-badge { color: #000; }
+.sl-drawer-body { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
 
 /* ---------- Inputs ---------- */
 input[type=text] {
@@ -570,6 +594,23 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <div class="sl-row">
+        <button id="sl-hl-custom" class="sl-list" disabled title="Load a list of Gaia DR3 source IDs to enable"><span class="sl-swatch" style="background:#ffffff"></span>Custom IDs<span class="sl-count" id="sl-count-custom"></span></button>
+        <button id="sl-only-custom" class="sl-only small" disabled title="Show only the custom IDs">only</button>
+      </div>
+      <div class="sl-row">
+        <button id="sl-custom-load" class="small" style="flex:1" title="Load a text/CSV file of Gaia DR3 source IDs">Load ID list…</button>
+        <button id="sl-custom-paste" class="small" style="flex:1" title="Paste Gaia DR3 source IDs">Paste IDs…</button>
+        <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
+      </div>
+
+      <details class="sl-drawer" id="pulsator-drawer">
+      <summary title="Preset Gaia DR3 catalogs of known radial pulsator classes">
+        <span class="sl-drawer-caret">▸</span>Known Radial Pulsators
+        <span class="sl-drawer-badge" id="pulsator-drawer-badge" hidden></span>
+      </summary>
+      <div class="sl-drawer-body">
+
+      <div class="sl-row">
         <button id="sl-hl-cepheid" class="sl-list" title="Highlight catalog Cepheids on both plots"><span class="sl-swatch" style="background:#ffd700"></span>Cepheids<span class="sl-count" id="sl-count-cepheid"></span></button>
         <button id="sl-only-cepheid" class="sl-only small" title="Show only Cepheids">only</button>
       </div>
@@ -624,17 +665,10 @@ input[type=range]::-moz-range-thumb {
         <button id="sl-only-sdbv" class="sl-only small" title="Show only sdBV">only</button>
       </div>
 
-      <div class="sl-row">
-        <button id="sl-hl-custom" class="sl-list" disabled title="Load a list of Gaia DR3 source IDs to enable"><span class="sl-swatch" style="background:#ffffff"></span>Custom IDs<span class="sl-count" id="sl-count-custom"></span></button>
-        <button id="sl-only-custom" class="sl-only small" disabled title="Show only the custom IDs">only</button>
       </div>
-      <div class="sl-row">
-        <button id="sl-custom-load" class="small" style="flex:1" title="Load a text/CSV file of Gaia DR3 source IDs">Load ID list…</button>
-        <button id="sl-custom-paste" class="small" style="flex:1" title="Paste Gaia DR3 source IDs">Paste IDs…</button>
-        <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
-      </div>
+      </details>
 
-      <button id="sl-clear" class="small" disabled title="Turn off every catalog highlight and restriction">Clear all lists</button>
+      <button id="sl-clear" class="small" disabled title="Turn off every catalog highlight and restriction">Clear all input lists</button>
       <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
     </div>
 
@@ -4288,6 +4322,10 @@ function slRefreshUI() {
     }
   }
   $('sl-clear').disabled = !slAnyActive();
+  const nPreset = STAR_LISTS.filter(L => !L.custom && (L.highlight || L.restrict)).length;
+  const badge = $('pulsator-drawer-badge');
+  badge.hidden = nPreset === 0;
+  badge.textContent = nPreset ? `${nPreset} active` : '';
 }
 for (const L of STAR_LISTS) {
   $('sl-hl-' + L.key).addEventListener('click', async () => {

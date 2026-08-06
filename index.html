@@ -535,7 +535,7 @@ input[type=range]::-moz-range-thumb {
       <div class="msg" id="counts-label">—</div>
       <div class="muted" id="filter-count" style="font-size:12px;">—</div>
       <div class="sub-title">Messages</div>
-      <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or either plot as a PNG</div>
+      <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or both plots as high-resolution PNG images</div>
     </div>
 
     <div class="card">
@@ -716,8 +716,7 @@ input[type=range]::-moz-range-thumb {
       <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
       <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
       <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
-      <button id="export-detail-png-btn" title="Download the Detail View as a PNG image">Export Detail View PNG</button>
-      <button id="export-overview-png-btn" title="Download the Overview plot as a PNG image">Export Overview PNG</button>
+      <button id="export-plots-png-btn" title="Save both plots as high-resolution PNG images on a white background, ready for print or publication">Save Plot Images (PNG)</button>
     </div>
 
     <div class="card" id="legend-card">
@@ -784,7 +783,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
-        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV, or either panel as a PNG.</li>
+        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images (PNG)</b> writes both panels as separate high-resolution PNGs, re-rendered on a white background (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
       <ul>
@@ -931,6 +930,87 @@ const THEME = (() => {
     accent: v('--accent'), accentHover: v('--accent-hover'), green: v('--green'),
   };
 })();
+
+/* ---------------- Canvas ink (screen vs print) ----------------
+   Colors the two main plots draw with that are NOT part of the UI theme:
+   overlays, the reddening arrow, the view rectangle, selection rings. They
+   live in one swappable object (rather than as literals at each call site) so
+   the PNG export can re-render the exact same code path on white paper — the
+   dark-mode values are tuned against #1f2021 and several of them (gold, pale
+   gray) are unreadable on white. INK is repointed for the duration of an
+   export and restored afterwards; nothing caches its values. */
+const INK_SCREEN = {
+  hrTrack: 'rgba(139,148,158,0.30)',   // dashed HR reference tracks
+  hrLabel: 'rgba(139,148,158,0.75)',   // their names
+  stripFill: 'rgba(210,153,34,0.10)',  // instability strip polygon
+  stripEdge: 'rgba(210,153,34,0.45)',
+  stripText: 'rgba(210,153,34,0.85)',
+  redVec: '#e3b341',                   // A_V = 1 reddening arrow
+  viewRectFill: 'rgba(63,185,80,0.25)', // overview "you are here" rectangle
+  hoverRing: '#ffd700',
+};
+const INK_PRINT = {
+  hrTrack: 'rgba(96,104,114,0.55)',
+  hrLabel: 'rgba(72,80,90,0.90)',
+  stripFill: 'rgba(176,124,0,0.13)',
+  stripEdge: 'rgba(158,111,0,0.60)',
+  stripText: 'rgba(124,87,0,0.95)',
+  redVec: '#9a6100',
+  // lighter than the screen wash: on white this covers a large area as a solid
+  // tint, and the (much stronger) green border already delimits the rectangle
+  viewRectFill: 'rgba(26,127,55,0.09)',
+  hoverRing: '#a06e00',
+};
+let INK = INK_SCREEN;
+
+/* The UI theme values the plots read, restated for white paper. Keys match
+   THEME; both surfaces are pure white so the figure has no visible panel. */
+const THEME_PRINT = {
+  bg: '#ffffff', panel: '#ffffff', panelAlt: '#ffffff',
+  text: '#111111', muted: '#333333', border: '#2b2b2b',
+  accent: '#2f5d8a', accentHover: '#24496c', green: '#1a7f37',
+};
+let printMode = false;
+
+/* Run fn with the plots' palette switched to the print one. Restores on the
+   way out even if fn throws, so a failed export can't leave the live app
+   rendering in white-on-white. */
+function withPrintPalette(fn) {
+  const savedTheme = { ...THEME };
+  Object.assign(THEME, THEME_PRINT);
+  INK = INK_PRINT;
+  printMode = true;
+  try { return fn(); }
+  finally {
+    Object.assign(THEME, savedTheme);
+    INK = INK_SCREEN;
+    printMode = false;
+  }
+}
+
+/* Highlight colors for the catalog overlays are chosen for a dark panel, and
+   several (gold, cyan, and Custom IDs' pure white) wash out or vanish entirely
+   on paper. Rather than hand-maintaining a second color per list, scale each
+   one toward black until it clears ~4.5:1 contrast against white, which keeps
+   the hue — and so the visual mapping to the sidebar swatches — intact. Pure
+   white has no hue to keep, so it gets an explicit near-black instead. */
+const PRINT_INK_OVERRIDES = { '#ffffff': '#111111' };
+const printInkCache = new Map(Object.entries(PRINT_INK_OVERRIDES));
+function printInk(color) {
+  const hit = printInkCache.get(color);
+  if (hit !== undefined) return hit;
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  if (!m) { printInkCache.set(color, color); return color; }   // rgba()/named: leave alone
+  const hex = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1];
+  let r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+  const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const lum = () => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  // L <= 0.18 puts contrast against white at ~4.6:1 — enough for 1–3 px lines
+  for (let k = 0; k < 60 && lum() > 0.18; k++) { r *= 0.95; g *= 0.95; b *= 0.95; }
+  const out = '#' + [r, g, b].map(c => Math.round(c).toString(16).padStart(2, '0')).join('');
+  printInkCache.set(color, out);
+  return out;
+}
 
 const LIST_NAME = 'RANKED';
 // Folder (relative to index.html) that holds all the unzipped data tables.
@@ -1284,6 +1364,8 @@ detail.xlabelParts = LBL_BPRP; detail.ylabelParts = LBL_GMAG;
 
 let overviewCache = null;        // offscreen canvas with segments pre-rendered
 let overviewCacheKey = '';
+// device-pixels-per-CSS-px while rendering a PNG export; 0 = drawing to screen
+let exportScale = 0;
 // the tightly-framed data extent the overview fits to; the live overview view
 // (overview.xlim/ylim) can be zoomed/panned away from this for exploration, and
 // the detail rectangle is clamped to it.
@@ -1729,9 +1811,13 @@ function drawSourcesBatched(ctx, plot, indices, ox, oy, wScale) {
 
 function ensureOverviewCache() {
   const r = overview.plotRect;
-  const dpr = window.devicePixelRatio || 1;
+  // exportScale (set only while a PNG is being rendered) bakes the cache at the
+  // export resolution instead of the display's, so the overview's data layer is
+  // genuinely high-res rather than a screen-resolution bitmap scaled up. It is
+  // part of the key, so the screen cache re-bakes at dpr on the next frame.
+  const dpr = exportScale || window.devicePixelRatio || 1;
   const f = state.filter;
-  const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h,
+  const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h, dpr,
     f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist, f.minGlat, f.maxGlat,
     state.thickness, state.plotMode, state.visIdx.length, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
@@ -1763,7 +1849,7 @@ function drawOverview() {
   const y0 = overview.yToPx(detail.ylim[0]), y1 = overview.yToPx(detail.ylim[1]);
   const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
   const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
-  ctx.fillStyle = 'rgba(63,185,80,0.25)';
+  ctx.fillStyle = INK.viewRectFill;
   ctx.fillRect(rx, ry, rw, rh);
   ctx.strokeStyle = THEME.green;
   ctx.lineWidth = 2.5;
@@ -1782,7 +1868,7 @@ function drawOverview() {
      ΔE(BP−RP) = 0.413,  ΔA_G = 0.789   (slope A_G / E(BP−RP) ≈ 1.91),
    i.e. down-and-right in the conventional CMD orientation. The arrow spans
    exactly A_V = 1 in DATA units, so its on-screen size/angle track the zoom. */
-const RED_VEC = { dBR: 0.413, dG: 0.789, color: '#e3b341' };
+const RED_VEC = { dBR: 0.413, dG: 0.789 };   // color comes from INK.redVec
 // tail anchor as a fraction of the plot rect — top-right by default, draggable
 const redVecAnchor = { fx: 0.72, fy: 0.10 };
 // tail/tip in canvas px for the current view (single source of truth for
@@ -1798,8 +1884,8 @@ function drawReddeningVector(plot, ctx) {
   if (!state.showRedVec) return;
   const { tx, ty, tipX, tipY } = redVecPx(plot);
   ctx.save();
-  ctx.strokeStyle = RED_VEC.color;
-  ctx.fillStyle = RED_VEC.color;
+  ctx.strokeStyle = INK.redVec;
+  ctx.fillStyle = INK.redVec;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(tx, ty);
@@ -1862,7 +1948,7 @@ function drawDetail() {
     ctx.restore();
   };
   for (const i of state.selection) ring(i, THEME.green, 2.5, 0);
-  if (state.hover >= 0) ring(state.hover, '#ffd700', 2.5, 10);
+  if (state.hover >= 0) ring(state.hover, INK.hoverRing, 2.5, 10);
 
   countsLabel.textContent = `Detail View: ${idx.length.toLocaleString()} ${state.plotMode === 'points' ? 'points' : 'lines'} in window`;
   state.detailIdx = idx;
@@ -1893,7 +1979,7 @@ const HR_TRACKS = [
 function drawHRTracks(plot, ctx, lw) {
   if (!state.showHRRef) return;
   ctx.save();
-  ctx.strokeStyle = 'rgba(139,148,158,0.30)';
+  ctx.strokeStyle = INK.hrTrack;
   ctx.lineWidth = lw;
   ctx.setLineDash([6, 4]);
   for (const t of HR_TRACKS) {
@@ -1921,9 +2007,8 @@ $('hr-ref-checkbox').addEventListener('change', ev => {
 const HR_REGIONS = [
   {
     name: 'Instability strip',
-    fill: 'rgba(210,153,34,0.10)',
-    edge: 'rgba(210,153,34,0.45)',
-    text: 'rgba(210,153,34,0.85)',
+    // 'strip' picks strip{Fill,Edge,Text} out of the active INK palette
+    ink: 'strip',
     label: [0.95, -0.8],
     points: [[0.20, 3.0], [0.35, 1.5], [0.45, 0.0], [0.55, -1.5], [0.70, -3.5], [0.85, -5.5],
              [1.45, -5.5], [1.15, -3.5], [0.95, -1.5], [0.85, 0.0], [0.75, 1.5], [0.65, 3.0]],
@@ -1939,9 +2024,9 @@ function drawHRRegions(plot, ctx) {
       k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
     });
     ctx.closePath();
-    ctx.fillStyle = rg.fill;
+    ctx.fillStyle = INK[rg.ink + 'Fill'];
     ctx.fill();
-    ctx.strokeStyle = rg.edge;
+    ctx.strokeStyle = INK[rg.ink + 'Edge'];
     ctx.lineWidth = 1.2;
     ctx.setLineDash([5, 4]);
     ctx.stroke();
@@ -1955,7 +2040,7 @@ function drawHRLabels(plot, ctx) {
   ctx.font = '11px "IBM Plex Sans", sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   if (state.showHRRef) {
-    ctx.fillStyle = 'rgba(139,148,158,0.75)';
+    ctx.fillStyle = INK.hrLabel;
     for (const t of HR_TRACKS) {
       const [mx, my] = t.points[Math.floor(t.points.length / 2)];
       ctx.fillText(t.name, plot.xToPx(mx) + 6, plot.yToPx(my) - 4);
@@ -1963,7 +2048,7 @@ function drawHRLabels(plot, ctx) {
   }
   if (state.showInstabilityStrip) {
     for (const rg of HR_REGIONS) {
-      ctx.fillStyle = rg.text;
+      ctx.fillStyle = INK[rg.ink + 'Text'];
       ctx.fillText(rg.name, plot.xToPx(rg.label[0]) + 6, plot.yToPx(rg.label[1]) - 4);
     }
   }
@@ -2737,19 +2822,115 @@ function exportCSV(indices, what) {
   URL.revokeObjectURL(a.href);
   setMessage(`[${timestamp()}] Saved ${indices.length.toLocaleString()} ${what} to '${filename}' with columns (${state.xColName}, ${state.yColName})`);
 }
-function exportCanvasPNG(canvas, defName) {
-  const base = $('filename-input').value.trim().replace(/\.csv$/i, '');
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = (base ? base + '_' : '') + defName;
-  a.click();
-  setMessage(`[${timestamp()}] Downloaded ${a.download}`);
+/* ---------------- Plot image export ----------------
+   The app is dark, but a figure headed for a paper or a slide wants white
+   paper. Rather than screenshotting the on-screen canvas and inverting it, the
+   two plots are RE-RENDERED through the very same drawOverview()/drawDetail()
+   code path with (a) the palette swapped to the print one and (b) a bigger
+   device-pixel ratio — so text, hairlines and the millions of data segments are
+   all rasterized at export resolution instead of being an upscaled screenshot.
+
+   The trick that keeps this from duplicating any drawing logic: a Plot only
+   ever touches the outside world through .canvas/.ctx, so for the duration of
+   one render we point those at an offscreen canvas. Layout (plot.w/plot.h, and
+   therefore the axes, ticks and view limits) is untouched, so the image is
+   exactly what is on screen, just larger and on white. */
+const EXPORT_MIN_PX = 2400;   // target for the longer side of each image
+const EXPORT_MAX_SCALE = 6;   // ceiling on device-pixels per CSS px
+
+function renderPlotForPrint(plot, draw) {
+  const w = plot.w, h = plot.h;
+  if (!(w > 0 && h > 0)) throw new Error('the plots have no size yet');
+  const scale = Math.min(EXPORT_MAX_SCALE, Math.max(2, EXPORT_MIN_PX / Math.max(w, h)));
+  const off = document.createElement('canvas');
+  off.width = Math.round(w * scale);
+  off.height = Math.round(h * scale);
+  const octx = off.getContext('2d');
+  // one unit of the drawing code's CSS-px coordinate space = `scale` real pixels
+  octx.setTransform(scale, 0, 0, scale, 0, 0);
+  // a canvas starts transparent; PNG keeps alpha, so paint the paper first or
+  // the figure lands on a black background in anything that flattens it
+  octx.fillStyle = THEME_PRINT.panel;
+  octx.fillRect(0, 0, w, h);
+
+  const liveCanvas = plot.canvas, liveCtx = plot.ctx;
+  plot.canvas = off; plot.ctx = octx;
+  exportScale = scale;
+  try { draw(); }
+  finally {
+    plot.canvas = liveCanvas; plot.ctx = liveCtx;
+    exportScale = 0;
+  }
+  return off;
 }
+
+// canvas -> file. toBlob (not toDataURL) because these images run to tens of
+// megabytes and a base64 data: URL of that size is both a huge string and, in
+// some browsers, past the maximum URL length.
+function downloadCanvas(canvas, filename) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (!blob) { reject(new Error('the browser could not encode the PNG')); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      // revoke on a later turn: Safari and Electron need the URL to survive the
+      // click long enough for the download to start
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      resolve({ filename, bytes: blob.size, w: canvas.width, h: canvas.height });
+    }, 'image/png');
+  });
+}
+
+async function exportPlotImages() {
+  const btn = $('export-plots-png-btn');
+  if (btn.disabled) return;
+  const base = $('filename-input').value.trim().replace(/\.(csv|png)$/i, '');
+  const name = suffix => (base ? base + '_' : '') + suffix + '.png';
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = 'Rendering images…';
+  // let the button repaint before the (synchronous, possibly multi-second) render
+  await new Promise(requestAnimationFrame);
+  const jobs = [
+    { plot: overview, draw: drawOverview, file: name('overview') },
+    { plot: detail, draw: drawDetail, file: name('detail_view') },
+  ];
+  const canvases = [];   // tracked for cleanup even if a later job throws
+  try {
+    const saved = [];
+    for (const j of jobs) {
+      if (saved.length) {
+        // browsers rate-limit back-to-back programmatic downloads; a beat apart
+        // keeps the second one from being dropped
+        await new Promise(r => setTimeout(r, 400));
+      }
+      const canvas = withPrintPalette(() => renderPlotForPrint(j.plot, j.draw));
+      canvases.push(canvas);
+      saved.push(await downloadCanvas(canvas, j.file));
+    }
+    const dims = `${saved[0].w}×${saved[0].h}`;
+    const mb = (saved.reduce((t, s) => t + s.bytes, 0) / 1048576).toFixed(1);
+    setMessage(`[${timestamp()}] Saved ${saved.map(s => `'${s.filename}'`).join(' and ')} ` +
+      `— ${dims} px on a white background, ${mb} MB total`);
+  } catch (e) {
+    setMessage(`[${timestamp()}] Could not save the plot images: ${e.message}`);
+  } finally {
+    // free the export bitmaps (tens of MB each) and put the screen-resolution
+    // overview cache back
+    for (const c of canvases) { c.width = 0; c.height = 0; }
+    btn.disabled = false;
+    btn.textContent = label;
+    requestRedraw();
+  }
+}
+
 $('export-visible-btn').addEventListener('click', () => exportCSV(state.detailIdx, 'visible sources'));
 $('export-selected-btn').addEventListener('click', () => exportCSV(state.selection, 'selected sources'));
 $('export-filtered-btn').addEventListener('click', () => exportCSV(state.visIdx, 'filtered sources'));
-$('export-detail-png-btn').addEventListener('click', () => exportCanvasPNG($('detail-canvas'), 'detail_view.png'));
-$('export-overview-png-btn').addEventListener('click', () => exportCanvasPNG($('overview-canvas'), 'overview.png'));
+$('export-plots-png-btn').addEventListener('click', exportPlotImages);
 
 /* ---------------- Spearman table manual load (boot fallback) ---------------- */
 $('spearman-file-input').addEventListener('change', async ev => {
@@ -4454,14 +4635,18 @@ function slListIndices(L) {
 // highlight render groups: each {color, idx[]} drawn in its own color
 function slHighlightGroups() {
   const groups = [];
+  // during a PNG export the same colors are darkened for white paper; going
+  // through here means slSignature() changes too, so the overview cache
+  // re-bakes for the export and again for the screen afterwards
+  const ink = c => printMode ? printInk(c) : c;
   for (const L of STAR_LISTS) {
     if (!L.highlight || !L.loaded) continue;
     if (L.subtypes && L.activeSubtypes.size) {
       for (const st of L.subtypes) if (L.activeSubtypes.has(st)) {
-        groups.push({ color: SL_SUBTYPE_COLORS[st] || L.color, idx: L.membersBySubtype[st] });
+        groups.push({ color: ink(SL_SUBTYPE_COLORS[st] || L.color), idx: L.membersBySubtype[st] });
       }
     } else {
-      groups.push({ color: L.color, idx: L.members });
+      groups.push({ color: ink(L.color), idx: L.members });
     }
   }
   return groups;

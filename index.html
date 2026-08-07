@@ -1736,30 +1736,69 @@ function redrawAll() {
 /* Batched segment renderer. A separate ctx.beginPath()/stroke() per segment
    means millions of stroke() calls for a multi-million-row view, which floods
    the canvas command buffer and crashes the renderer. Instead we group segments
-   by (color, alpha) bucket and emit ONE Path2D + one stroke() per non-empty
-   bucket — at most NB_COLOR*NA_ALPHA strokes — while keeping the identical
-   appearance. Work is done in fixed-size chunks so the temporary Path2D objects
-   stay small. (ox, oy) shift into the offscreen overview-cache coordinate
-   space; pass 0, 0 to draw in place.
+   by (color, alpha) bucket and emit one Path2D + one stroke() per non-empty
+   bucket — NB_COLOR*NA_ALPHA strokes plus one more per PATH_CHUNK segments,
+   which caps the size of any single temporary Path2D. (ox, oy) shift into the
+   offscreen overview-cache coordinate space; pass 0, 0 to draw in place.
 
-   Layering: bucket batching would otherwise impose a systematic paint order
-   (all of one color class over the other within each chunk). To keep bluing
-   and reddening sources genuinely interwoven, small views are drawn one stroke
-   per line in true painter's order, and large views stroke each chunk's
-   buckets in a per-chunk shuffled (but frame-stable) order so neither color
-   ever ends up wholesale on top. */
-const PAINTER_MAX = 20000;   // per-line painter's order up to this many sources
-function shuffleBuckets(present, seed) {
-  // Fisher–Yates ordered by a tiny seeded LCG: random-looking, yet identical
-  // on every redraw so the picture doesn't shimmer between frames
-  let s = (seed * 2654435761) >>> 0 || 1;
-  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-  for (let i = present.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    const t = present[i]; present[i] = present[j]; present[j] = t;
+   Layering: the paint order is a pure function of each source's own (color,
+   alpha) bucket — never of where it sits in the index array, nor of how many
+   sources happen to be visible. That is what keeps the picture stable: nudging
+   a filter or panning the Detail View changes *which* lines are drawn, not how
+   the surviving ones are stacked, so the plot no longer re-shuffles itself on
+   every small change. Sources are painted in ascending alpha bucket, which puts
+   the most significant lines (smallest Spearman p) on top of the faint ones.
+   Within one significance level the color buckets are visited in a fixed
+   bit-reversed order, so bluing and reddening sources stay interwoven instead
+   of one class sitting wholesale over the other. */
+const NBUCKETS = NB_COLOR * NA_ALPHA;
+const BUCKET_RANK = new Int16Array(NBUCKETS);   // (color,alpha) bucket -> paint rank
+const RANK_BUCKET = new Int16Array(NBUCKETS);   // paint rank -> (color,alpha) bucket
+(function buildDrawOrder() {
+  // bit-reversed color order (NB_COLOR is a power of two): 0, 32, 16, 48, 8, …
+  // — a fixed permutation that spreads the colormap out, so no part of it is
+  // systematically on top and the interleave is identical on every redraw
+  const bits = Math.round(Math.log2(NB_COLOR));
+  const colorOrder = [];
+  for (let c = 0; c < NB_COLOR; c++) {
+    let v = 0;
+    for (let k = 0; k < bits; k++) if (c & (1 << k)) v |= 1 << (bits - 1 - k);
+    colorOrder.push(v);
   }
-  return present;
+  let rank = 0;
+  for (let a = 0; a < NA_ALPHA; a++)             // least significant painted first
+    for (const c of colorOrder) {
+      const b = c * NA_ALPHA + a;
+      BUCKET_RANK[b] = rank; RANK_BUCKET[rank] = b; rank++;
+    }
+})();
+
+/* Counting sort of `indices` into paint-rank order. Returns the grouped
+   indices; the run for rank r is [sortStart[r], sortStart[r+1]). Both the
+   scratch buffer and the offset table are reused across frames so a
+   full-dataset redraw allocates nothing. Not reentrant — the two renderers
+   below consume the result before the next call. */
+const sortStart = new Int32Array(NBUCKETS + 1);
+const sortCursor = new Int32Array(NBUCKETS);
+let sortScratch = null;
+function sortByPaintRank(indices) {
+  const n = indices.length, NA = NA_ALPHA;
+  if (!sortScratch || sortScratch.length < n) sortScratch = new Int32Array(n);
+  const out = sortScratch, cb = state.cbucket, ab = state.abucket;
+  sortStart.fill(0);
+  for (let k = 0; k < n; k++) {
+    const i = indices[k];
+    sortStart[BUCKET_RANK[cb[i] * NA + ab[i]] + 1]++;
+  }
+  for (let r = 0; r < NBUCKETS; r++) sortStart[r + 1] += sortStart[r];
+  sortCursor.set(sortStart.subarray(0, NBUCKETS));
+  for (let k = 0; k < n; k++) {
+    const i = indices[k];
+    out[sortCursor[BUCKET_RANK[cb[i] * NA + ab[i]]]++] = i;
+  }
+  return out;
 }
+const PATH_CHUNK = 100000;   // max segments per Path2D, to keep temporaries small
 function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
   const n = indices.length;
   if (!n) return;
@@ -1770,58 +1809,35 @@ function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
   const NA = NA_ALPHA;
   const seg = [0, 0, 0, 0];
   ctx.lineCap = 'round';
-  if (n <= PAINTER_MAX) {
-    for (let k = 0; k < n; k++) {
-      const i = indices[k];
-      segEnds(i, seg);
-      const x1 = rx + (seg[0] - x0) / xspan * rw;
-      const x2 = rx + (seg[2] - x0) / xspan * rw;
-      let y1, y2;
-      if (inv) {
-        y1 = ry + (seg[1] - y0) / yspan * rh;
-        y2 = ry + (seg[3] - y0) / yspan * rh;
-      } else {
-        y1 = ry + (1 - (seg[1] - y0) / yspan) * rh;
-        y2 = ry + (1 - (seg[3] - y0) / yspan) * rh;
+  const order = sortByPaintRank(indices);
+  for (let rank = 0; rank < NBUCKETS; rank++) {
+    const runStart = sortStart[rank], runEnd = sortStart[rank + 1];
+    if (runStart === runEnd) continue;
+    const b = RANK_BUCKET[rank];
+    ctx.strokeStyle = BUCKET_STYLE[b];
+    ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
+    // Every line in this run shares one style, and src-over compositing of
+    // identical rgba is order independent, so splitting a long run across
+    // several Path2Ds is invisible in the result while keeping each one small.
+    for (let base = runStart; base < runEnd; base += PATH_CHUNK) {
+      const end = Math.min(runEnd, base + PATH_CHUNK);
+      const pth = new Path2D();
+      for (let k = base; k < end; k++) {
+        const i = order[k];
+        segEnds(i, seg);
+        const x1 = rx + (seg[0] - x0) / xspan * rw;
+        const x2 = rx + (seg[2] - x0) / xspan * rw;
+        let y1, y2;
+        if (inv) {
+          y1 = ry + (seg[1] - y0) / yspan * rh;
+          y2 = ry + (seg[3] - y0) / yspan * rh;
+        } else {
+          y1 = ry + (1 - (seg[1] - y0) / yspan) * rh;
+          y2 = ry + (1 - (seg[3] - y0) / yspan) * rh;
+        }
+        pth.moveTo(x1, y1); pth.lineTo(x2, y2);
       }
-      const b = state.cbucket[i] * NA + state.abucket[i];
-      ctx.strokeStyle = BUCKET_STYLE[b];
-      ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
-      ctx.beginPath();
-      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-    return;
-  }
-  const CHUNK = 100000;
-  for (let base = 0; base < n; base += CHUNK) {
-    const end = Math.min(n, base + CHUNK);
-    const paths = new Array(NB_COLOR * NA);
-    for (let k = base; k < end; k++) {
-      const i = indices[k];
-      segEnds(i, seg);
-      const x1 = rx + (seg[0] - x0) / xspan * rw;
-      const x2 = rx + (seg[2] - x0) / xspan * rw;
-      let y1, y2;
-      if (inv) {
-        y1 = ry + (seg[1] - y0) / yspan * rh;
-        y2 = ry + (seg[3] - y0) / yspan * rh;
-      } else {
-        y1 = ry + (1 - (seg[1] - y0) / yspan) * rh;
-        y2 = ry + (1 - (seg[3] - y0) / yspan) * rh;
-      }
-      const b = state.cbucket[i] * NA + state.abucket[i];
-      let pth = paths[b];
-      if (pth === undefined) pth = paths[b] = new Path2D();
-      pth.moveTo(x1, y1); pth.lineTo(x2, y2);
-    }
-    const present = [];
-    for (let b = 0; b < paths.length; b++) if (paths[b] !== undefined) present.push(b);
-    shuffleBuckets(present, base / CHUNK + 1);
-    for (const b of present) {
-      ctx.strokeStyle = BUCKET_STYLE[b];
-      ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
-      ctx.stroke(paths[b]);
+      ctx.stroke(pth);
     }
   }
 }
@@ -1844,44 +1860,28 @@ function fillPointsBatched(ctx, plot, indices, ox, oy, wScale) {
   const RAD = new Array(NA);
   for (let a = 0; a < NA; a++) RAD[a] = Math.max(1, 0.8 * (1 + wScale * BUCKET_ALPHA[a]));
   const TAU = 2 * Math.PI;
-  // same interleaving strategy as the line renderer: painter's order while it's
-  // affordable, per-chunk shuffled bucket order beyond that
-  if (n <= PAINTER_MAX) {
-    for (let k = 0; k < n; k++) {
-      const i = indices[k];
-      const x = rx + (state.xFull[i] - x0) / xspan * rw;
-      const fy = (state.yFull[i] - y0) / yspan;
-      const y = ry + (inv ? fy : 1 - fy) * rh;
-      const b = state.cbucket[i] * NA + state.abucket[i];
-      ctx.fillStyle = BUCKET_STYLE[b];
-      ctx.beginPath();
-      ctx.arc(x, y, RAD[b % NA], 0, TAU);
-      ctx.fill();
-    }
-    return;
-  }
-  const CHUNK = 100000;
-  for (let base = 0; base < n; base += CHUNK) {
-    const end = Math.min(n, base + CHUNK);
-    const paths = new Array(NB_COLOR * NA);
-    for (let k = base; k < end; k++) {
-      const i = indices[k];
-      const x = rx + (state.xFull[i] - x0) / xspan * rw;
-      const fy = (state.yFull[i] - y0) / yspan;
-      const y = ry + (inv ? fy : 1 - fy) * rh;
-      const b = state.cbucket[i] * NA + state.abucket[i];
-      let pth = paths[b];
-      if (pth === undefined) pth = paths[b] = new Path2D();
-      const rad = RAD[b % NA];
-      pth.moveTo(x + rad, y);
-      pth.arc(x, y, rad, 0, TAU);
-    }
-    const present = [];
-    for (let b = 0; b < paths.length; b++) if (paths[b] !== undefined) present.push(b);
-    shuffleBuckets(present, base / CHUNK + 1);
-    for (const b of present) {
-      ctx.fillStyle = BUCKET_STYLE[b];
-      ctx.fill(paths[b]);
+  // same layering rule as the line renderer: significance-ascending paint order
+  // that depends only on each source's own buckets, so points stack identically
+  // no matter which other points happen to be on screen
+  const order = sortByPaintRank(indices);
+  for (let rank = 0; rank < NBUCKETS; rank++) {
+    const runStart = sortStart[rank], runEnd = sortStart[rank + 1];
+    if (runStart === runEnd) continue;
+    const b = RANK_BUCKET[rank];
+    const rad = RAD[b % NA];
+    ctx.fillStyle = BUCKET_STYLE[b];
+    for (let base = runStart; base < runEnd; base += PATH_CHUNK) {
+      const end = Math.min(runEnd, base + PATH_CHUNK);
+      const pth = new Path2D();
+      for (let k = base; k < end; k++) {
+        const i = order[k];
+        const x = rx + (state.xFull[i] - x0) / xspan * rw;
+        const fy = (state.yFull[i] - y0) / yspan;
+        const y = ry + (inv ? fy : 1 - fy) * rh;
+        pth.moveTo(x + rad, y);
+        pth.arc(x, y, rad, 0, TAU);
+      }
+      ctx.fill(pth);
     }
   }
 }

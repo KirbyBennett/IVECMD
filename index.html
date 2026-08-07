@@ -1733,7 +1733,26 @@ function redrawAll() {
    bucket — at most NB_COLOR*NA_ALPHA strokes — while keeping the identical
    appearance. Work is done in fixed-size chunks so the temporary Path2D objects
    stay small. (ox, oy) shift into the offscreen overview-cache coordinate
-   space; pass 0, 0 to draw in place. */
+   space; pass 0, 0 to draw in place.
+
+   Layering: bucket batching would otherwise impose a systematic paint order
+   (all of one color class over the other within each chunk). To keep bluing
+   and reddening sources genuinely interwoven, small views are drawn one stroke
+   per line in true painter's order, and large views stroke each chunk's
+   buckets in a per-chunk shuffled (but frame-stable) order so neither color
+   ever ends up wholesale on top. */
+const PAINTER_MAX = 20000;   // per-line painter's order up to this many sources
+function shuffleBuckets(present, seed) {
+  // Fisher–Yates ordered by a tiny seeded LCG: random-looking, yet identical
+  // on every redraw so the picture doesn't shimmer between frames
+  let s = (seed * 2654435761) >>> 0 || 1;
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  for (let i = present.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    const t = present[i]; present[i] = present[j]; present[j] = t;
+  }
+  return present;
+}
 function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
   const n = indices.length;
   if (!n) return;
@@ -1743,8 +1762,31 @@ function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
   const rx = r.x - ox, ry = r.y - oy, rw = r.w, rh = r.h, inv = plot.invertY;
   const NA = NA_ALPHA;
   const seg = [0, 0, 0, 0];
-  const CHUNK = 300000;
   ctx.lineCap = 'round';
+  if (n <= PAINTER_MAX) {
+    for (let k = 0; k < n; k++) {
+      const i = indices[k];
+      segEnds(i, seg);
+      const x1 = rx + (seg[0] - x0) / xspan * rw;
+      const x2 = rx + (seg[2] - x0) / xspan * rw;
+      let y1, y2;
+      if (inv) {
+        y1 = ry + (seg[1] - y0) / yspan * rh;
+        y2 = ry + (seg[3] - y0) / yspan * rh;
+      } else {
+        y1 = ry + (1 - (seg[1] - y0) / yspan) * rh;
+        y2 = ry + (1 - (seg[3] - y0) / yspan) * rh;
+      }
+      const b = state.cbucket[i] * NA + state.abucket[i];
+      ctx.strokeStyle = BUCKET_STYLE[b];
+      ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
+      ctx.beginPath();
+      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    return;
+  }
+  const CHUNK = 100000;
   for (let base = 0; base < n; base += CHUNK) {
     const end = Math.min(n, base + CHUNK);
     const paths = new Array(NB_COLOR * NA);
@@ -1766,12 +1808,13 @@ function strokeSegmentsBatched(ctx, plot, indices, ox, oy, wBase, wScale) {
       if (pth === undefined) pth = paths[b] = new Path2D();
       pth.moveTo(x1, y1); pth.lineTo(x2, y2);
     }
-    for (let b = 0; b < paths.length; b++) {
-      const pth = paths[b];
-      if (pth === undefined) continue;
+    const present = [];
+    for (let b = 0; b < paths.length; b++) if (paths[b] !== undefined) present.push(b);
+    shuffleBuckets(present, base / CHUNK + 1);
+    for (const b of present) {
       ctx.strokeStyle = BUCKET_STYLE[b];
       ctx.lineWidth = wBase + wScale * BUCKET_ALPHA[b % NA];
-      ctx.stroke(pth);
+      ctx.stroke(paths[b]);
     }
   }
 }
@@ -1794,7 +1837,23 @@ function fillPointsBatched(ctx, plot, indices, ox, oy, wScale) {
   const RAD = new Array(NA);
   for (let a = 0; a < NA; a++) RAD[a] = Math.max(1, 0.8 * (1 + wScale * BUCKET_ALPHA[a]));
   const TAU = 2 * Math.PI;
-  const CHUNK = 300000;
+  // same interleaving strategy as the line renderer: painter's order while it's
+  // affordable, per-chunk shuffled bucket order beyond that
+  if (n <= PAINTER_MAX) {
+    for (let k = 0; k < n; k++) {
+      const i = indices[k];
+      const x = rx + (state.xFull[i] - x0) / xspan * rw;
+      const fy = (state.yFull[i] - y0) / yspan;
+      const y = ry + (inv ? fy : 1 - fy) * rh;
+      const b = state.cbucket[i] * NA + state.abucket[i];
+      ctx.fillStyle = BUCKET_STYLE[b];
+      ctx.beginPath();
+      ctx.arc(x, y, RAD[b % NA], 0, TAU);
+      ctx.fill();
+    }
+    return;
+  }
+  const CHUNK = 100000;
   for (let base = 0; base < n; base += CHUNK) {
     const end = Math.min(n, base + CHUNK);
     const paths = new Array(NB_COLOR * NA);
@@ -1810,33 +1869,20 @@ function fillPointsBatched(ctx, plot, indices, ox, oy, wScale) {
       pth.moveTo(x + rad, y);
       pth.arc(x, y, rad, 0, TAU);
     }
-    for (let b = 0; b < paths.length; b++) {
-      const pth = paths[b];
-      if (pth === undefined) continue;
+    const present = [];
+    for (let b = 0; b < paths.length; b++) if (paths[b] !== undefined) present.push(b);
+    shuffleBuckets(present, base / CHUNK + 1);
+    for (const b of present) {
       ctx.fillStyle = BUCKET_STYLE[b];
-      ctx.fill(pth);
+      ctx.fill(paths[b]);
     }
   }
 }
 // dispatch on the active plot style, so both views and the overview cache
 // render lines or points through one call site
 function drawSourcesBatched(ctx, plot, indices, ox, oy, wScale) {
-  const render = idxs => {
-    if (state.plotMode === 'points') fillPointsBatched(ctx, plot, idxs, ox, oy, wScale);
-    else strokeSegmentsBatched(ctx, plot, idxs, ox, oy, 1, wScale);
-  };
-  // With both signs on screen (direction filter 'all'), chunked bucket order
-  // would interleave the two populations and bury the far rarer reddening
-  // sources under the bluing majority. Decide the layering globally instead:
-  // every bluing (ρ>0) source first, then every reddening (ρ<0) source on top.
-  if (state.filter.dir === 'all') {
-    const pos = [], neg = [];
-    for (const i of indices) (state.coeff[i] < 0 ? neg : pos).push(i);
-    render(pos);
-    render(neg);
-  } else {
-    render(indices);
-  }
+  if (state.plotMode === 'points') fillPointsBatched(ctx, plot, indices, ox, oy, wScale);
+  else strokeSegmentsBatched(ctx, plot, indices, ox, oy, 1, wScale);
 }
 
 function ensureOverviewCache() {
@@ -1901,16 +1947,27 @@ function drawOverview() {
    i.e. down-and-right in the conventional CMD orientation. The arrow spans
    exactly A_V = 1 in DATA units, so its on-screen size/angle track the zoom. */
 const RED_VEC = { dBR: 0.413, dG: 0.789 };   // color comes from INK.redVec
-// tail anchor as a fraction of the plot rect — top-right by default, draggable
+// tail anchor as a fraction of the overview plot rect — top-right by default,
+// draggable on the overview
 const redVecAnchor = { fx: 0.72, fy: 0.10 };
-// tail/tip in canvas px for the current view (single source of truth for
-// drawing and hit-testing)
+// The anchor resolved to one DATA-space position in the diagram: the vector
+// lives at that spot like any other vector, so the Detail View shows it only
+// when its window (the green box) actually covers it.
+function redVecDataTail() {
+  const xspan = overview.xlim[1] - overview.xlim[0];
+  const yspan = overview.ylim[1] - overview.ylim[0];
+  const fy = overview.invertY ? redVecAnchor.fy : 1 - redVecAnchor.fy;
+  return { x: overview.xlim[0] + redVecAnchor.fx * xspan,
+           y: overview.ylim[0] + fy * yspan };
+}
+// tail/tip in canvas px for the given plot (single source of truth for
+// drawing and hit-testing); on the overview this reproduces the anchor exactly
 function redVecPx(plot) {
-  const r = plot.plotRect;
-  const tx = r.x + redVecAnchor.fx * r.w, ty = r.y + redVecAnchor.fy * r.h;
-  const tipX = plot.xToPx(plot.pxToX(tx) + RED_VEC.dBR);
-  const tipY = plot.yToPx(plot.pxToY(ty) + RED_VEC.dG);
-  return { tx, ty, tipX, tipY };
+  const t = redVecDataTail();
+  return {
+    tx: plot.xToPx(t.x), ty: plot.yToPx(t.y),
+    tipX: plot.xToPx(t.x + RED_VEC.dBR), tipY: plot.yToPx(t.y + RED_VEC.dG),
+  };
 }
 function drawReddeningVector(plot, ctx) {
   if (!state.showRedVec) return;
@@ -1981,8 +2038,8 @@ function drawDetail() {
   };
   for (const i of state.selection) ring(i, THEME.green, 2.5, 0);
   if (state.hover >= 0) ring(state.hover, INK.hoverRing, 2.5, 10);
-  // same A_V = 1 arrow as the overview, at the shared anchor — spanning one
-  // magnitude of extinction in DATA units, so it tracks the detail zoom
+  // the A_V = 1 arrow at its data position; the clip region means it appears
+  // only when the detail window (the green overview box) covers that spot
   drawReddeningVector(detail, ctx);
 
   countsLabel.textContent = `Detail View: ${idx.length.toLocaleString()} ${state.plotMode === 'points' ? 'points' : 'lines'} in window`;
@@ -2872,10 +2929,14 @@ function exportCSV(indices, what) {
    all rasterized at export resolution instead of being an upscaled screenshot.
 
    The trick that keeps this from duplicating any drawing logic: a Plot only
-   ever touches the outside world through .canvas/.ctx, so for the duration of
-   one render we point those at an offscreen canvas. Layout (plot.w/plot.h, and
-   therefore the axes, ticks and view limits) is untouched, so the image is
-   exactly what is on screen, just larger and on white. */
+   ever touches the outside world through .canvas/.ctx/.w/.h, so for the
+   duration of one render we point the canvas at an offscreen one and set the
+   layout size to a fixed, clean 4:5 figure — the saved image always has the
+   same publication shape no matter how the window happens to be sized. The
+   view limits are untouched, so the figure shows exactly the data region that
+   is on screen. */
+const EXPORT_W = 1080;        // CSS-px layout of every exported figure (4:5)
+const EXPORT_H = 1350;
 const EXPORT_MIN_PX = 2400;   // target for the longer side of each image
 const EXPORT_MAX_SCALE = 6;   // ceiling on device-pixels per CSS px
 
@@ -2916,8 +2977,8 @@ function drawPrintColorbar(plot, ctx) {
 }
 
 function renderPlotForPrint(plot, draw) {
-  const w = plot.w, h = plot.h;
-  if (!(w > 0 && h > 0)) throw new Error('the plots have no size yet');
+  if (!(plot.w > 0 && plot.h > 0)) throw new Error('the plots have no size yet');
+  const w = EXPORT_W, h = EXPORT_H;
   const scale = Math.min(EXPORT_MAX_SCALE, Math.max(2, EXPORT_MIN_PX / Math.max(w, h)));
   const off = document.createElement('canvas');
   off.width = Math.round(w * scale);
@@ -2931,11 +2992,14 @@ function renderPlotForPrint(plot, draw) {
   octx.fillRect(0, 0, w, h);
 
   const liveCanvas = plot.canvas, liveCtx = plot.ctx;
+  const liveW = plot.w, liveH = plot.h;
   plot.canvas = off; plot.ctx = octx;
+  plot.w = w; plot.h = h;
   exportScale = scale;
   try { draw(); drawPrintColorbar(plot, octx); }
   finally {
     plot.canvas = liveCanvas; plot.ctx = liveCtx;
+    plot.w = liveW; plot.h = liveH;
     exportScale = 0;
   }
   return off;

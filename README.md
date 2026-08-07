@@ -146,7 +146,7 @@ A star that varies traces a small path in this diagram — the segment shows the
 
 - 🔵 **Blue lines** — stars that get bluer as they brighten.
 - 🔴 **Red lines** — stars that get redder as they brighten.
-- **Bolder, more opaque lines** have a more statistically significant correlation (smaller Spearman p-value).
+- **Bolder, more opaque lines** have a more statistically significant correlation (smaller Spearman p-value). They are also drawn *on top*, so a significant source is never buried under the faint ones — and because the stacking depends only on each source's own significance, it stays put as you pan the Detail View or nudge a filter.
 
 ---
 

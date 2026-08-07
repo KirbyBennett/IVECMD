@@ -1746,24 +1746,31 @@ function redrawAll() {
    sources happen to be visible. That is what keeps the picture stable: nudging
    a filter or panning the Detail View changes *which* lines are drawn, not how
    the surviving ones are stacked, so the plot no longer re-shuffles itself on
-   every small change. Sources are painted in ascending alpha bucket, which puts
-   the most significant lines (smallest Spearman p) on top of the faint ones.
-   Within one significance level the color buckets are visited in a fixed
-   bit-reversed order, so bluing and reddening sources stay interwoven instead
-   of one class sitting wholesale over the other. */
+   every small change. Both keys of that order run weakest-first, so the lines
+   that carry the most information end up on top:
+
+     primary   — alpha bucket ascending, putting the most statistically
+                 significant sources (smallest Spearman p) above the faint ones;
+     secondary — |ρ| ascending, so within one significance level the washed-out
+                 center of the colormap sinks and the saturated ends surface.
+
+   The secondary key matters more than it looks: the lowest alpha bucket holds
+   the great majority of the catalog (the main-sequence blob) and spans the full
+   range of ρ, so it is the color key alone that decides what you see there. */
 const NBUCKETS = NB_COLOR * NA_ALPHA;
 const BUCKET_RANK = new Int16Array(NBUCKETS);   // (color,alpha) bucket -> paint rank
 const RANK_BUCKET = new Int16Array(NBUCKETS);   // paint rank -> (color,alpha) bucket
 (function buildDrawOrder() {
-  // bit-reversed color order (NB_COLOR is a power of two): 0, 32, 16, 48, 8, …
-  // — a fixed permutation that spreads the colormap out, so no part of it is
-  // systematically on top and the interleave is identical on every redraw
-  const bits = Math.round(Math.log2(NB_COLOR));
+  /* Color buckets ordered by |ρ|: the pale middle of the colormap first, the
+     deep blue and deep red ends last. The two buckets at equal |ρ| — one
+     bluing, one reddening — swap which goes first as the strength rises, so
+     neither class ever sits wholesale on top of the other. */
   const colorOrder = [];
-  for (let c = 0; c < NB_COLOR; c++) {
-    let v = 0;
-    for (let k = 0; k < bits; k++) if (c & (1 << k)) v |= 1 << (bits - 1 - k);
-    colorOrder.push(v);
+  const mid = NB_COLOR / 2;              // buckets mid-1 and mid straddle ρ = 0
+  for (let d = 0; d < mid; d++) {
+    const red = mid - 1 - d, blue = mid + d;      // equal |ρ|, opposite sign
+    if (d % 2 === 0) colorOrder.push(red, blue);
+    else colorOrder.push(blue, red);
   }
   let rank = 0;
   for (let a = 0; a < NA_ALPHA; a++)             // least significant painted first

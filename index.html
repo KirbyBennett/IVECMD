@@ -699,7 +699,8 @@ input[type=range]::-moz-range-thumb {
       <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
       <label class="check"><input type="checkbox" id="hr-ref-checkbox"><span class="box"></span>Show HR diagram reference lines</label>
       <label class="check"><input type="checkbox" id="strip-checkbox"><span class="box"></span>Show instability strip</label>
-      <label class="check" title="Interstellar reddening vector for AV = 1 mag of extinction, from the red-clump calibration of the Gaia bands. Drag it around the Overview plot."><input type="checkbox" id="redvec-checkbox" checked><span class="box"></span>Show reddening vector</label>
+      <label class="check" title="Interstellar reddening vector for AV = 1 mag of extinction, from the red-clump calibration of the Gaia bands. Shown on both plots; drag it around the Overview plot."><input type="checkbox" id="redvec-checkbox" checked><span class="box"></span>Show reddening vector</label>
+      <label class="check" title="The green rectangle on the Overview marking the region shown in the Detail View. Hide it for a clean overview; scrolling the overview still zooms the Detail View."><input type="checkbox" id="viewrect-checkbox" checked><span class="box"></span>Show Detail View box</label>
     </div>
 
     <div class="card">
@@ -716,7 +717,13 @@ input[type=range]::-moz-range-thumb {
       <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
       <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
       <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
-      <button id="export-plots-png-btn" title="Save both plots as high-resolution PNG images on a white background, ready for print or publication">Save Plot Images (PNG)</button>
+      <div class="field-label">Plot image format</div>
+      <div class="seg-group">
+        <button id="fmt-png" class="active" title="Lossless PNG images — best for slides and further editing">PNG</button>
+        <button id="fmt-jpeg" title="Smaller JPEG images — best for quick sharing">JPEG</button>
+        <button id="fmt-pdf" title="Single-page PDF per plot — best for LaTeX and print">PDF</button>
+      </div>
+      <button id="export-plots-png-btn" title="Save both plots as high-resolution, paper-ready figures on a white background, in the format chosen above">Save Plot Images (PNG)</button>
     </div>
 
     <div class="card" id="legend-card">
@@ -783,7 +790,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
         <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
-        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images (PNG)</b> writes both panels as separate high-resolution PNGs, re-rendered on a white background (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide.</li>
+        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts and a Spearman colorbar (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
       <ul>
@@ -1178,6 +1185,9 @@ if (APP_VERSION) {
    Handles HiDPI canvas sizing, data<->pixel transforms,
    themed axes/ticks/labels. All drawing in CSS px. */
 const MARGIN = { l: 58, r: 12, t: 34, b: 46 };
+// paper margins: room for the larger print fonts on the left/bottom and for
+// the Spearman colorbar column (bar + tick labels + rotated title) on the right
+const MARGIN_PRINT = { l: 80, r: 132, t: 40, b: 66 };
 
 class Plot {
   constructor(canvas, title) {
@@ -1200,7 +1210,8 @@ class Plot {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   get plotRect() {
-    return { x: MARGIN.l, y: MARGIN.t, w: this.w - MARGIN.l - MARGIN.r, h: this.h - MARGIN.t - MARGIN.b };
+    const m = printMode ? MARGIN_PRINT : MARGIN;
+    return { x: m.l, y: m.t, w: this.w - m.l - m.r, h: this.h - m.t - m.b };
   }
   xToPx(x) {
     const r = this.plotRect;
@@ -1234,10 +1245,13 @@ class Plot {
     ctx.fillStyle = THEME.panelAlt;
     ctx.fillRect(r.x, r.y, r.w, r.h);
 
-    // ticks
+    // ticks — print exports get the larger, paper-legible type sizes
+    const tickFs = printMode ? 17 : 11;
+    const labelFs = printMode ? 20 : 13;
+    const titleFs = printMode ? 20 : 14;
     ctx.fillStyle = THEME.muted;
     ctx.strokeStyle = THEME.border;
-    ctx.font = '11px "IBM Plex Sans", sans-serif';
+    ctx.font = `${tickFs}px "IBM Plex Sans", sans-serif`;
     const xt = niceTicks(this.xlim[0], this.xlim[1]);
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (const v of xt) {
@@ -1260,20 +1274,20 @@ class Plot {
 
     // title
     ctx.fillStyle = THEME.text;
-    ctx.font = '600 14px "IBM Plex Sans", sans-serif';
+    ctx.font = `600 ${titleFs}px "IBM Plex Sans", sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.fillText(this.title, r.x + r.w / 2, r.y - 10);
 
     // axis labels (supports subscript parts like G_BP)
     ctx.fillStyle = THEME.muted;
     if (this.xlabelParts) {
-      drawMathText(ctx, this.xlabelParts, r.x + r.w / 2, this.h - 8, 13, 'center');
+      drawMathText(ctx, this.xlabelParts, r.x + r.w / 2, this.h - 8, labelFs, 'center');
     }
     if (this.ylabelParts) {
       ctx.save();
-      ctx.translate(14, r.y + r.h / 2);
+      ctx.translate(printMode ? 20 : 14, r.y + r.h / 2);
       ctx.rotate(-Math.PI / 2);
-      drawMathText(ctx, this.ylabelParts, 0, 0, 13, 'center');
+      drawMathText(ctx, this.ylabelParts, 0, 0, labelFs, 'center');
       ctx.restore();
     }
     ctx.restore();
@@ -1324,6 +1338,7 @@ const state = {
   showHRRef: false,
   showInstabilityStrip: false,
   showRedVec: true,
+  showViewRect: true,            // green Detail View rectangle on the overview
   visIdx: [],                    // indices passing the active filters
   detailIdx: [],                 // visible indices currently inside the detail window
   selection: [],                 // multi-selection (indices)
@@ -1654,14 +1669,15 @@ function setOverviewLimitsLines() {
   // Array.from(...).sort((a,b)=>a-b): ~6× faster and far less memory on the
   // multi-million-row catalogs. Runs once at load; Reset View reuses overviewBase.
   const xs = state.xFull.slice().sort();
-  const ys = state.yFull.slice().sort();
   const loX = percentile(xs, 0.1), hiX = percentile(xs, 99.9);
-  const loY = percentile(ys, 0.1), hiY = percentile(ys, 99.9);
   // Frame to the bulk of the data with a small margin so the overview loads
   // comfortably (not smushed against the edges) yet still zoomed in.
-  const padX = 0.08 * (hiX - loX), padY = 0.08 * (hiY - loY);
+  const padX = 0.08 * (hiX - loX);
   overview.xlim = [loX - padX, hiX + padX];
-  overview.ylim = [loY - padY, hiY + padY];
+  // Fixed magnitude span, 16 (faint, bottom) up to −6 (bright, top), so every
+  // dataset lands on the same frame; the 22-mag span makes niceTicks put the
+  // y ticks every 5 magnitudes.
+  overview.ylim = [-6, 16];
   overviewBase = { xlim: [...overview.xlim], ylim: [...overview.ylim] };
 }
 function fullExtent() {
@@ -1805,8 +1821,22 @@ function fillPointsBatched(ctx, plot, indices, ox, oy, wScale) {
 // dispatch on the active plot style, so both views and the overview cache
 // render lines or points through one call site
 function drawSourcesBatched(ctx, plot, indices, ox, oy, wScale) {
-  if (state.plotMode === 'points') fillPointsBatched(ctx, plot, indices, ox, oy, wScale);
-  else strokeSegmentsBatched(ctx, plot, indices, ox, oy, 1, wScale);
+  const render = idxs => {
+    if (state.plotMode === 'points') fillPointsBatched(ctx, plot, idxs, ox, oy, wScale);
+    else strokeSegmentsBatched(ctx, plot, idxs, ox, oy, 1, wScale);
+  };
+  // With both signs on screen (direction filter 'all'), chunked bucket order
+  // would interleave the two populations and bury the far rarer reddening
+  // sources under the bluing majority. Decide the layering globally instead:
+  // every bluing (ρ>0) source first, then every reddening (ρ<0) source on top.
+  if (state.filter.dir === 'all') {
+    const pos = [], neg = [];
+    for (const i of indices) (state.coeff[i] < 0 ? neg : pos).push(i);
+    render(pos);
+    render(neg);
+  } else {
+    render(indices);
+  }
 }
 
 function ensureOverviewCache() {
@@ -1845,15 +1875,17 @@ function drawOverview() {
   ctx.drawImage(overviewCache, r.x, r.y, r.w, r.h);
 
   // green view rectangle = current detail limits
-  const x0 = overview.xToPx(detail.xlim[0]), x1 = overview.xToPx(detail.xlim[1]);
-  const y0 = overview.yToPx(detail.ylim[0]), y1 = overview.yToPx(detail.ylim[1]);
-  const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
-  const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
-  ctx.fillStyle = INK.viewRectFill;
-  ctx.fillRect(rx, ry, rw, rh);
-  ctx.strokeStyle = THEME.green;
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(rx, ry, rw, rh);
+  if (state.showViewRect) {
+    const x0 = overview.xToPx(detail.xlim[0]), x1 = overview.xToPx(detail.xlim[1]);
+    const y0 = overview.yToPx(detail.ylim[0]), y1 = overview.yToPx(detail.ylim[1]);
+    const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
+    const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
+    ctx.fillStyle = INK.viewRectFill;
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.strokeStyle = THEME.green;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(rx, ry, rw, rh);
+  }
   drawReddeningVector(overview, ctx);   // on top, so it never hides under the data
   overview.end();
 }
@@ -1949,6 +1981,9 @@ function drawDetail() {
   };
   for (const i of state.selection) ring(i, THEME.green, 2.5, 0);
   if (state.hover >= 0) ring(state.hover, INK.hoverRing, 2.5, 10);
+  // same A_V = 1 arrow as the overview, at the shared anchor — spanning one
+  // magnitude of extinction in DATA units, so it tracks the detail zoom
+  drawReddeningVector(detail, ctx);
 
   countsLabel.textContent = `Detail View: ${idx.length.toLocaleString()} ${state.plotMode === 'points' ? 'points' : 'lines'} in window`;
   state.detailIdx = idx;
@@ -2133,6 +2168,7 @@ let ovRectDrag = null;   // grab offset within the rect, in data coords
 let ovVecDrag = null;    // grab offset from the reddening-vector tail, in px
 
 function ovRectHit(px, py) {
+  if (!state.showViewRect) return false;   // a hidden rectangle can't be grabbed
   if (!overview.inPlot(px, py)) return false;
   const x = overview.pxToX(px), y = overview.pxToY(py);
   const rect = detailRectData();
@@ -2573,6 +2609,11 @@ $('redvec-checkbox').addEventListener('change', ev => {
   requestRedraw();
 });
 
+$('viewrect-checkbox').addEventListener('change', ev => {
+  state.showViewRect = ev.target.checked;
+  requestRedraw();
+});
+
 $('reset-view-btn').addEventListener('click', () => {
   // Restore the framing cached at load instead of re-sorting the whole dataset,
   // which would freeze the UI for seconds on large catalogs (and did so when a
@@ -2838,6 +2879,42 @@ function exportCSV(indices, what) {
 const EXPORT_MIN_PX = 2400;   // target for the longer side of each image
 const EXPORT_MAX_SCALE = 6;   // ceiling on device-pixels per CSS px
 
+/* Vertical Spearman colorbar drawn into the widened right margin of each
+   exported figure, mirroring a matplotlib colorbar: the same coolwarm_r ramp
+   as the data, ticks every 0.25, +1 (bluing) at the top, and a rotated title.
+   Only exists on paper — the live app has the Color Legend card instead. */
+function drawPrintColorbar(plot, ctx) {
+  const r = plot.plotRect;
+  const bx = r.x + r.w + 16, bw = 22, by = r.y, bh = r.h;
+  const grad = ctx.createLinearGradient(0, by + bh, 0, by);   // stop 0 at ρ=−1 (bottom)
+  for (let k = 0; k <= 24; k++) {
+    const t = k / 24;
+    const [cr, cg, cb] = coolwarmR(t);
+    grad.addColorStop(t, `rgb(${cr},${cg},${cb})`);
+  }
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = THEME.border;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+  ctx.fillStyle = THEME.text;
+  ctx.font = '14px "IBM Plex Sans", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (let s = -4; s <= 4; s++) {
+    const v = s / 4;
+    const y = by + (1 - (v + 1) / 2) * bh;
+    ctx.beginPath(); ctx.moveTo(bx + bw, y); ctx.lineTo(bx + bw + 4, y); ctx.stroke();
+    ctx.fillText(v.toFixed(2).replace('-', '−'), bx + bw + 8, y);
+  }
+  ctx.translate(bx + bw + 62, by + bh / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '16px "IBM Plex Sans", sans-serif';
+  ctx.fillText('Spearman Correlation Coefficient', 0, 0);
+  ctx.restore();
+}
+
 function renderPlotForPrint(plot, draw) {
   const w = plot.w, h = plot.h;
   if (!(w > 0 && h > 0)) throw new Error('the plots have no size yet');
@@ -2856,7 +2933,7 @@ function renderPlotForPrint(plot, draw) {
   const liveCanvas = plot.canvas, liveCtx = plot.ctx;
   plot.canvas = off; plot.ctx = octx;
   exportScale = scale;
-  try { draw(); }
+  try { draw(); drawPrintColorbar(plot, octx); }
   finally {
     plot.canvas = liveCanvas; plot.ctx = liveCtx;
     exportScale = 0;
@@ -2864,31 +2941,88 @@ function renderPlotForPrint(plot, draw) {
   return off;
 }
 
-// canvas -> file. toBlob (not toDataURL) because these images run to tens of
+// canvas -> blob. toBlob (not toDataURL) because these images run to tens of
 // megabytes and a base64 data: URL of that size is both a huge string and, in
 // some browsers, past the maximum URL length.
-function downloadCanvas(canvas, filename) {
+function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(blob => {
-      if (!blob) { reject(new Error('the browser could not encode the PNG')); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      // revoke on a later turn: Safari and Electron need the URL to survive the
-      // click long enough for the download to start
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-      resolve({ filename, bytes: blob.size, w: canvas.width, h: canvas.height });
-    }, 'image/png');
+      if (blob) resolve(blob);
+      else reject(new Error(`the browser could not encode the ${type.split('/')[1].toUpperCase()}`));
+    }, type, quality);
+  });
+}
+
+/* Minimal single-page PDF wrapping the figure as one JPEG (DCTDecode) image —
+   just the five objects every viewer requires, written by hand so the export
+   needs no library (the app runs fully offline). The page is sized so the
+   figure comes out at 300 dpi. */
+async function canvasToPdfBlob(canvas) {
+  const jpeg = new Uint8Array(await (await canvasToBlob(canvas, 'image/jpeg', 0.95)).arrayBuffer());
+  const W = (canvas.width * 72 / 300).toFixed(2), H = (canvas.height * 72 / 300).toFixed(2);
+  const enc = s => new TextEncoder().encode(s);   // every string here is ASCII
+  const content = enc(`q\n${W} 0 0 ${H} 0 0 cm\n/Im0 Do\nQ\n`);
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`,
+    { head: `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`, stream: jpeg },
+    { head: `<< /Length ${content.length} >>`, stream: content },
+  ];
+  const parts = [enc('%PDF-1.4\n')];
+  let pos = parts[0].length;
+  const offsets = [];
+  objs.forEach((o, i) => {
+    offsets.push(pos);
+    const isStream = typeof o !== 'string';
+    const head = enc(`${i + 1} 0 obj\n${isStream ? o.head + '\nstream\n' : o + '\nendobj\n'}`);
+    parts.push(head); pos += head.length;
+    if (isStream) {
+      const tail = enc('\nendstream\nendobj\n');
+      parts.push(o.stream, tail);
+      pos += o.stream.length + tail.length;
+    }
+  });
+  const xref = `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`
+    + offsets.map(off => `${String(off).padStart(10, '0')} 00000 n \n`).join('')
+    + `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${pos}\n%%EOF\n`;
+  parts.push(enc(xref));
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  // revoke on a later turn: Safari and Electron need the URL to survive the
+  // click long enough for the download to start
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return { filename, bytes: blob.size };
+}
+
+/* ---------------- Plot image format (PNG / JPEG / PDF) ---------------- */
+const PLOT_FORMATS = {
+  png:  { ext: '.png', label: 'PNG' },
+  jpeg: { ext: '.jpg', label: 'JPEG' },
+  pdf:  { ext: '.pdf', label: 'PDF' },
+};
+let plotImageFormat = 'png';
+for (const f of Object.keys(PLOT_FORMATS)) {
+  $('fmt-' + f).addEventListener('click', () => {
+    plotImageFormat = f;
+    for (const g of Object.keys(PLOT_FORMATS)) $('fmt-' + g).classList.toggle('active', g === f);
+    $('export-plots-png-btn').textContent = `Save Plot Images (${PLOT_FORMATS[f].label})`;
   });
 }
 
 async function exportPlotImages() {
   const btn = $('export-plots-png-btn');
   if (btn.disabled) return;
-  const base = $('filename-input').value.trim().replace(/\.(csv|png)$/i, '');
-  const name = suffix => (base ? base + '_' : '') + suffix + '.png';
+  const fmt = plotImageFormat, ext = PLOT_FORMATS[fmt].ext;
+  const base = $('filename-input').value.trim().replace(/\.(csv|png|jpe?g|pdf)$/i, '');
+  const name = suffix => (base ? base + '_' : '') + suffix + ext;
   btn.disabled = true;
   const label = btn.textContent;
   btn.textContent = 'Rendering images…';
@@ -2909,7 +3043,10 @@ async function exportPlotImages() {
       }
       const canvas = withPrintPalette(() => renderPlotForPrint(j.plot, j.draw));
       canvases.push(canvas);
-      saved.push(await downloadCanvas(canvas, j.file));
+      const blob = fmt === 'pdf'
+        ? await canvasToPdfBlob(canvas)
+        : await canvasToBlob(canvas, 'image/' + fmt, 0.95);
+      saved.push({ ...downloadBlob(blob, j.file), w: canvas.width, h: canvas.height });
     }
     const dims = `${saved[0].w}×${saved[0].h}`;
     const mb = (saved.reduce((t, s) => t + s.bytes, 0) / 1048576).toFixed(1);

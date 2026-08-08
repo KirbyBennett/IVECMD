@@ -20,6 +20,22 @@
     "dmg": {
       "title": "ITCMD ${version}"
     },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
     "files": [
       "main.js",
       "index.html",
@@ -43,6 +59,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "extract-zip": "^2.0.1"
+    "extract-zip": "^2.0.1",
+    "yauzl": "^2.10.0"
   }
 }

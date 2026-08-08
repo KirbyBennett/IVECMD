@@ -2,7 +2,8 @@ const { app, BrowserWindow, protocol, net, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const url = require('url')
-const { execFile, spawn } = require('child_process')
+const extract = require('extract-zip')
+const yauzl = require('yauzl')
 
 // ============================================================
 //  CONFIG
@@ -12,7 +13,14 @@ const DATA_FILENAME = 'list_RANKED_Scatter_Slope_SPEARMAN'
 const DATA_VERSION  = '1'
 // ============================================================
 
-const cacheDir   = path.join(app.getPath('userData'), 'data')
+// The extracted dataset is ~3.7 GB. On Windows userData resolves to the
+// *roaming* profile (%APPDATA%), which gets synced to a server on login for
+// machines with roaming profiles enabled — so cache to LOCALAPPDATA there.
+const baseDir = process.platform === 'win32' && process.env.LOCALAPPDATA
+  ? path.join(process.env.LOCALAPPDATA, 'itcmd')
+  : app.getPath('userData')
+
+const cacheDir   = path.join(baseDir, 'data')
 const dataFile   = path.join(cacheDir, DATA_FILENAME)
 const markerPath = path.join(cacheDir, '.data-version')
 
@@ -48,7 +56,7 @@ function loadingPage(message) {
   return 'data:text/html,' + encodeURIComponent(`
     <html><body style="margin:0;height:100vh;display:flex;flex-direction:column;
       align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;
-      font-family:-apple-system,sans-serif;text-align:center;padding:0 40px">
+      font-family:-apple-system,'Segoe UI',sans-serif;text-align:center;padding:0 40px">
       <div style="font-size:18px;max-width:560px;line-height:1.6">${message}</div>
       <div id="pct" style="font-size:42px;margin-top:16px"></div>
     </body></html>`)
@@ -68,37 +76,38 @@ function alreadyExtracted() {
   } catch { return false }
 }
 
+// Sum the uncompressed sizes from the zip's central directory. Cheap — it
+// never reads the compressed data itself.
 function uncompressedBytes(zip) {
   return new Promise((resolve) => {
-    execFile('/usr/bin/unzip', ['-l', zip], { maxBuffer: 64 * 1024 * 1024 }, (err, stdout) => {
+    yauzl.open(zip, { lazyEntries: true }, (err, zipfile) => {
       if (err) return resolve(0)
-      const lines = stdout.trim().split('\n')
-      const m = lines[lines.length - 1].trim().match(/^(\d+)/)
-      resolve(m ? parseInt(m[1], 10) : 0)
+      let total = 0
+      zipfile.on('entry', (entry) => { total += entry.uncompressedSize; zipfile.readEntry() })
+      zipfile.on('end', () => resolve(total))
+      zipfile.on('error', () => resolve(0))
+      zipfile.readEntry()
     })
   })
 }
 
+// Cross-platform replacement for `du -sk`. The dataset is only ~17 files, so
+// walking it every second costs nothing.
 function folderBytes(dir) {
-  return new Promise((resolve) => {
-    execFile('/usr/bin/du', ['-sk', dir], (err, stdout) => {
-      if (err) return resolve(0)
-      const m = stdout.trim().match(/^(\d+)/)
-      resolve(m ? parseInt(m[1], 10) * 1024 : 0)
-    })
-  })
+  let total = 0
+  try {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) total += folderBytes(p)
+      else total += fs.statSync(p).size
+    }
+  } catch {}
+  return total
 }
 
 function extractNative(zip, destDir) {
-  return new Promise((resolve, reject) => {
-    fs.mkdirSync(destDir, { recursive: true })
-    const child = spawn('/usr/bin/ditto', ['-x', '-k', zip, destDir])
-    let stderr = ''
-    child.stderr.on('data', d => { stderr += d })
-    child.on('error', reject)
-    child.on('close', code =>
-      code === 0 ? resolve() : reject(new Error('ditto exited ' + code + ': ' + stderr)))
-  })
+  fs.mkdirSync(destDir, { recursive: true })
+  return extract(zip, { dir: destDir })   // destDir must be absolute; cacheDir already is
 }
 
 app.whenReady().then(async () => {
@@ -147,9 +156,9 @@ app.whenReady().then(async () => {
       const total = await uncompressedBytes(zipPath)
       const job = extractNative(zipPath, cacheDir)
 
-      const poll = setInterval(async () => {
+      const poll = setInterval(() => {
         if (!total) { setPct('working…'); return }
-        const done = await folderBytes(cacheDir)
+        const done = folderBytes(cacheDir)
         setPct(Math.min(99, Math.round(done / total * 100)) + '%')
       }, 1000)
 

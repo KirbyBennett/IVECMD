@@ -560,10 +560,21 @@ input[type=range]::-moz-range-thumb {
       <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
     </div>
 
+    <!-- Search and the selection it produces are one job, so they share a card
+         and sit near the top: searching a source selects it, and a selected
+         source is pinned onto both plots past the filters. -->
     <div class="card">
-      <div class="section-title">Search</div>
-      <input type="text" id="search-input" placeholder="Gaia DR3 source ID">
-      <button id="search-btn" title="Center and highlight this Gaia DR3 source on both plots">Search</button>
+      <div class="section-title">Search &amp; Selection</div>
+      <div class="muted" style="font-size:12px; line-height:1.5;">
+        One ID per search — run them one after another and each source joins the
+        selection, so several can be compared on the same plot.
+      </div>
+      <input type="text" id="search-input" placeholder="One Gaia DR3 source ID">
+      <button id="search-btn" title="Center both plots on this Gaia DR3 source and add it to the selection, keeping any already there. A source that fails the active filters is still plotted while it stays selected.">Search</button>
+      <div class="sub-title">Selected Sources</div>
+      <div class="msg" id="sel-count">0 selected</div>
+      <div class="muted" id="sel-list" style="font-size:11px; word-break:break-all;"></div>
+      <button id="clear-sel-btn" class="small" disabled title="Deselect all currently selected stars">Clear Selection</button>
     </div>
 
     <div class="card">
@@ -739,13 +750,6 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
-      <div class="section-title">Selected Sources</div>
-      <div class="msg" id="sel-count">0 selected</div>
-      <div class="muted" id="sel-list" style="font-size:11px; word-break:break-all;"></div>
-      <button id="clear-sel-btn" class="small" disabled title="Deselect all currently selected stars">Clear Selection</button>
-    </div>
-
-    <div class="card">
       <div class="section-title">Export</div>
       <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
       <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
@@ -825,8 +829,8 @@ input[type=range]::-moz-range-thumb {
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
         <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
-        <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star. A searched star is selected even when it fails the active filters — selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. Clear the selection to let the filters hide it again.</li>
-        <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
+        <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search &amp; Selection card (or press <code>/</code>) to center both plots on that star. <b>One ID per search, but searches add up:</b> run a second search and the first star stays selected, so several sources can be compared on one plot — the box takes a bare ID, a "Gaia DR3 …" label, or a whole table row (the RA/Dec alongside it are ignored). Paste two IDs at once and it says so rather than silently picking one. A searched star is selected even when it fails the active filters: selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. <b>Clear Selection</b> drops them all; <code>Ctrl/Cmd+Click</code> on one drops just that one.</li>
+        <li><b>Selecting:</b> Click selects one star, replacing whatever was selected; <code>Ctrl/Cmd+Click</code> adds or removes stars without disturbing the rest. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide. Each figure takes the <b>shape of its panel on screen</b> — reshape the window to frame a feature and the saved figure is framed the same way, rather than being squeezed into a fixed page. Untick <b>Colorbar in saved plots</b> for figures that carry their own caption or share one legend; the page narrows to match so no empty band is left behind. The two figures arrive together in a single <code>.zip</code>, because a browser only lets a page save one file per click — sending them separately meant the second one was silently dropped.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
@@ -999,12 +1003,19 @@ const INK_PRINT = {
   stripFill: 'rgba(176,124,0,0.13)',
   stripEdge: 'rgba(158,111,0,0.60)',
   stripText: 'rgba(124,87,0,0.95)',
-  // A real gold rather than the near-brown it used to be: at PRINT_MAX_LUM it
-  // still clears 3:1 on white, but it reads as the same arrow you see on screen
-  redVec: '#b8860b',
-  // lighter than the screen wash: on white this covers a large area as a solid
-  // tint, and the (much stronger) green border already delimits the rectangle
-  viewRectFill: 'rgba(46,160,67,0.12)',
+  /* The same gold as the screen arrow (hue 42°, saturation ~75%), just deep
+     enough to hold on white — 2.5:1, matching the on-screen green's ratio.
+     Chasing 3:1 instead landed on darkgoldenrod, which is the same hue but
+     reads as mustard-brown: against the blue data it looked like a mistake
+     rather than an annotation. An arrow is a thick mark with a filled head,
+     not 4 px body text, so the text-contrast target was the wrong yardstick. */
+  redVec: '#cf9a1e',
+  /* NO fill on paper. A translucent wash over a dark screen reads as a gentle
+     highlight, but on white it tints everything inside the rectangle — the
+     data there turns a different color from the identical data just outside
+     it, which in a figure whose whole point is the ρ colormap is actively
+     misleading. The border alone delimits the region perfectly well. */
+  viewRectFill: null,
   hoverRing: '#c08a00',
 };
 let INK = INK_SCREEN;
@@ -1014,10 +1025,10 @@ let INK = INK_SCREEN;
 const THEME_PRINT = {
   bg: '#ffffff', panel: '#ffffff', panelAlt: '#ffffff',
   text: '#111111', muted: '#333333', border: '#2b2b2b',
-  // green draws the Detail View rectangle and the selection rings; a bright,
-  // clearly green green (3.4:1 on white) rather than the near-black one that
-  // made the box look like a plain dark outline in saved figures
-  accent: '#2f5d8a', accentHover: '#24496c', green: '#2ea043',
+  // green draws the Detail View rectangle and the selection rings: as close to
+  // the on-screen green as still clears 3:1 on white, rather than the
+  // near-black one that made the box look like a plain dark outline
+  accent: '#2f5d8a', accentHover: '#24496c', green: '#35a94c',
 };
 let printMode = false;
 
@@ -1758,12 +1769,13 @@ const X_RED_LIMIT = 5.75;
    members inside BP−RP ∈ [−0.62, −0.08], M_G ∈ [3.3, 5.1] with a usable
    parallax center on BP−RP ≈ −0.33, M_G ≈ +4.36 (−0.27, +4.31 under the app's
    default filters) and run −0.49…−0.11 by 3.49…4.97 from the 1st to the 99th
-   percentile. The window below is a little over 3× that box, so the clump sits
-   in the middle with the blue edge of the main sequence for context. It used
-   to open on the center of the whole dataset, which is nowhere near here.
-   Reset View and the `0` key come back to this framing too. */
+   percentile. DEFAULT_DETAIL_MIN is the box that must end up visible — a
+   little over 2× the clump, so it sits in the middle with the blue edge of the
+   main sequence for context. It used to open on the center of the whole
+   dataset, which is nowhere near here. Reset View and the `0` key come back to
+   this framing too. */
 const DEFAULT_DETAIL_CENTER = { x: -0.30, y: 4.35 };
-const DEFAULT_DETAIL_SIZE = { w: 1.30, h: 2.80 };
+const DEFAULT_DETAIL_MIN = { w: 0.90, h: 2.40 };
 
 // auto-frame overview to bulk of the data, ignoring outliers (matches Python percentiles)
 function setOverviewLimitsLines() {
@@ -1798,15 +1810,45 @@ function setDetailToCenterWindow(frac) {
   detail.xlim = [xm - xh, xm + xh];
   detail.ylim = [ym - yh, ym + yh];
 }
+/* The startup window's proportions are not free. The green rectangle on the
+   overview IS this window drawn in overview coordinates, so it only looks like
+   a scale model of the Detail View panel when
+
+     (w / overviewXSpan) · ovRect.w      dtRect.w
+     ------------------------------  =  ---------
+     (h / overviewYSpan) · ovRect.h      dtRect.h
+
+   With a hardcoded w and h that identity held only by luck, and it did not:
+   the two panels are the same size and the overview spans ~6.5 mag of color
+   against 22 of magnitude, so a 1.30 × 2.80 window drew a landscape rectangle
+   standing in for a portrait panel. Solve the identity for w/h instead, then
+   take the smallest window of that shape still containing DEFAULT_DETAIL_MIN.
+   Recomputed on every reset rather than stored, because the answer depends on
+   the overview's span and on the panel's current shape. */
+function defaultDetailSize() {
+  const ov = overview.plotRect, dt = detail.plotRect;
+  const oxSpan = Math.abs(overview.xlim[1] - overview.xlim[0]);
+  const oySpan = Math.abs(overview.ylim[1] - overview.ylim[0]);
+  let aspect = (oxSpan / oySpan) * (dt.w / dt.h) * (ov.h / ov.w);
+  // before the first layout the rects can be degenerate; fall back to the
+  // shape of the clump box itself rather than propagating a NaN into the limits
+  if (!(aspect > 0) || !Number.isFinite(aspect)) {
+    return { ...DEFAULT_DETAIL_MIN };
+  }
+  let { w, h } = DEFAULT_DETAIL_MIN;
+  if (w / h < aspect) w = h * aspect; else h = w / aspect;
+  return { w, h };
+}
 /* The startup / Reset View Detail window. Falls back to the old
    center-of-the-data framing for a table that has nothing where the hot
    subdwarfs live — a differently-shaped dataset should still open on its data
    rather than on empty space. */
 function setDetailToDefaultWindow() {
-  const c = DEFAULT_DETAIL_CENTER, s = DEFAULT_DETAIL_SIZE;
+  const c = DEFAULT_DETAIL_CENTER;
   const e = fullExtent();
   const inside = c.x > e.xmin && c.x < e.xmax && c.y > e.ymin && c.y < e.ymax;
   if (!inside) { setDetailToCenterWindow(0.1); return; }
+  const s = defaultDetailSize();
   detail.xlim = [c.x - s.w / 2, c.x + s.w / 2];
   detail.ylim = [c.y - s.h / 2, c.y + s.h / 2];
 }
@@ -2084,8 +2126,10 @@ function drawOverview() {
     const y0 = overview.yToPx(detail.ylim[0]), y1 = overview.yToPx(detail.ylim[1]);
     const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
     const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
-    ctx.fillStyle = INK.viewRectFill;
-    ctx.fillRect(rx, ry, rw, rh);
+    if (INK.viewRectFill) {          // null on paper — see INK_PRINT
+      ctx.fillStyle = INK.viewRectFill;
+      ctx.fillRect(rx, ry, rw, rh);
+    }
     ctx.strokeStyle = THEME.green;
     ctx.lineWidth = 2.5;
     ctx.strokeRect(rx, ry, rw, rh);
@@ -2128,19 +2172,26 @@ function redVecPx(plot) {
     tipX: plot.xToPx(t.x + RED_VEC.dBR), tipY: plot.yToPx(t.y + RED_VEC.dG),
   };
 }
+/* An exported figure lays the same CSS-px drawing code out about 2.5× larger
+   than the screen panel — which is why Plot.begin swaps its 11 px ticks for
+   28 px ones. The arrow was the one annotation that never got that treatment,
+   so on paper it came out as a hairline with a caption a third the height of
+   the tick numbers. Everything with a pixel size here scales by PRINT_K. */
+const PRINT_K = 2.5;
 function drawReddeningVector(plot, ctx) {
   if (!state.showRedVec) return;
   const { tx, ty, tipX, tipY } = redVecPx(plot);
+  const k = printMode ? PRINT_K : 1;
   ctx.save();
   ctx.strokeStyle = INK.redVec;
   ctx.fillStyle = INK.redVec;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2 * k;
   ctx.beginPath();
   ctx.moveTo(tx, ty);
   ctx.lineTo(tipX, tipY);
   ctx.stroke();
   // filled arrowhead at the tip
-  const ang = Math.atan2(tipY - ty, tipX - tx), ah = 9;
+  const ang = Math.atan2(tipY - ty, tipX - tx), ah = 9 * k;
   ctx.beginPath();
   ctx.moveTo(tipX, tipY);
   ctx.lineTo(tipX - ah * Math.cos(ang - 0.45), tipY - ah * Math.sin(ang - 0.45));
@@ -2149,7 +2200,7 @@ function drawReddeningVector(plot, ctx) {
   ctx.fill();
   // label above the tail so the arrow itself stays clear
   drawMathText(ctx, [{ t: 'A' }, { t: 'V', sub: true }, { t: ' = 1 reddening' }],
-    tx, ty - 8, 12, 'center');
+    tx, ty - 8 * k, 12 * k, 'center');
   ctx.restore();
 }
 // distance from a point to the arrow segment, for grab hit-testing
@@ -2647,11 +2698,25 @@ function updateSelectionInfo() {
 $('clear-sel-btn').addEventListener('click', clearSelection);
 
 /* ---------------- Gaia DR3 source search ----------------
-   Robust to pasted decoration: a leading "Gaia DR3"/"DR3"/"source_id ="
-   label, surrounding quotes/whitespace, and stray commas. We pull the longest
-   run of digits out of the input and look it up. Lookup uses the prebuilt
-   id→index map when a catalog has forced it to exist, otherwise a typed-array
-   scan (fast enough for a one-off search and avoids building a big map). */
+   ONE id per search, but searches ACCUMULATE: each hit is added to the
+   selection rather than replacing it, so several sources are compared by
+   searching them one after another. Everything the selection already does then
+   applies to the whole set — each one is pinned onto both plots past the active
+   filters and drawn thickened, and Clear Selection (or Ctrl/Cmd-clicking one)
+   takes them back off.
+
+   Parsing is robust to pasted decoration: a leading "Gaia DR3" / "DR3" /
+   "source_id =" label, quotes, and stray commas. Everything that is not a
+   digit, whitespace or a decimal point becomes a separator, and only tokens
+   that are then ALL digits count as ids — so "source_id=4585…" reduces to its
+   number, while the RA/Dec of a table row pasted alongside an id keep their
+   decimal points and are ignored rather than mistaken for a second id.
+   Lookup uses the prebuilt id→index map when a catalog has forced it to exist,
+   otherwise a typed-array scan (fast enough for a one-off search and avoids
+   building a big map). */
+// Real DR3 ids in these tables run 15–19 digits; 8 is the same floor the Custom
+// IDs parser uses, low enough to never reject a genuine id.
+const MIN_ID_DIGITS = 8;
 function findSourceIndex(qb) {
   if (slIdIndex) {
     const gi = slIdIndex.get(qb);
@@ -2659,18 +2724,30 @@ function findSourceIndex(qb) {
   }
   return state.ids.indexOf(qb);   // ids are stored as BigInt
 }
+/* The id in `raw`, or an {error} explaining why there isn't exactly one. */
+function parseSearchQuery(raw) {
+  const labelled = raw.replace(/gaia/ig, ' ').replace(/e?dr3/ig, ' ').replace(/source/ig, ' ');
+  const tokens = labelled.replace(/[^\d\s.]+/g, ' ').split(/\s+/).filter(t => /^\d+$/.test(t));
+  const ids = [...new Set(tokens.filter(t => t.length >= MIN_ID_DIGITS))];
+  if (ids.length > 1) {
+    return { error: `That looks like ${ids.length} source IDs (${ids[0]}, ${ids[1]}` +
+      `${ids.length > 2 ? ', …' : ''}). Search one at a time — each search adds ` +
+      `its source to the selection, so run them one after another to build up a set.` };
+  }
+  // no id-length token: fall back to the longest all-digit token so the lookup
+  // itself can report "not in the loaded dataset", which says more than "invalid"
+  const q = ids[0] || tokens.sort((a, b) => b.length - a.length)[0] || '';
+  if (!q) return { error: 'Enter a numeric Gaia DR3 source ID to search.' };
+  return { q };
+}
 function searchSource() {
   const raw = $('search-input').value;
   if (!state.ids || state.ids.length === 0) {
     setMessage('The dataset is still loading — try the search again once it finishes.');
     return;
   }
-  // Strip the catalog label words first (so the "3" in "DR3" isn't kept), then
-  // take the longest digit run as the candidate source ID.
-  const stripped = raw.replace(/gaia/ig, ' ').replace(/e?dr3/ig, ' ').replace(/source/ig, ' ');
-  const runs = stripped.match(/\d{3,}/g);
-  const q = runs && runs.length ? runs.sort((a, b) => b.length - a.length)[0] : '';
-  if (!q) { setMessage('Enter a numeric Gaia DR3 source ID to search.'); return; }
+  const { q, error } = parseSearchQuery(raw);
+  if (error) { setMessage(error); return; }
   let qb;
   try { qb = BigInt(q); } catch { setMessage(`'${raw.trim()}' is not a valid Gaia DR3 source ID.`); return; }
   const idx = findSourceIndex(qb);
@@ -2692,16 +2769,24 @@ function searchSource() {
     overviewCacheKey = '';
   }
   pushHistory();
-  // Select it whether or not it passes the filters: selecting pins it onto both
-  // plots (see applyFilters) and draws it thickened, so a search always ends
-  // with the star actually on screen instead of a centered empty patch.
+  /* ADD to the selection rather than replacing it, so searching a second
+     source keeps the first — that is what makes several of them comparable on
+     one plot. Selecting also pins the source past the active filters (see
+     applyFilters) and draws it thickened, so a search always ends with the
+     star actually on screen instead of a centered empty patch. */
   const wasHidden = !state.visMask || !state.visMask[idx];
-  state.selection = [idx];
+  const already = state.selection.includes(idx);
+  if (!already) state.selection.push(idx);
   selectionChanged();
+  $('search-input').value = '';   // ready for the next one
+  const n = state.selection.length;
   setMessage(`Found Gaia DR3 ${q}: ρ = ${state.coeff[idx].toFixed(3)}, ` +
-    `p = ${state.p[idx].toExponential(2)}. Centered Detail View (1 selected)` +
-    (wasHidden ? ' — it does not pass the active filters, so it is pinned on ' +
-      'top of them until you clear the selection.' : '.'));
+    `p = ${state.p[idx].toExponential(2)}. ` +
+    (already
+      ? `Centered the Detail View on it; it was already selected (${n} selected).`
+      : `Centered the Detail View and added it to the selection (${n} selected).`) +
+    (wasHidden ? ' It does not pass the active filters, so it is pinned on top ' +
+      'of them until you deselect it.' : ''));
 }
 $('search-btn').addEventListener('click', searchSource);
 $('search-input').addEventListener('keydown', ev => { if (ev.key === 'Enter') searchSource(); });

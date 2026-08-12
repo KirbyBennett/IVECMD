@@ -188,6 +188,19 @@ input[type=text] {
 input[type=text]:focus { outline: none; border-color: var(--accent); }
 input[type=text]::placeholder { color: var(--muted); }
 
+select {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: var(--accent); }
+
 .seg-group { display: flex; gap: 6px; }
 .seg-group button {
   flex: 1; padding: 8px 4px; font-size: 12px;
@@ -587,6 +600,28 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
+      <div class="section-title">Saved Settings</div>
+      <div class="muted" style="font-size:12px; line-height:1.5;">
+        Keep the Filters you worked out — plus the Display options, catalog
+        overlays and current view — under a name. ★ marks the set applied on
+        startup, which <b>Reset Filters</b> then returns to.
+      </div>
+      <select id="preset-select" title="Settings saved in this app. Use Export / Import for a file you can keep beside a project or send to someone."></select>
+      <div class="seg-group">
+        <button id="preset-load" class="small" disabled title="Apply the selected saved settings now">Load</button>
+        <button id="preset-star" class="small" disabled title="Apply the selected settings automatically at startup, and make Reset Filters return to them instead of the factory values">Set ★</button>
+        <button id="preset-delete" class="small" disabled title="Forget the selected saved settings">Delete</button>
+      </div>
+      <input type="text" id="preset-name" placeholder="Name for the current settings">
+      <button id="preset-save" class="small" title="Save the current Filters, Display options, catalog overlays and view under the name above">Save Current Settings</button>
+      <div class="seg-group">
+        <button id="preset-export" class="small" title="Write the selected settings — or the current ones — to a .json file, so several configurations can live beside a project or be shared">Export File…</button>
+        <button id="preset-import" class="small" title="Apply settings from a .json file saved here before">Import File…</button>
+      </div>
+      <input type="file" id="preset-file-input" accept=".json,application/json" hidden>
+    </div>
+
+    <div class="card">
       <div class="section-title">Variable-Star Lists</div>
       <div class="muted" style="font-size:12px; line-height:1.5;">
         Highlight catalog members on both plots, or restrict the view to a catalog.
@@ -723,7 +758,8 @@ input[type=range]::-moz-range-thumb {
         <button id="fmt-jpeg" title="Smaller JPEG images — best for quick sharing">JPEG</button>
         <button id="fmt-pdf" title="Single-page PDF per plot — best for LaTeX and print">PDF</button>
       </div>
-      <button id="export-plots-png-btn" title="Save both plots as high-resolution, paper-ready figures on a white background, in the format chosen above. Both arrive together in one .zip — browsers only allow a page to save one file per click.">Save Plot Images (PNG)</button>
+      <label class="check" title="Draw the vertical Spearman correlation colorbar down the right-hand side of each saved figure. Untick it for a figure that carries its own caption, or when several panels share one legend — the page narrows to match, leaving no empty band."><input type="checkbox" id="colorbar-checkbox" checked><span class="box"></span>Colorbar in saved plots</label>
+      <button id="export-plots-png-btn" title="Save both plots as high-resolution, paper-ready figures on a white background, in the format chosen above. Each figure takes the shape of its on-screen panel. Both arrive together in one .zip — browsers only allow a page to save one file per click.">Save Plot Images (PNG)</button>
     </div>
 
     <div class="card" id="legend-card">
@@ -784,17 +820,18 @@ input[type=range]::-moz-range-thumb {
         <li><b>Plot style:</b> The Display card switches both plots between <b>Lines</b> (each star's variability segment) and <b>Points</b> (a single dot at each star's average color and magnitude from the input table). Points keep the same ρ color and significance opacity as the lines, and the thickness slider sets the dot size.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
+        <li><b>Saved Settings:</b> Once the Filters are dialed in, type a name and press <b>Save Current Settings</b> to keep that whole arrangement — Filters, the Display card, the catalog overlays, the plot-image options and the current view. Pick it from the list later and press <b>Load</b> to come straight back to it. <b>Set ★</b> marks one set as the startup configuration: it is applied automatically every time the app opens, and <b>Reset Filters</b> then returns to it instead of the factory values. <b>Export File… / Import File…</b> put the same thing in a <code>.json</code> file, for keeping several configurations beside a project or handing one to a collaborator. Custom ID lists travel along up to 20,000 IDs; above that only the on/off state is kept, and a catalog whose file is missing is reported and left off.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
         <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
-        <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star.</li>
-        <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection.</li>
-        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts and a Spearman colorbar (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide. The two figures arrive together in a single <code>.zip</code>, because a browser only lets a page save one file per click — sending them separately meant the second one was silently dropped.</li>
+        <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search card (or press <code>/</code>) to center and highlight that star. A searched star is selected even when it fails the active filters — selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. Clear the selection to let the filters hide it again.</li>
+        <li><b>Selecting:</b> Click selects one star; <code>Ctrl/Cmd+Click</code> adds or removes stars from a multi-selection. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
+        <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide. Each figure takes the <b>shape of its panel on screen</b> — reshape the window to frame a feature and the saved figure is framed the same way, rather than being squeezed into a fixed page. Untick <b>Colorbar in saved plots</b> for figures that carry their own caption or share one legend; the page narrows to match so no empty band is left behind. The two figures arrive together in a single <code>.zip</code>, because a browser only lets a page save one file per click — sending them separately meant the second one was silently dropped.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
       <ul>
-        <li><code>F</code> fit all data in the Detail View · <code>0</code> reset to the default window</li>
+        <li><code>F</code> fit all data in the Detail View · <code>0</code> reset to the default window (the hot subdwarf clump)</li>
         <li><code>+</code>/<code>−</code> zoom the detail window</li>
         <li><code>/</code> focus the search box · <code>H</code> toggle this help</li>
         <li><code>S</code> export the current selection · <code>Esc</code> clear selection / close dialogs</li>
@@ -962,11 +999,13 @@ const INK_PRINT = {
   stripFill: 'rgba(176,124,0,0.13)',
   stripEdge: 'rgba(158,111,0,0.60)',
   stripText: 'rgba(124,87,0,0.95)',
-  redVec: '#9a6100',
+  // A real gold rather than the near-brown it used to be: at PRINT_MAX_LUM it
+  // still clears 3:1 on white, but it reads as the same arrow you see on screen
+  redVec: '#b8860b',
   // lighter than the screen wash: on white this covers a large area as a solid
   // tint, and the (much stronger) green border already delimits the rectangle
-  viewRectFill: 'rgba(26,127,55,0.09)',
-  hoverRing: '#a06e00',
+  viewRectFill: 'rgba(46,160,67,0.12)',
+  hoverRing: '#c08a00',
 };
 let INK = INK_SCREEN;
 
@@ -975,7 +1014,10 @@ let INK = INK_SCREEN;
 const THEME_PRINT = {
   bg: '#ffffff', panel: '#ffffff', panelAlt: '#ffffff',
   text: '#111111', muted: '#333333', border: '#2b2b2b',
-  accent: '#2f5d8a', accentHover: '#24496c', green: '#1a7f37',
+  // green draws the Detail View rectangle and the selection rings; a bright,
+  // clearly green green (3.4:1 on white) rather than the near-black one that
+  // made the box look like a plain dark outline in saved figures
+  accent: '#2f5d8a', accentHover: '#24496c', green: '#2ea043',
 };
 let printMode = false;
 
@@ -998,9 +1040,14 @@ function withPrintPalette(fn) {
 /* Highlight colors for the catalog overlays are chosen for a dark panel, and
    several (gold, cyan, and Custom IDs' pure white) wash out or vanish entirely
    on paper. Rather than hand-maintaining a second color per list, scale each
-   one toward black until it clears ~4.5:1 contrast against white, which keeps
-   the hue — and so the visual mapping to the sidebar swatches — intact. Pure
-   white has no hue to keep, so it gets an explicit near-black instead. */
+   one toward black just far enough to clear 3:1 contrast against white — the
+   WCAG floor for graphical marks — which keeps the hue, and so the visual
+   mapping to the sidebar swatches, intact. The earlier target was the 4.5:1
+   meant for body text; on 1–3 px colored lines it bought nothing and turned
+   gold into brown, so the overlays came out noticeably darker than the screen.
+   Pure white has no hue to keep, so it gets an explicit near-black instead. */
+// L <= 0.30 puts contrast against white at ~3.2:1
+const PRINT_MAX_LUM = 0.30;
 const PRINT_INK_OVERRIDES = { '#ffffff': '#111111' };
 const printInkCache = new Map(Object.entries(PRINT_INK_OVERRIDES));
 function printInk(color) {
@@ -1012,8 +1059,7 @@ function printInk(color) {
   let r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
   const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
   const lum = () => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  // L <= 0.18 puts contrast against white at ~4.6:1 — enough for 1–3 px lines
-  for (let k = 0; k < 60 && lum() > 0.18; k++) { r *= 0.95; g *= 0.95; b *= 0.95; }
+  for (let k = 0; k < 60 && lum() > PRINT_MAX_LUM; k++) { r *= 0.95; g *= 0.95; b *= 0.95; }
   const out = '#' + [r, g, b].map(c => Math.round(c).toString(16).padStart(2, '0')).join('');
   printInkCache.set(color, out);
   return out;
@@ -1187,11 +1233,17 @@ if (APP_VERSION) {
 const MARGIN = { l: 58, r: 12, t: 34, b: 46 };
 /* Paper margins: room for the large print fonts on the left/bottom and for the
    Spearman colorbar column (bar + tick labels + rotated title) on the right.
-   These are tuned together with EXPORT_W/EXPORT_H so the data rectangle comes
-   out at exactly 868 × 1244 CSS px — the size the figure was signed off at.
-   Change one of the four numbers and you resize the data area; to give text
-   more room, grow EXPORT_W/EXPORT_H and the margin by the same amount. */
+   The page is sized around these (see exportPageSize), so changing one just
+   moves that edge of the figure — the data rectangle keeps its shape. */
 const MARGIN_PRINT = { l: 136, r: 176, t: 60, b: 171 };
+/* Same margins with the colorbar column dropped, for exports that leave the
+   legend out: without this the figure would keep a blank 176 px band of paper
+   down its right edge where the bar used to be. What remains is the small
+   breathing room the top/right of the frame needs. */
+const MARGIN_PRINT_NOBAR = { ...MARGIN_PRINT, r: 46 };
+// whether saved figures carry the Spearman colorbar (Export card checkbox)
+let exportColorbar = true;
+function printMargin() { return exportColorbar ? MARGIN_PRINT : MARGIN_PRINT_NOBAR; }
 
 class Plot {
   constructor(canvas, title) {
@@ -1214,7 +1266,7 @@ class Plot {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   get plotRect() {
-    const m = printMode ? MARGIN_PRINT : MARGIN;
+    const m = printMode ? printMargin() : MARGIN;
     return { x: m.l, y: m.t, w: this.w - m.l - m.r, h: this.h - m.t - m.b };
   }
   xToPx(x) {
@@ -1349,6 +1401,7 @@ const state = {
   visIdx: [],                    // indices passing the active filters
   detailIdx: [],                 // visible indices currently inside the detail window
   selection: [],                 // multi-selection (indices)
+  pinned: [],                    // selected indices the filters would otherwise hide
   hover: -1,
   filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: 10000,
             minGlat: 0, maxGlat: 90 },
@@ -1599,7 +1652,7 @@ function ingestSpearmanData(d) {
   overviewCacheKey = '';
 
   setOverviewLimitsLines();
-  setDetailToCenterWindow(0.1);
+  setDetailToDefaultWindow();
   applyFilters();
   updateSelectionInfo();
   slOnDataLoaded();   // re-index any loaded catalogs against the new dataset
@@ -1608,6 +1661,8 @@ function ingestSpearmanData(d) {
   viewHistory.stack = [snapshotView()];
   viewHistory.idx = 0;
   updateHistoryButtons();
+
+  applyStartupPreset();   // async; re-seeds the history if it moves the view
 }
 
 /* ---------------- Line opacity ----------------
@@ -1623,6 +1678,11 @@ function computeAlphas() {
 
 /* ---------------- Filters ---------------- */
 function applyFilters() {
+  // The sidebar stays live behind the loading overlay, so a slider drag — or
+  // loading a saved set — can land before there is any data to filter.
+  // ingestSpearmanData() calls this again once the table is in, and it reads
+  // state.filter, so whatever was set meanwhile still takes effect.
+  if (!state.coeff) return;
   const f = state.filter;
   const pMax = Math.pow(10, -f.minLogP);
   const minRho = f.minAbsRho, minPoe = f.minPoe, minDist = f.minDist, maxDist = f.maxDist;
@@ -1660,15 +1720,50 @@ function applyFilters() {
     vis.push(i);
     mask[i] = 1;
   }
+  /* Selected sources are PINNED: they stay on the plots even when the active
+     filters would hide them. Searching for a star used to center the view on a
+     blank patch whenever it missed the cut — the one case where you most want
+     to see it — and the same went for the Example Stars. A pinned source is
+     drawn like any other (plus the emphasis pass below), counts as visible, and
+     is included in the exports; clearing the selection drops it back out. */
+  const pinnedNow = [];
+  for (const i of state.selection) {
+    if (!mask[i]) { mask[i] = 1; vis.push(i); pinnedNow.push(i); }
+  }
+  const pinned = pinnedNow.length;
+  state.pinned = pinnedNow;
   state.visIdx = vis;
-  state.selection = state.selection.filter(i => mask[i]);
   if (state.hover >= 0 && !mask[state.hover]) state.hover = -1;
   overviewCacheKey = '';
   $('filter-count').textContent =
-    `Showing ${vis.length.toLocaleString()} of ${state.coeff.length.toLocaleString()} sources`;
+    `Showing ${vis.length.toLocaleString()} of ${state.coeff.length.toLocaleString()} sources` +
+    (pinned ? ` (${pinned} pinned by the selection)` : '');
   updateSelectionInfo();
   requestRedraw();
 }
+
+/* Red end of the color axis. Even at the 99.9th percentile the BP−RP tail runs
+   out past 7.8 — a thin scatter of very cool and heavily reddened sources that
+   stretches the frame by a third while adding no structure, squeezing
+   everything that matters into the left of the plot. Every automatic framing
+   (the overview, the full-extent view, the startup Detail window) therefore
+   stops here. Panning and zooming are NOT clamped: the sources past this point
+   are still loaded, still exported, and still reachable by dragging or by
+   searching for one. */
+const X_RED_LIMIT = 5.75;
+
+/* Startup framing for the Detail View: the hot subdwarf clump — the compact
+   island of blue, ~4-mag-absolute sources sitting well clear of both the main
+   sequence and the white dwarf track. Measured on the RANKED table: the
+   members inside BP−RP ∈ [−0.62, −0.08], M_G ∈ [3.3, 5.1] with a usable
+   parallax center on BP−RP ≈ −0.33, M_G ≈ +4.36 (−0.27, +4.31 under the app's
+   default filters) and run −0.49…−0.11 by 3.49…4.97 from the 1st to the 99th
+   percentile. The window below is a little over 3× that box, so the clump sits
+   in the middle with the blue edge of the main sequence for context. It used
+   to open on the center of the whole dataset, which is nowhere near here.
+   Reset View and the `0` key come back to this framing too. */
+const DEFAULT_DETAIL_CENTER = { x: -0.30, y: 4.35 };
+const DEFAULT_DETAIL_SIZE = { w: 1.30, h: 2.80 };
 
 // auto-frame overview to bulk of the data, ignoring outliers (matches Python percentiles)
 function setOverviewLimitsLines() {
@@ -1680,7 +1775,7 @@ function setOverviewLimitsLines() {
   // Frame to the bulk of the data with a small margin so the overview loads
   // comfortably (not smushed against the edges) yet still zoomed in.
   const padX = 0.08 * (hiX - loX);
-  overview.xlim = [loX - padX, hiX + padX];
+  overview.xlim = [loX - padX, Math.min(hiX + padX, X_RED_LIMIT)];
   // Fixed magnitude span, 16 (faint, bottom) up to −6 (bright, top), so every
   // dataset lands on the same frame; the 22-mag span makes niceTicks put the
   // y ticks every 5 magnitudes.
@@ -1694,7 +1789,7 @@ function fullExtent() {
     if (x < xmin) xmin = x; if (x > xmax) xmax = x;
     if (y < ymin) ymin = y; if (y > ymax) ymax = y;
   }
-  return { xmin, xmax, ymin, ymax };
+  return { xmin, xmax: Math.min(xmax, X_RED_LIMIT), ymin, ymax };
 }
 function setDetailToCenterWindow(frac) {
   const e = fullExtent();
@@ -1702,6 +1797,18 @@ function setDetailToCenterWindow(frac) {
   const xh = 0.5 * frac * (e.xmax - e.xmin), yh = 0.5 * frac * (e.ymax - e.ymin);
   detail.xlim = [xm - xh, xm + xh];
   detail.ylim = [ym - yh, ym + yh];
+}
+/* The startup / Reset View Detail window. Falls back to the old
+   center-of-the-data framing for a table that has nothing where the hot
+   subdwarfs live — a differently-shaped dataset should still open on its data
+   rather than on empty space. */
+function setDetailToDefaultWindow() {
+  const c = DEFAULT_DETAIL_CENTER, s = DEFAULT_DETAIL_SIZE;
+  const e = fullExtent();
+  const inside = c.x > e.xmin && c.x < e.xmax && c.y > e.ymin && c.y < e.ymax;
+  if (!inside) { setDetailToCenterWindow(0.1); return; }
+  detail.xlim = [c.x - s.w / 2, c.x + s.w / 2];
+  detail.ylim = [c.y - s.h / 2, c.y + s.h / 2];
 }
 function setDetailToFullExtent() {
   const e = fullExtent();
@@ -1899,6 +2006,43 @@ function drawSourcesBatched(ctx, plot, indices, ox, oy, wScale) {
   else strokeSegmentsBatched(ctx, plot, indices, ox, oy, 1, wScale);
 }
 
+/* ---------------- Selected-source emphasis ----------------
+   Every selected star is drawn again, over everything else, at SEL_WIDTH_MULT
+   times the width it would otherwise have had and in its own ρ color at full
+   opacity. Among millions of segments a normal-width line is impossible to
+   pick out — and a low-significance one is exactly what the alpha ramp fades
+   into the background, which is precisely the star someone searched for. Runs
+   outside the overview's offscreen cache, so changing the selection never
+   forces the (expensive) re-bake. */
+const SEL_WIDTH_MULT = 2.5;
+function drawSelectionEmphasis(plot, ctx) {
+  if (!state.selection.length) return;
+  const seg = [0, 0, 0, 0];
+  const points = state.plotMode === 'points';
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const i of state.selection) {
+    const [r, g, b] = BUCKET_RGB[state.cbucket[i]];
+    ctx.strokeStyle = ctx.fillStyle = `rgb(${r},${g},${b})`;
+    // the width this source draws at normally (see strokeSegmentsBatched),
+    // scaled up — so the emphasis tracks the thickness slider
+    const w = (1 + state.thickness * BUCKET_ALPHA[state.abucket[i]]) * SEL_WIDTH_MULT;
+    ctx.lineWidth = w;
+    if (points) {
+      ctx.beginPath();
+      ctx.arc(plot.xToPx(state.xFull[i]), plot.yToPx(state.yFull[i]), Math.max(2, w * 0.9), 0, 2 * Math.PI);
+      ctx.fill();
+      continue;
+    }
+    segEnds(i, seg);
+    ctx.beginPath();
+    ctx.moveTo(plot.xToPx(seg[0]), plot.yToPx(seg[1]));
+    ctx.lineTo(plot.xToPx(seg[2]), plot.yToPx(seg[3]));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function ensureOverviewCache() {
   const r = overview.plotRect;
   // exportScale (set only while a PNG is being rendered) bakes the cache at the
@@ -1946,6 +2090,7 @@ function drawOverview() {
     ctx.lineWidth = 2.5;
     ctx.strokeRect(rx, ry, rw, rh);
   }
+  drawSelectionEmphasis(overview, ctx);  // find the searched star at a glance
   drawReddeningVector(overview, ctx);   // on top, so it never hides under the data
   overview.end();
 }
@@ -2035,6 +2180,7 @@ function drawDetail() {
   drawSourcesBatched(ctx, detail, idx, 0, 0, mult);
   // catalog overlays: redraw member segments in each list's color, on top
   slDrawGroups(ctx, detail, 0, 0, true);
+  drawSelectionEmphasis(detail, ctx);
   drawHRLabels(detail, ctx);   // reference names last, so lines never cover them
   // selection rings: green, like the Qt version; hover ring: glowing gold
   const ring = (i, color, lw, glow) => {
@@ -2452,13 +2598,26 @@ dtCanvas.addEventListener('click', ev => {
     return;
   }
   state.selection = [i];                // plain click replaces the selection
-  updateSelectionInfo();
-  requestRedraw();
+  selectionChanged();
   setMessage(`ID ${state.ids[i]} | coeff ${state.coeff[i].toFixed(3)} | p ${state.p[i].toExponential(2)} | 1 selected`);
   showEpochCMD(i);
 });
 
-/* ---------------- Multi-selection ---------------- */
+/* ---------------- Multi-selection ----------------
+   Call selectionChanged() instead of updateSelectionInfo()+requestRedraw()
+   after anything that alters state.selection. Selected sources are pinned past
+   the filters inside applyFilters(), so the visible set has to be recomputed
+   whenever the pinned members change — but only then: a plain click on an
+   already-visible line must not trigger a rescan of a multi-million-row
+   catalog just to redraw a ring. */
+function selectionChanged() {
+  const mask = state.visMask;
+  const needsRescan =
+    state.selection.some(i => !mask || !mask[i]) ||
+    state.pinned.some(i => !state.selection.includes(i));
+  updateSelectionInfo();
+  if (needsRescan) applyFilters(); else requestRedraw();
+}
 function toggleSelection(i) {
   const k = state.selection.indexOf(i);
   if (k >= 0) {
@@ -2468,14 +2627,12 @@ function toggleSelection(i) {
     state.selection.push(i);
     setMessage(`Added Gaia DR3 ${state.ids[i]} to selection (${state.selection.length} selected).`);
   }
-  updateSelectionInfo();
-  requestRedraw();
+  selectionChanged();
 }
 function clearSelection() {
   if (!state.selection.length) return;
   state.selection = [];
-  updateSelectionInfo();
-  requestRedraw();
+  selectionChanged();   // drops any source that was only on screen because it was pinned
   setMessage('Selection cleared.');
 }
 function updateSelectionInfo() {
@@ -2535,18 +2692,16 @@ function searchSource() {
     overviewCacheKey = '';
   }
   pushHistory();
-  if (!state.visIdx.includes(idx)) {
-    setMessage(`Found Gaia DR3 ${q} (ρ = ${state.coeff[idx].toFixed(3)}, ` +
-      `p = ${state.p[idx].toExponential(2)}) and centered the view, but it is ` +
-      `hidden by the active filters — reset or loosen them to display it.`);
-    requestRedraw();
-    return;
-  }
+  // Select it whether or not it passes the filters: selecting pins it onto both
+  // plots (see applyFilters) and draws it thickened, so a search always ends
+  // with the star actually on screen instead of a centered empty patch.
+  const wasHidden = !state.visMask || !state.visMask[idx];
   state.selection = [idx];
-  updateSelectionInfo();
-  requestRedraw();
+  selectionChanged();
   setMessage(`Found Gaia DR3 ${q}: ρ = ${state.coeff[idx].toFixed(3)}, ` +
-    `p = ${state.p[idx].toExponential(2)}. Centered Detail View (1 selected).`);
+    `p = ${state.p[idx].toExponential(2)}. Centered Detail View (1 selected)` +
+    (wasHidden ? ' — it does not pass the active filters, so it is pinned on ' +
+      'top of them until you clear the selection.' : '.'));
 }
 $('search-btn').addEventListener('click', searchSource);
 $('search-input').addEventListener('keydown', ev => { if (ev.key === 'Enter') searchSource(); });
@@ -2631,7 +2786,7 @@ window.addEventListener('keydown', ev => {
 
   if (ev.key === '+' || ev.key === '=') { resizeViewRect(PZOOM_IN); pushHistorySoon(); }
   else if (ev.key === '-') { resizeViewRect(PZOOM_OUT); pushHistorySoon(); }
-  else if (ev.key === '0') { setDetailToCenterWindow(0.1); requestRedraw(); pushHistory(); }
+  else if (ev.key === '0') { setDetailToDefaultWindow(); requestRedraw(); pushHistory(); }
   else if (ev.key === 'f' || ev.key === 'F') { setDetailToFullExtent(); pushHistory(); }
   else if (ev.key === 'h' || ev.key === 'H') { $('help-btn').click(); }
   else if (ev.key === 's' || ev.key === 'S') { exportCSV(state.selection, 'selected sources'); }
@@ -2691,7 +2846,7 @@ $('reset-view-btn').addEventListener('click', () => {
   // catalog "only" filter was active and the user reset the view).
   overview.xlim = [...overviewBase.xlim];
   overview.ylim = [...overviewBase.ylim];
-  setDetailToCenterWindow(0.1);
+  setDetailToDefaultWindow();
   overviewCacheKey = '';
   requestRedraw();
   pushHistory();
@@ -2810,36 +2965,44 @@ $('bmax-slider').addEventListener('input', () => {
   scheduleFilters();
 });
 updateGlatUI();   // initial label + fill on load
-// Reset Filters: put every control back exactly where it sits on first load
-// (significance 1e-4, |ρ| 0, parallax/error 10, distance off, galactic |b| off,
-// direction All).
-function resetFilters() {
-  $('sig-slider').value = DEFAULT_FILTER.minLogP;
-  $('rho-slider').value = DEFAULT_FILTER.minAbsRho;
-  $('poe-slider').value = DEFAULT_FILTER.minPoe;
-  $('dmin-slider').value = DEFAULT_FILTER.minDist;
-  $('dmax-slider').value = DEFAULT_FILTER.maxDist;
-  $('bmin-slider').value = DEFAULT_FILTER.minGlat;
-  $('bmax-slider').value = DEFAULT_FILTER.maxGlat;
-  state.filter.minLogP = DEFAULT_FILTER.minLogP;
-  state.filter.minAbsRho = DEFAULT_FILTER.minAbsRho;
-  state.filter.minPoe = DEFAULT_FILTER.minPoe;
-  state.filter.minDist = DEFAULT_FILTER.minDist;
-  state.filter.maxDist = DEFAULT_FILTER.maxDist;
-  state.filter.minGlat = DEFAULT_FILTER.minGlat;
-  state.filter.maxGlat = DEFAULT_FILTER.maxGlat;
-  $('sig-label').textContent = DEFAULT_FILTER.minLogP === 0
+/* Push state.filter out to every control and readout in the Filters card.
+   Both Reset Filters and loading a saved set go through here, so the knobs can
+   never drift out of step with the values the plots are actually filtered on. */
+function syncFilterUI() {
+  const f = state.filter;
+  $('sig-slider').value = f.minLogP;
+  $('rho-slider').value = f.minAbsRho;
+  $('poe-slider').value = f.minPoe;
+  $('dmin-slider').value = f.minDist;
+  $('dmax-slider').value = f.maxDist;
+  $('bmin-slider').value = f.minGlat;
+  $('bmax-slider').value = f.maxGlat;
+  $('sig-label').textContent = f.minLogP === 0
     ? 'Significance: all (any p)'
-    : `Significance: p ≤ 1e-${DEFAULT_FILTER.minLogP}`;
-  $('rho-label').textContent = `Min |ρ|: ${DEFAULT_FILTER.minAbsRho.toFixed(2)}`;
-  $('poe-label').textContent = DEFAULT_FILTER.minPoe === 0
+    : `Significance: p ≤ 1e-${f.minLogP}`;
+  $('rho-label').textContent = `Min |ρ|: ${f.minAbsRho.toFixed(2)}`;
+  $('poe-label').textContent = f.minPoe === 0
     ? 'Min parallax / error: off'
-    : `Min parallax / error: ${DEFAULT_FILTER.minPoe}`;
+    : `Min parallax / error: ${f.minPoe}`;
   $('dist-error').hidden = true;
   $('glat-error').hidden = true;
   updateDistUI();
   updateGlatUI();
-  setDirFilter(DEFAULT_FILTER.dir);   // also calls applyFilters
+  for (const [id, d] of [['dir-all', 'all'], ['dir-pos', 'pos'], ['dir-neg', 'neg']]) {
+    $(id).classList.toggle('active', d === f.dir);
+  }
+}
+// Reset Filters: put every control back where it sits on first load
+// (significance 1e-4, |ρ| 0, parallax/error 10, distance off, galactic |b| off,
+// direction All) — or, once a saved set is marked ★, back to that instead.
+function resetFilters() {
+  const def = startupFilterValues();
+  Object.assign(state.filter, def.filter);
+  syncFilterUI();
+  applyFilters();
+  setMessage(def.name
+    ? `Filters returned to your startup settings “${def.name}”.`
+    : 'Filters returned to their startup values.');
 }
 $('filter-reset-btn').addEventListener('click', resetFilters);
 
@@ -2945,14 +3108,36 @@ function exportCSV(indices, what) {
    The trick that keeps this from duplicating any drawing logic: a Plot only
    ever touches the outside world through .canvas/.ctx/.w/.h, so for the
    duration of one render we point the canvas at an offscreen one and set the
-   layout size to a fixed, clean 4:5 figure — the saved image always has the
-   same publication shape no matter how the window happens to be sized. The
-   view limits are untouched, so the figure shows exactly the data region that
-   is on screen. */
-const EXPORT_W = 1180;        // CSS-px layout of every exported figure (4:5)
-const EXPORT_H = 1475;
-const EXPORT_MIN_PX = 2400;   // target for the longer side of each image
-const EXPORT_MAX_SCALE = 6;   // ceiling on device-pixels per CSS px
+   layout size to the page exportPageSize() works out. The view limits are
+   untouched, so the figure shows exactly the data region that is on screen.
+
+   The page follows the SHAPE OF THE LIVE PANEL. Both plots keep the same x/y
+   limits they have on screen, so pouring them into a fixed 4:5 page stretched
+   the picture: a window reshaped to frame a feature nicely came back squeezed
+   into a different aspect ratio. Instead the exported DATA rectangle is given
+   the live data rectangle's aspect, and the margins are added around it — so
+   what you framed is what you get, and the margins stay the fixed sizes the
+   large print type needs rather than scaling with the window. */
+const EXPORT_DATA_LONG = 1244;  // long side of the exported DATA rect, CSS px
+const EXPORT_MIN_PX = 2400;     // target for the longer side of each image
+const EXPORT_MAX_SCALE = 6;     // ceiling on device-pixels per CSS px
+// A panel dragged to an extreme letterbox would otherwise produce a figure
+// whose short side is a sliver; past this ratio the export stops following it.
+const EXPORT_ASPECT_MAX = 6;
+
+/* Page size (CSS px) whose data rectangle has the same shape as `plot`'s live
+   one. At the app's default panel proportions this returns 1180 × 1475 with an
+   868 × 1244 data area — the figure the export was originally signed off at. */
+function exportPageSize(plot) {
+  const inW = plot.w - MARGIN.l - MARGIN.r;
+  const inH = plot.h - MARGIN.t - MARGIN.b;
+  let a = (inW > 0 && inH > 0) ? inW / inH : 868 / 1244;
+  a = Math.max(1 / EXPORT_ASPECT_MAX, Math.min(EXPORT_ASPECT_MAX, a));
+  const dataW = a >= 1 ? EXPORT_DATA_LONG : EXPORT_DATA_LONG * a;
+  const dataH = a >= 1 ? EXPORT_DATA_LONG / a : EXPORT_DATA_LONG;
+  const m = printMargin();
+  return { w: Math.round(dataW + m.l + m.r), h: Math.round(dataH + m.t + m.b) };
+}
 
 /* Vertical Spearman colorbar drawn into the widened right margin of each
    exported figure, mirroring a matplotlib colorbar: the same coolwarm_r ramp
@@ -2998,7 +3183,8 @@ function drawPrintColorbar(plot, ctx) {
 
 function renderPlotForPrint(plot, draw) {
   if (!(plot.w > 0 && plot.h > 0)) throw new Error('the plots have no size yet');
-  const w = EXPORT_W, h = EXPORT_H;
+  // read the page size before the live .w/.h are swapped out below
+  const { w, h } = exportPageSize(plot);
   const scale = Math.min(EXPORT_MAX_SCALE, Math.max(2, EXPORT_MIN_PX / Math.max(w, h)));
   const off = document.createElement('canvas');
   off.width = Math.round(w * scale);
@@ -3021,7 +3207,7 @@ function renderPlotForPrint(plot, draw) {
   // and can come out upside-down (magnitude increasing upward).
   plot.invertY = state.invertY;
   exportScale = scale;
-  try { draw(); drawPrintColorbar(plot, octx); }
+  try { draw(); if (exportColorbar) drawPrintColorbar(plot, octx); }
   finally {
     plot.canvas = liveCanvas; plot.ctx = liveCtx;
     plot.w = liveW; plot.h = liveH;
@@ -3175,6 +3361,9 @@ const PLOT_FORMATS = {
   pdf:  { ext: '.pdf', label: 'PDF' },
 };
 let plotImageFormat = 'png';
+$('colorbar-checkbox').addEventListener('change', ev => {
+  exportColorbar = ev.target.checked;
+});
 for (const f of Object.keys(PLOT_FORMATS)) {
   $('fmt-' + f).addEventListener('click', () => {
     plotImageFormat = f;
@@ -3218,10 +3407,10 @@ async function exportPlotImages() {
     btn.textContent = 'Saving…';
     const zip = await filesToZipBlob(ready.map(r => ({ name: r.file, blob: r.blob })));
     const saved = downloadBlob(zip, (base ? base + '_' : '') + 'plots.zip');
-    const dims = `${ready[0].w}×${ready[0].h}`;
     const mb = (saved.bytes / 1048576).toFixed(1);
     setMessage(`[${timestamp()}] Saved '${saved.filename}' containing ` +
-      `${ready.map(r => `'${r.file}'`).join(' and ')} — ${dims} px on a white background, ${mb} MB`);
+      `${ready.map(r => `'${r.file}' (${r.w}×${r.h} px)`).join(' and ')} — ` +
+      `on a white background${exportColorbar ? ' with a Spearman colorbar' : ', no colorbar'}, ${mb} MB`);
   } catch (e) {
     setMessage(`[${timestamp()}] Could not save the plot images: ${e.message}`);
   } finally {
@@ -5207,6 +5396,370 @@ $('custom-apply-btn').addEventListener('click', () => {
 slRefreshCustom();
 slRefreshUI();
 
+/* =====================================================
+   Saved settings
+   -----------------------------------------------------
+   Getting the Filters right for a particular question is real work —
+   significance, |ρ|, parallax quality, a distance shell, a galactic-latitude
+   cut, which catalogs are lit up, how thick the lines want to be — and all of
+   it used to be gone the moment the app closed. A saved set captures that whole
+   arrangement (Filters, the Display card, the catalog overlays, the plot-image
+   options and the current view) under a name.
+
+   Two places to keep them, because they answer different needs:
+     * this app's local storage — the named list in the dropdown, with one
+       optionally marked ★ to be applied at startup, which Reset Filters then
+       returns to instead of the factory values;
+     * a .json file — Export / Import, for keeping a configuration beside a
+       project, versioning it, or handing it to a collaborator.
+   Both are the same object, so a file can be imported and then saved under a
+   name, and a named set can be exported to a file.
+
+   Deliberately NOT captured: which dataset is loaded (a saved set is meant to
+   outlive a table swap), and a Custom ID list longer than
+   PRESET_MAX_CUSTOM_IDS — a giant pasted list would blow the ~5 MB storage
+   quota and take every other saved set down with it. Under the cap the IDs
+   travel along. Everything read back is clamped to the controls' own ranges
+   before it reaches state, so a hand-edited or truncated file can't leave the
+   plots framed on NaN. */
+const PRESET_KEY = 'itcmd.savedSettings.v1';
+const PRESET_STARTUP_KEY = 'itcmd.startupSettings.v1';
+const PRESET_FORMAT = 'itcmd-settings';
+const PRESET_MAX_CUSTOM_IDS = 20000;
+
+// localStorage is missing (or throws on access) in some embeddings. The saved
+// list then simply stays empty and says so; Export / Import keep working.
+let presetStorageBroken = false;
+function presetStore() {
+  try {
+    const raw = localStorage.getItem(PRESET_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+  } catch { presetStorageBroken = true; return {}; }
+}
+function presetStoreWrite(obj) {
+  try { localStorage.setItem(PRESET_KEY, JSON.stringify(obj)); return true; }
+  catch (e) {
+    presetStorageBroken = true;
+    setMessage(`Could not save the settings in the app (${e.message}). ` +
+      `Storage may be full or unavailable — “Export File…” writes them to a .json instead.`);
+    return false;
+  }
+}
+function presetStartupName() {
+  try { return localStorage.getItem(PRESET_STARTUP_KEY) || ''; } catch { return ''; }
+}
+function presetSetStartupName(name) {
+  try {
+    if (name) localStorage.setItem(PRESET_STARTUP_KEY, name);
+    else localStorage.removeItem(PRESET_STARTUP_KEY);
+  } catch { /* nothing to do: the ★ just won't persist */ }
+}
+// The filter values Reset Filters returns to: the ★ set's, or the factory ones.
+function startupFilterValues() {
+  const name = presetStartupName();
+  const p = name ? presetStore()[name] : null;
+  return p ? { name, filter: sanitizeFilter(p.filter) } : { name: '', filter: { ...DEFAULT_FILTER } };
+}
+// window.confirm exists in the browser and in Electron's renderer; if some
+// embedding blocks it, take the click at face value rather than dropping it.
+function askConfirm(msg) {
+  try { return window.confirm(msg); } catch { return true; }
+}
+
+/* ---- capture ---- */
+function capturePreset() {
+  const p = {
+    format: PRESET_FORMAT,
+    app: APP_NAME,
+    version: APP_VERSION || null,
+    saved: new Date().toISOString(),
+    filter: { ...state.filter },
+    display: {
+      plotMode: state.plotMode,
+      thickness: state.thickness,
+      showHRRef: state.showHRRef,
+      showInstabilityStrip: state.showInstabilityStrip,
+      showRedVec: state.showRedVec,
+      showViewRect: state.showViewRect,
+    },
+    plotImage: { format: plotImageFormat, colorbar: exportColorbar },
+    lists: STAR_LISTS
+      .filter(L => L.highlight || L.restrict || L.activeSubtypes.size)
+      .map(L => ({ key: L.key, highlight: L.highlight, restrict: L.restrict,
+                   subtypes: [...L.activeSubtypes] })),
+    view: {
+      detail: { x: [...detail.xlim], y: [...detail.ylim] },
+      overview: { x: [...overview.xlim], y: [...overview.ylim] },
+    },
+  };
+  if (customList.catIds && customList.catIds.size && customList.catIds.size <= PRESET_MAX_CUSTOM_IDS) {
+    p.customIds = [...customList.catIds].map(String);
+  }
+  return p;
+}
+
+/* ---- read back, clamped to the controls' own ranges ---- */
+const FILTER_BOUNDS = {
+  minLogP:   { min: 0, max: 10,       step: 1 },
+  minAbsRho: { min: 0, max: 0.95,     step: 0.05 },
+  minPoe:    { min: 0, max: 50,       step: 1 },
+  minDist:   { min: 0, max: DIST_MAX, step: 50 },
+  maxDist:   { min: 0, max: DIST_MAX, step: 50 },
+  minGlat:   { min: 0, max: GLAT_MAX, step: 1 },
+  maxGlat:   { min: 0, max: GLAT_MAX, step: 1 },
+};
+function sanitizeFilter(raw) {
+  const f = { ...DEFAULT_FILTER };
+  if (!raw || typeof raw !== 'object') return f;
+  if (raw.dir === 'all' || raw.dir === 'pos' || raw.dir === 'neg') f.dir = raw.dir;
+  for (const k in FILTER_BOUNDS) {
+    const b = FILTER_BOUNDS[k], v = Number(raw[k]);
+    if (!Number.isFinite(v)) continue;
+    const clamped = Math.min(b.max, Math.max(b.min, v));
+    // snap onto the slider's own step, so the knob and the label agree
+    f[k] = parseFloat((Math.round(clamped / b.step) * b.step).toFixed(6));
+  }
+  // the dual sliders may not cross or touch
+  if (f.maxDist < f.minDist + DIST_GAP) f.maxDist = Math.min(DIST_MAX, f.minDist + DIST_GAP);
+  if (f.minDist > f.maxDist - DIST_GAP) f.minDist = Math.max(0, f.maxDist - DIST_GAP);
+  if (f.maxGlat < f.minGlat + GLAT_GAP) f.maxGlat = Math.min(GLAT_MAX, f.minGlat + GLAT_GAP);
+  if (f.minGlat > f.maxGlat - GLAT_GAP) f.minGlat = Math.max(0, f.maxGlat - GLAT_GAP);
+  return f;
+}
+// a stored {x:[lo,hi], y:[lo,hi]} pair, or null if it isn't a usable rectangle
+function sanitizeLimits(v) {
+  if (!v || !Array.isArray(v.x) || !Array.isArray(v.y)) return null;
+  const n = [v.x[0], v.x[1], v.y[0], v.y[1]].map(Number);
+  if (!n.every(Number.isFinite)) return null;
+  if (n[0] === n[1] || n[2] === n[3]) return null;
+  return { x: [Math.min(n[0], n[1]), Math.max(n[0], n[1])],
+           y: [Math.min(n[2], n[3]), Math.max(n[2], n[3])] };
+}
+
+/* ---- apply ----
+   Async because a catalog overlay the set asks for may not have been fetched
+   yet; that goes through the very same lazy loaders the buttons use. Returns
+   the labels of anything it could not restore, for the status line. */
+async function applyPreset(p) {
+  const missing = [];
+
+  Object.assign(state.filter, sanitizeFilter(p.filter));
+  syncFilterUI();
+
+  const d = p.display || {};
+  if (d.plotMode === 'lines' || d.plotMode === 'points') setPlotMode(d.plotMode);
+  const th = Number(d.thickness);
+  if (Number.isFinite(th)) {
+    state.thickness = Math.min(10, Math.max(0, th));
+    $('thickness-slider').value = state.thickness;
+    updateThicknessLabel();
+  }
+  for (const [key, id] of [['showHRRef', 'hr-ref-checkbox'],
+                           ['showInstabilityStrip', 'strip-checkbox'],
+                           ['showRedVec', 'redvec-checkbox'],
+                           ['showViewRect', 'viewrect-checkbox']]) {
+    if (typeof d[key] === 'boolean') { state[key] = d[key]; $(id).checked = d[key]; }
+  }
+
+  const pi = p.plotImage || {};
+  if (PLOT_FORMATS[pi.format]) $('fmt-' + pi.format).click();
+  if (typeof pi.colorbar === 'boolean') {
+    exportColorbar = pi.colorbar;
+    $('colorbar-checkbox').checked = pi.colorbar;
+  }
+
+  // Custom IDs first: the loop below then sets their highlight/restrict from
+  // the saved state rather than the "on" that supplying a list implies.
+  if (Array.isArray(p.customIds) && p.customIds.length) {
+    const ids = new Set();
+    for (const s of p.customIds) { try { ids.add(BigInt(s)); } catch { /* skip junk */ } }
+    if (ids.size) applyCustomIds(ids, 'saved settings');
+  }
+
+  const wanted = new Map((Array.isArray(p.lists) ? p.lists : []).map(l => [l.key, l]));
+  for (const L of STAR_LISTS) {
+    const w = wanted.get(L.key);
+    L.activeSubtypes.clear();
+    if (!w) { L.highlight = false; L.restrict = false; continue; }
+    if (!L.loaded && !L.custom) await slEnsureLoaded(L);
+    if (!L.loaded) {          // catalog file absent, or no Custom IDs supplied
+      L.highlight = false; L.restrict = false;
+      missing.push(L.label);
+      continue;
+    }
+    L.highlight = !!w.highlight;
+    L.restrict = !!w.restrict;
+    if (L.subtypes && Array.isArray(w.subtypes)) {
+      for (const st of w.subtypes) {
+        if (!L.subtypes.includes(st)) continue;
+        const sub = L.subs ? L.subs.find(s => s.id === st) : null;
+        if (sub && !sub.loaded && !(await slEnsureSubLoaded(L, sub))) {
+          missing.push(`${L.label} / ${st}`);
+          continue;
+        }
+        L.activeSubtypes.add(st);
+      }
+    }
+  }
+  slRebuildRestrict();
+  slRefreshUI();
+
+  const v = p.view || {};
+  const ov = sanitizeLimits(v.overview), dt = sanitizeLimits(v.detail);
+  if (ov) { overview.xlim = ov.x; overview.ylim = ov.y; }
+  if (dt) { detail.xlim = dt.x; detail.ylim = dt.y; }
+
+  invalidateOverviewCache();
+  applyFilters();             // recomputes the visible set and redraws
+  pushHistory();
+  return missing;
+}
+
+/* ---- the sidebar card ----
+   `pick` is the name to leave selected; without it the current selection is
+   kept where it still exists. Rebuilding the <option> list clears the value,
+   so a freshly saved name has to be re-selected through this argument rather
+   than by assigning to .value beforehand. */
+function presetRefreshUI(pick) {
+  const store = presetStore();
+  const names = Object.keys(store).sort((a, b) => a.localeCompare(b));
+  const startup = presetStartupName();
+  const sel = $('preset-select');
+  const keep = typeof pick === 'string' ? pick : sel.value;
+  sel.textContent = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = names.length ? '— pick a saved set —'
+    : presetStorageBroken ? '— in-app saving unavailable —' : '— nothing saved yet —';
+  sel.appendChild(ph);
+  for (const n of names) {
+    const o = document.createElement('option');
+    o.value = n;
+    o.textContent = (n === startup ? '★ ' : '') + n;
+    sel.appendChild(o);
+  }
+  sel.value = names.includes(keep) ? keep : '';
+  const picked = sel.value;
+  $('preset-load').disabled = !picked;
+  $('preset-delete').disabled = !picked;
+  $('preset-star').disabled = !picked;
+  $('preset-star').textContent = picked && picked === startup ? 'Clear ★' : 'Set ★';
+  $('filter-reset-btn').title = startup
+    ? `Return every filter to your saved startup settings “${startup}”`
+    : 'Return every filter to its startup value';
+}
+function presetReport(verb, name, missing) {
+  setMessage(`[${timestamp()}] ${verb} the settings${name ? ` “${name}”` : ''}` +
+    (missing && missing.length
+      ? `, except ${missing.join(', ')} — no catalog file or ID list for those.`
+      : '.'));
+}
+
+$('preset-select').addEventListener('change', () => presetRefreshUI());
+
+$('preset-save').addEventListener('click', () => {
+  const name = $('preset-name').value.trim();
+  if (!name) { setMessage('Type a name for the current settings first.'); $('preset-name').focus(); return; }
+  const store = presetStore();
+  if (name in store && !askConfirm(`Replace the saved settings “${name}”?`)) return;
+  const existed = name in store;
+  store[name] = capturePreset();
+  if (!presetStoreWrite(store)) return;
+  $('preset-name').value = '';
+  presetRefreshUI(name);
+  setMessage(`[${timestamp()}] ${existed ? 'Replaced' : 'Saved'} the settings “${name}”. ` +
+    `Pick it in the list and press Load to come back to it, or Set ★ to start here every time.`);
+});
+
+$('preset-load').addEventListener('click', async () => {
+  const name = $('preset-select').value;
+  const p = presetStore()[name];
+  if (!p) { presetRefreshUI(); return; }
+  presetReport('Loaded', name, await applyPreset(p));
+});
+
+$('preset-delete').addEventListener('click', () => {
+  const name = $('preset-select').value;
+  if (!name || !askConfirm(`Delete the saved settings “${name}”?`)) return;
+  const store = presetStore();
+  delete store[name];
+  if (!presetStoreWrite(store)) return;
+  if (presetStartupName() === name) presetSetStartupName('');
+  presetRefreshUI('');
+  setMessage(`Deleted the saved settings “${name}”.`);
+});
+
+$('preset-star').addEventListener('click', () => {
+  const name = $('preset-select').value;
+  if (!name) return;
+  const on = presetStartupName() !== name;
+  presetSetStartupName(on ? name : '');
+  presetRefreshUI();
+  setMessage(on
+    ? `“${name}” will be applied every time the app starts, and Reset Filters now returns to it.`
+    : `“${name}” is no longer the startup set; Reset Filters goes back to the factory values.`);
+});
+
+$('preset-export').addEventListener('click', () => {
+  // the selected set if one is picked, otherwise whatever is on screen now
+  const name = $('preset-select').value;
+  const p = name ? presetStore()[name] : capturePreset();
+  if (!p) { presetRefreshUI(); return; }
+  const base = (name || $('preset-name').value.trim() || 'itcmd_settings')
+    .replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'itcmd_settings';
+  const blob = new Blob([JSON.stringify({ ...p, name: name || undefined }, null, 2)],
+    { type: 'application/json' });
+  const saved = downloadBlob(blob, base + '.json');
+  setMessage(`[${timestamp()}] Wrote ${name ? `the settings “${name}”` : 'the current settings'} ` +
+    `to '${saved.filename}'.`);
+});
+
+$('preset-import').addEventListener('click', () => $('preset-file-input').click());
+$('preset-file-input').addEventListener('change', ev => {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';                   // let the same file be picked again
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onerror = () => setMessage(`Could not read “${file.name}”.`);
+  reader.onload = async () => {
+    let p;
+    try { p = JSON.parse(String(reader.result || '')); }
+    catch (e) { setMessage(`“${file.name}” is not valid JSON (${e.message}).`); return; }
+    if (!p || typeof p !== 'object' || p.format !== PRESET_FORMAT) {
+      setMessage(`“${file.name}” is not a ${APP_NAME} settings file.`);
+      return;
+    }
+    const missing = await applyPreset(p);
+    // seed the name box so it can be kept in the app with one more click
+    $('preset-name').value = (typeof p.name === 'string' && p.name)
+      ? p.name : file.name.replace(/\.json$/i, '');
+    presetReport('Applied', file.name, missing);
+  };
+  reader.readAsText(file);
+});
+
+/* Apply the ★ set once the data is in. Runs after ingest so the filters have
+   something to filter, and re-seeds the view history so Undo View can't walk
+   back to the pre-preset framing that was never really on screen. */
+function applyStartupPreset() {
+  const name = presetStartupName();
+  if (!name) return;
+  const p = presetStore()[name];
+  if (!p) { presetSetStartupName(''); presetRefreshUI(); return; }
+  applyPreset(p).then(missing => {
+    presetRefreshUI(name);   // show which set the app came up in
+    viewHistory.stack = [snapshotView()];
+    viewHistory.idx = 0;
+    updateHistoryButtons();
+    setMessage(`[${timestamp()}] Loaded ${state.ids.length.toLocaleString()} sources and applied ` +
+      `your startup settings “${name}”` +
+      (missing.length ? `, except ${missing.join(', ')} — no catalog file or ID list for those.` : '.'));
+  });
+}
+
+presetRefreshUI();
+
 /* ---------------- Curated example stars ----------------
    One-click classroom presets: each button jumps to a well-measured member of
    a catalog and opens its epoch CMD, removing the need to know any Gaia IDs.
@@ -5248,8 +5801,7 @@ async function showExampleStar(ex) {
   setDetailLimitsFromRect(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2);
   pushHistory();
   state.selection = [best];
-  updateSelectionInfo();
-  requestRedraw();
+  selectionChanged();   // pins it past the filters if it would not otherwise show
   setMessage(`Example ${ex.label}: Gaia DR3 ${state.ids[best]} ` +
     `(ρ = ${state.coeff[best].toFixed(3)}, p = ${state.p[best].toExponential(2)}).`);
   showEpochCMD(best);

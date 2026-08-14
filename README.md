@@ -1,6 +1,6 @@
-# ITCMD
+# iVECMD
 
-An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulsators, and further analysis tools are available once a line has been clicked on.
+An interactive variability-encoded CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulsators, and further analysis tools are available once a line has been clicked on.
 
 ---
 

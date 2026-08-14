@@ -1,5 +1,5 @@
 {
-  "name": "itcmd",
+  "name": "ivecmd",
   "version": "0.0.0-dev",
   "description": "An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulastors and further analysis tools are available once a line has been clicked on.",
   "main": "main.js",
@@ -8,8 +8,8 @@
     "build": "electron-builder"
   },
   "build": {
-    "appId": "com.kirbybennett.itcmd",
-    "productName": "ITCMD",
+    "appId": "com.kirbybennett.ivecmd",
+    "productName": "iVECMD",
     "icon": "AppIcon.icns",
     "asar": false,
     "mac": {
@@ -18,7 +18,7 @@
       "category": "public.app-category.utilities"
     },
     "dmg": {
-      "title": "ITCMD ${version}"
+      "title": "iVECMD ${version}"
     },
     "win": {
       "icon": "build/icon.ico",

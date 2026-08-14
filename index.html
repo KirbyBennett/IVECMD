@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Data Explorer — Gaia Variability Dataset Viewer</title>
+<title>iVECMD — Gaia Variability Dataset Viewer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -63,8 +63,7 @@ body { padding: 0; }
 #sidebar::-webkit-scrollbar { width: 8px; }
 #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-.title { font-size: 30px; font-weight: 700; line-height: 1.15; }
-.subtitle { color: var(--muted); font-size: 14px; padding-bottom: 4px; }
+.title { font-size: 30px; font-weight: 700; line-height: 1.15; padding-bottom: 4px; }
 
 .card {
   background: var(--card-bg);
@@ -318,10 +317,6 @@ input[type=range]::-moz-range-thumb {
   min-width: 0;
 }
 
-#title-bar { display: flex; align-items: center; gap: 8px; }
-#window-title { font-size: 22px; font-weight: 700; flex: 1; }
-#title-bar button { width: 36px; height: 36px; padding: 0; font-size: 15px; }
-
 #plot-panel {
   flex: 1;
   background: rgba(255,255,255,0.03);
@@ -460,13 +455,13 @@ input[type=range]::-moz-range-thumb {
    plot's top-right corner (not a header), so they never shift when other buttons
    such as "Reset Zoom" appear or disappear, and don't hug the panel's outer edge.
    The default inset matches the overview/detail plot margins (MARGIN.t 34, r 12);
-   .zoom-overlay-cmd shifts to the CMD's larger margins (M.t 48, r 20). */
+   .zoom-overlay-cmd shifts to the CMD's own margins (M.t 20, r 20). */
 .zoom-overlay {
   position: absolute; top: 42px; right: 20px;
   display: flex; flex-direction: column; gap: 4px;
   z-index: 6; width: fit-content;
 }
-.zoom-overlay-cmd { top: 56px; right: 28px; }
+.zoom-overlay-cmd { top: 28px; right: 28px; }
 .zoom-overlay .zrow { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
 .zoom-overlay .zaxis { color: var(--muted); font-size: 11px; font-weight: 600; padding-right: 2px; }
 .zoom-overlay .zbtn {
@@ -538,8 +533,7 @@ input[type=range]::-moz-range-thumb {
   <!-- ================= Sidebar ================= -->
   <aside id="sidebar">
     <div>
-      <div class="title">Data Explorer</div>
-      <div class="subtitle">Visualize and interact with large datasets</div>
+      <div class="title">iVECMD</div>
     </div>
 
     <div class="card" id="status-card">
@@ -783,10 +777,6 @@ input[type=range]::-moz-range-thumb {
 
   <!-- ================= Main area ================= -->
   <main id="main-area">
-    <div id="title-bar">
-      <div id="window-title">Data Explorer</div>
-      <button id="fullscreen-btn" title="Toggle fullscreen">⛶</button>
-    </div>
     <div id="plot-panel">
       <div class="plot-half">
         <canvas id="overview-canvas"></canvas>
@@ -813,7 +803,7 @@ input[type=range]::-moz-range-thumb {
 <div class="modal-backdrop" id="help-modal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1">
     <div class="modal-header">
-      <h2 id="help-title">Data Explorer Help</h2>
+      <h2 id="help-title">iVECMD Help</h2>
       <button class="small" id="help-close-x" title="Close the help dialog">✕</button>
     </div>
     <div class="modal-body">
@@ -1208,9 +1198,9 @@ const messageLabel = $('message-label');
 const countsLabel = $('counts-label');
 function setMessage(text) { messageLabel.textContent = text; }
 
-// One app name everywhere; the main-area heading and the tab title pick up the
-// name of whichever dataset is currently loaded (auto-fetch, browse, or drop).
-const APP_NAME = 'Data Explorer';
+// One app name everywhere; the window/tab title picks up the name of whichever
+// dataset is currently loaded (auto-fetch, browse, or drop).
+const APP_NAME = 'iVECMD';
 
 // The version shown in the window title comes from package.json — the same
 // field that names the built DMG, so there's nothing to keep in sync by hand.
@@ -1222,7 +1212,6 @@ let currentDataset = '';
 function setWindowTitle(dataset) {
   currentDataset = dataset || '';
   const name = APP_VERSION ? `${APP_NAME} v${APP_VERSION}` : APP_NAME;
-  $('window-title').textContent = dataset ? `${APP_NAME} — ${dataset}` : APP_NAME;
   document.title = dataset ? `${name} — ${dataset}` : `${name} — Gaia Variability Dataset Viewer`;
 }
 if (APP_VERSION) {
@@ -3142,12 +3131,6 @@ $('help-modal').addEventListener('click', ev => {
   if (ev.target === $('help-modal')) { closeModal('help-modal'); $('help-btn').textContent = 'Show Help'; }
 });
 
-/* ---------------- Fullscreen ---------------- */
-$('fullscreen-btn').addEventListener('click', () => {
-  if (document.fullscreenElement) document.exitFullscreen();
-  else document.documentElement.requestFullscreen();
-});
-
 /* ---------------- Exports ----------------
    The CSV is streamed into incremental Blob parts (one part per chunk of rows)
    rather than one indices.map(...).join('\n') string — "Export Filtered
@@ -4145,7 +4128,7 @@ function drawCMD(d) {
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
-  const M = { l: 66, r: 20, t: 48, b: 56 };
+  const M = { l: 66, r: 20, t: 20, b: 56 };
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
   // user zoom/pan view when active, otherwise auto fit
@@ -4180,11 +4163,8 @@ function drawCMD(d) {
     ctx.fillText(fmtTick(v), M.l - 8, py);
   }
 
-  // labels + title
-  ctx.fillStyle = THEME.text;
-  ctx.font = '600 16px "IBM Plex Sans", sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  ctx.fillText(`Gaia DR3 ${d.id}`, M.l + pw / 2, M.t - 14);
+  // axis labels — the source id is already in the dialog header, so the plot
+  // carries no title of its own
   ctx.fillStyle = THEME.muted;
   drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - 14, 14, 'center');
   ctx.save();
@@ -4259,9 +4239,9 @@ function drawCMD(d) {
     occupied.push([M.l + 12 + fx * (tw + 20), M.t + 12 + fy * 28]);
   }
   // ...and from landing under the floating X/Y zoom buttons overlaid on the
-  // plot's top-right corner (.zoom-overlay-cmd: top 56px, right 28px, ~70×56 px)
+  // plot's top-right corner (.zoom-overlay-cmd: top 28px, right 28px, ~70×56 px)
   for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
-    occupied.push([W - 104 + fx * 82, 50 + fy * 68]);
+    occupied.push([W - 104 + fx * 82, 22 + fy * 68]);
   }
 
   // legend: every rank present, placed where the fewest points sit
@@ -4442,7 +4422,8 @@ const PHASE_COLORS = {
   G: '#b8d8c7',         // soft mint
   BP: '#a9c5f0',        // soft blue
   RP: '#f0b3ab',        // soft coral
-  combined: '#ead9a6',  // soft sand
+  // the combined periodogram shares this row with the folded BP−RP curve, so
+  // both panels are drawn in the color-curve lavender
   color: '#cfc0e8',     // soft lavender (BP−RP)
   peak: '#ead9a6',      // peak markers & period annotations
 };
@@ -4776,7 +4757,7 @@ function drawPhase() {
     }
   });
 
-  drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.combined,
+  drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.color,
     `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]', 'pg-comb');
   if (d.color.t.length >= 3) {
     drawFoldedPanel(ctx, rectAt(3, 1), d.color, pd.combPeriod * f, PHASE_COLORS.color,
@@ -5507,17 +5488,23 @@ slRefreshUI();
    travel along. Everything read back is clamped to the controls' own ranges
    before it reaches state, so a hand-edited or truncated file can't leave the
    plots framed on NaN. */
-const PRESET_KEY = 'itcmd.savedSettings.v1';
-const PRESET_STARTUP_KEY = 'itcmd.startupSettings.v1';
-const PRESET_FORMAT = 'itcmd-settings';
+const PRESET_KEY = 'ivecmd.savedSettings.v1';
+const PRESET_STARTUP_KEY = 'ivecmd.startupSettings.v1';
+const PRESET_FORMAT = 'ivecmd-settings';
 const PRESET_MAX_CUSTOM_IDS = 20000;
+/* The app was called ITCMD before, so anything saved by an older build sits
+   under the old key / carries the old format tag. Both are still read, and the
+   next save rewrites storage under the new key, so nobody loses a saved set. */
+const PRESET_KEY_LEGACY = 'itcmd.savedSettings.v1';
+const PRESET_STARTUP_KEY_LEGACY = 'itcmd.startupSettings.v1';
+const PRESET_FORMATS_ACCEPTED = [PRESET_FORMAT, 'itcmd-settings'];
 
 // localStorage is missing (or throws on access) in some embeddings. The saved
 // list then simply stays empty and says so; Export / Import keep working.
 let presetStorageBroken = false;
 function presetStore() {
   try {
-    const raw = localStorage.getItem(PRESET_KEY);
+    const raw = localStorage.getItem(PRESET_KEY) || localStorage.getItem(PRESET_KEY_LEGACY);
     const obj = raw ? JSON.parse(raw) : {};
     return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
   } catch { presetStorageBroken = true; return {}; }
@@ -5532,12 +5519,17 @@ function presetStoreWrite(obj) {
   }
 }
 function presetStartupName() {
-  try { return localStorage.getItem(PRESET_STARTUP_KEY) || ''; } catch { return ''; }
+  try {
+    return localStorage.getItem(PRESET_STARTUP_KEY) ||
+           localStorage.getItem(PRESET_STARTUP_KEY_LEGACY) || '';
+  } catch { return ''; }
 }
 function presetSetStartupName(name) {
   try {
     if (name) localStorage.setItem(PRESET_STARTUP_KEY, name);
-    else localStorage.removeItem(PRESET_STARTUP_KEY);
+    // clearing has to drop the pre-rename key too, or it would come back as the
+    // fallback the next time the ★ is read
+    else { localStorage.removeItem(PRESET_STARTUP_KEY); localStorage.removeItem(PRESET_STARTUP_KEY_LEGACY); }
   } catch { /* nothing to do: the ★ just won't persist */ }
 }
 // The filter values Reset Filters returns to: the ★ set's, or the factory ones.
@@ -5791,8 +5783,8 @@ $('preset-export').addEventListener('click', () => {
   const name = $('preset-select').value;
   const p = name ? presetStore()[name] : capturePreset();
   if (!p) { presetRefreshUI(); return; }
-  const base = (name || $('preset-name').value.trim() || 'itcmd_settings')
-    .replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'itcmd_settings';
+  const base = (name || $('preset-name').value.trim() || 'ivecmd_settings')
+    .replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'ivecmd_settings';
   const blob = new Blob([JSON.stringify({ ...p, name: name || undefined }, null, 2)],
     { type: 'application/json' });
   const saved = downloadBlob(blob, base + '.json');
@@ -5811,7 +5803,7 @@ $('preset-file-input').addEventListener('change', ev => {
     let p;
     try { p = JSON.parse(String(reader.result || '')); }
     catch (e) { setMessage(`“${file.name}” is not valid JSON (${e.message}).`); return; }
-    if (!p || typeof p !== 'object' || p.format !== PRESET_FORMAT) {
+    if (!p || typeof p !== 'object' || !PRESET_FORMATS_ACCEPTED.includes(p.format)) {
       setMessage(`“${file.name}” is not a ${APP_NAME} settings file.`);
       return;
     }

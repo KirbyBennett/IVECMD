@@ -17,7 +17,7 @@ const DATA_VERSION  = '1'
 // *roaming* profile (%APPDATA%), which gets synced to a server on login for
 // machines with roaming profiles enabled — so cache to LOCALAPPDATA there.
 const baseDir = process.platform === 'win32' && process.env.LOCALAPPDATA
-  ? path.join(process.env.LOCALAPPDATA, 'itcmd')
+  ? path.join(process.env.LOCALAPPDATA, 'ivecmd')
   : app.getPath('userData')
 
 const cacheDir   = path.join(baseDir, 'data')

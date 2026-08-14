@@ -1,4 +1,4 @@
-# ITCMD
+# iVECMD
 
 An interactive CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulsators, and further analysis tools are available once a line has been clicked on.
 
@@ -33,12 +33,12 @@ An interactive CMD with trajectories mapped as lines. Toggleable lists are prese
 Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
 
 1. Navigate to the "Releases" tab on the right side of the screen.
-2. Find the release that you want to download and click the "ITCMD-<version-#>-arm64.dmg" to download the app.
+2. Find the release that you want to download and click the "iVECMD-<version-#>-arm64.dmg" to download the app.
 3. Open the .dmg file on you computer. Normally, this will end up in the downloads folder.
 4. Drag the app icon over to the applications folder.
 5. Open a terminal and run this command to allow the app to run on your machine.
   ```
-  xattr -dr com.apple.quarantine /Applications/ITCMD.app
+  xattr -dr com.apple.quarantine /Applications/iVECMD.app
   ```
 **NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
 

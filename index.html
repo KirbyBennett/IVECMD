@@ -822,6 +822,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search &amp; Selection card (or press <code>/</code>) to center both plots on that star. <b>One ID per search, but searches add up:</b> run a second search and the first star stays selected, so several sources can be compared on one plot — the box takes a bare ID, a "Gaia DR3 …" label, or a whole table row (the RA/Dec alongside it are ignored). Paste two IDs at once and it says so rather than silently picking one. A searched star is selected even when it fails the active filters: selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. <b>Clear Selection</b> drops them all; <code>Ctrl/Cmd+Click</code> on one drops just that one.</li>
         <li><b>Selecting:</b> Click selects one star, replacing whatever was selected; <code>Ctrl/Cmd+Click</code> adds or removes stars without disturbing the rest. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide. Each figure takes the <b>shape of its panel on screen</b> — reshape the window to frame a feature and the saved figure is framed the same way, rather than being squeezed into a fixed page. Untick <b>Colorbar in saved plots</b> for figures that carry their own caption or share one legend; the page narrows to match so no empty band is left behind. The two figures arrive together in a single <code>.zip</code>, because a browser only lets a page save one file per click — sending them separately meant the second one was silently dropped.</li>
+        <li><b>Saving a dialog figure:</b> the <b>Download PNG</b> button in the CMD, Phase Analysis and Multi-Epoch Photometry dialogs saves that dialog's plot the same way: re-rendered on white paper at print resolution, with paper-sized type, deeper inks in place of the dark-mode pastels, tick marks, and a labelled axis on every panel. It saves what you are looking at, so any zoom, pan, re-fold or period pick you have made is in the figure. As with the main plots the figure takes the shape of the dialog's plot area, and it carries no title — the source id belongs in your caption, not inside the frame.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
       <ul>
@@ -875,7 +876,7 @@ input[type=range]::-moz-range-thumb {
       <button class="small" id="cmd-reset-zoom-btn" style="display:none" title="Restore the full CMD view">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
       <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Fold</button>
-      <button class="small" id="cmd-png-btn" title="Download this CMD as a PNG image">Download PNG</button>
+      <button class="small" id="cmd-png-btn" title="Save this CMD as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
       <button class="small" id="cmd-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="cmd-plot-wrap">
@@ -899,7 +900,7 @@ input[type=range]::-moz-range-thumb {
       <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
       <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
       <button class="small" id="phase-reset-btn" title="Return every periodogram and folded panel to its auto-fit view">Reset Views</button>
-      <button class="small" id="phase-png-btn" title="Download the phase plots as a PNG image">Download PNG</button>
+      <button class="small" id="phase-png-btn" title="Save the phase plots as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
       <button class="small" id="phase-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="phase-plot-wrap">
@@ -939,7 +940,7 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-header">
       <h2 id="mep-title">Multi-Epoch Photometry</h2>
       <button class="small" id="mep-reset-btn" title="Return every light-curve panel to its auto-fit view">Reset Views</button>
-      <button class="small" id="mep-png-btn" title="Download the light curves as a PNG image">Download PNG</button>
+      <button class="small" id="mep-png-btn" title="Save the light curves as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
       <button class="small" id="mep-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="mep-plot-wrap">
@@ -1379,6 +1380,9 @@ function drawMathText(ctx, parts, x, y, size, align = 'center') {
 }
 const LBL_BPRP = [{ t: 'G' }, { t: 'BP', sub: true }, { t: ' − ' }, { t: 'G' }, { t: 'RP', sub: true }];
 const LBL_GMAG = [{ t: 'GMAG' }];
+// the same axis for a figure, where the column name is nobody's business and
+// the quantity wants its band and its unit
+const LBL_GMAG_PRINT = [{ t: 'G' }, { t: ' [mag]' }];
 
 /* ---------------- Application state ---------------- */
 const state = {
@@ -3496,6 +3500,142 @@ $('export-selected-btn').addEventListener('click', () => exportCSV(state.selecti
 $('export-filtered-btn').addEventListener('click', () => exportCSV(state.visIdx, 'filtered sources'));
 $('export-plots-png-btn').addEventListener('click', exportPlotImages);
 
+/* ---------------- Paper-ready figures for the dialog plots ----------------
+   The CMD, Phase Analysis and Light Curve dialogs are drawn for a dark screen
+   at whatever size the window gives them. Handing that canvas straight to
+   toDataURL — which is what the Download PNG buttons used to do — produced a
+   dark, screen-resolution screenshot with 10–11 px type: fine on the monitor,
+   unusable in a paper. Each dialog figure is instead RE-RENDERED through its
+   own draw function, exactly as the two main plots already are, with
+
+     • the print palette (white paper, dark axes and text) plus the dialog-only
+       inks defined next to each draw function, since the pastels and the
+       near-white "used" marker are tuned against #171718 and vanish on white;
+     • every length inside the figure — type, margins, markers, rules, gaps —
+       multiplied by figTarget.k, so what comes out is the on-screen layout
+       with print-sized type rather than a page of hairlines; and
+     • a device scale that carries the long side past FIG_MIN_PX, so text and
+       markers are rasterized at figure resolution instead of being upscaled.
+
+   figTarget is non-null only for the duration of one such render. The draw
+   functions consult it through figPrint()/fpx() and, via figSurface(), draw
+   into the offscreen page instead of their on-screen canvas. */
+const FIG_PAGE_LONG = 1600;   // long side of the exported page, CSS px
+/* Page and lengths scaling together would reproduce the screen figure at
+   higher resolution — with its type still sized for a 900 px window seen at
+   arm's length rather than a 3.5-inch column. This is how much bigger the type
+   (and the margins that have to hold it) is made relative to the page. */
+const FIG_TYPE_BOOST = 1.2;
+const FIG_MIN_PX = 3000;      // target for the longer side of the raster
+const FIG_MAX_SCALE = 4;      // ceiling on device-pixels per CSS px
+
+let figTarget = null;         // {ctx, w, h, k} while a dialog figure renders
+const figPrint = () => figTarget !== null;
+const fpx = v => figTarget ? v * figTarget.k : v;
+/* Typographic minus for anything numeric in a figure. The hyphen the number
+   formatters emit is a shorter, higher mark that reads as a dash next to a
+   digit; the colorbar on the main export already makes this swap, and it is
+   the difference between a tick label and a typeset one. Screen text is left
+   alone — it is measured against the rest of the UI, which uses hyphens. */
+const figNum = s => figTarget ? String(s).replace(/-/g, '−') : s;
+
+/* Swap in the paper palettes for the duration of one figure. The two dialog
+   palettes are plain objects rather than per-call-site literals for the same
+   reason INK is: the draw code keeps one set of call sites and neither surface
+   is the special case. Restores even if the render throws. */
+function withFigurePalette(fn) {
+  const savedRank = {}, savedPhase = { ...PHASE_COLORS };
+  for (const r of Object.keys(CMD_RANK_STYLE)) {
+    savedRank[r] = CMD_RANK_STYLE[r].color;
+    CMD_RANK_STYLE[r].color = CMD_RANK_PRINT[r];
+  }
+  Object.assign(PHASE_COLORS, PHASE_COLORS_PRINT);
+  CMD_INK = CMD_INK_PRINT;
+  try { return withPrintPalette(fn); }
+  finally {
+    for (const r of Object.keys(savedRank)) CMD_RANK_STYLE[r].color = savedRank[r];
+    Object.assign(PHASE_COLORS, savedPhase);
+    CMD_INK = CMD_INK_SCREEN;
+  }
+}
+
+/* Each dialog draw function sizes itself from its on-screen canvas and draws
+   into it; during an export it is handed the offscreen page instead. Same code
+   either way — only the surface differs. */
+function figSurface(canvas, defW, defH) {
+  if (figTarget) return { ctx: figTarget.ctx, W: figTarget.w, H: figTarget.h };
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth || defW, H = canvas.clientHeight || defH;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
+
+function renderFigureForPrint(canvas, draw) {
+  const liveW = canvas.clientWidth, liveH = canvas.clientHeight;
+  if (!(liveW > 0 && liveH > 0)) throw new Error('the figure has no size yet');
+  const g = FIG_PAGE_LONG / Math.max(liveW, liveH);     // page growth
+  const w = Math.round(liveW * g), h = Math.round(liveH * g);
+  const scale = Math.min(FIG_MAX_SCALE, Math.max(2, FIG_MIN_PX / Math.max(w, h)));
+  const off = document.createElement('canvas');
+  off.width = Math.round(w * scale);
+  off.height = Math.round(h * scale);
+  const octx = off.getContext('2d');
+  // one unit of the drawing code's CSS-px space = `scale` real pixels
+  octx.setTransform(scale, 0, 0, scale, 0, 0);
+  // a fresh canvas is transparent and PNG keeps alpha, so lay the paper down
+  // first, or the figure lands on black in anything that flattens it
+  octx.fillStyle = THEME_PRINT.panel;
+  octx.fillRect(0, 0, w, h);
+
+  /* The draw functions also publish the geometry the dialogs hit-test their
+     pan/zoom against. A print pass would leave that describing the page rather
+     than the screen, so it is put back on the way out — the dialog stays
+     interactive without needing a redraw after every save. */
+  const savedXf = cmdXf, savedPhaseRects = panelRects.phase, savedMepRects = panelRects.mep;
+  figTarget = { ctx: octx, w, h, k: g * FIG_TYPE_BOOST };
+  try { withFigurePalette(draw); }
+  finally {
+    figTarget = null;
+    cmdXf = savedXf;
+    panelRects.phase = savedPhaseRects;
+    panelRects.mep = savedMepRects;
+  }
+  return off;
+}
+
+/* Render one dialog figure and save it. One file per click, so no zip is
+   needed here — the burst-download limit that forces the two main plots into a
+   single archive only bites from the second save onward. */
+async function saveDialogFigure(btn, canvas, draw, filename, statusEl) {
+  if (btn.disabled) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Rendering…';
+  // let the button repaint before the (synchronous) render
+  await new Promise(requestAnimationFrame);
+  let off = null;
+  try {
+    off = renderFigureForPrint(canvas, draw);
+    const blob = await canvasToBlob(off, 'image/png');
+    const saved = downloadBlob(blob, filename);
+    setMessage(`[${timestamp()}] Saved '${saved.filename}' (${off.width}×${off.height} px) — ` +
+      `paper-ready on a white background, ${(saved.bytes / 1048576).toFixed(1)} MB`);
+    btn.textContent = 'Saved ✓';
+    setTimeout(() => { if (!btn.disabled) btn.textContent = label; }, 1600);
+  } catch (e) {
+    btn.textContent = label;
+    const msg = `Could not save the figure: ${e.message}`;
+    if (statusEl) statusEl.textContent = msg;
+    setMessage(`[${timestamp()}] ${msg}`);
+  } finally {
+    if (off) { off.width = 0; off.height = 0; }   // free the export bitmap
+    btn.disabled = false;
+  }
+}
+
 /* ---------------- Spearman table manual load (boot fallback) ---------------- */
 $('spearman-file-input').addEventListener('change', async ev => {
   const file = ev.target.files[0];
@@ -3780,10 +3920,15 @@ let cmdXf = null;   // pixel transform of the last draw, for px↔data conversio
 $('cmd-close-btn').addEventListener('click', () => { cmdToken++; closeModal('cmd-modal'); });
 cmdModal.addEventListener('click', ev => { if (ev.target === cmdModal) { cmdToken++; closeModal('cmd-modal'); } });
 $('cmd-png-btn').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = cmdCanvas.toDataURL('image/png');
-  a.download = ($('cmd-title').textContent.replace(/\s+/g, '_') || 'cmd') + '.png';
-  a.click();
+  if (!lastCMD) return;
+  /* Named like the other two dialog figures — gaia_dr3_<id>_cmd.png — so a
+     paper's figure folder sorts by source and the name says which plot it is.
+     Anything the header is not (punctuation, the em dash a future title might
+     carry) collapses to an underscore rather than reaching a LaTeX path. */
+  const stem = $('cmd-title').textContent.trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  saveDialogFigure($('cmd-png-btn'), cmdCanvas, () => drawCMD(lastCMD),
+    (stem || 'cmd') + '_cmd.png', $('cmd-status'));
 });
 
 /* ---------------- CMD zoom & pan ----------------
@@ -4079,13 +4224,57 @@ const CMD_RANK_STYLE = {
   3: { marker: 'square',  color: '#f85149',  alpha: 0.70, label: 'sigma-clipped' },
   4: { marker: 'cross',   color: '#db61a2',  alpha: 0.85, label: 'clipped by both' },
 };
+/* The same five categories on white paper. The screen colors sit at the bright
+   end of their hues against #1f2021 — and "used" is simply the near-white body
+   text color — so rather than dimming them generically each one is replaced by
+   the deep member of the same hue family. The markers stay tellable apart in
+   print and in grayscale, and keep their mapping to the legend. */
+const CMD_RANK_PRINT = {
+  0: '#1a1a1a',   // used — near-black, the figure's primary data
+  1: '#7d3fbe',   // flare/eclipse candidate (violet)
+  2: '#a85f00',   // std-slope clipped (orange)
+  3: '#c0271f',   // sigma-clipped (red)
+  4: '#a82c72',   // clipped by both (magenta)
+};
+/* Everything else the CMD draws that is neither a rank marker nor a THEME
+   color, in its screen and paper forms — swapped by withFigurePalette(). */
+const CMD_INK_SCREEN = {
+  snr: '#8b949e',                          // SNR-rejected ×, and its error bars
+  snrBarAlpha: 0.30, snrMarkAlpha: 0.35,
+  fitNeg: '#f85149', fitPos: '#58a6ff',    // fit line, by the sign of the slope
+  meanStar: '#ffd700',                     // star at the mean of the used points
+  slopeFill: 'rgba(135,206,235,0.25)',     // the "m = …" box
+  slopeEdge: 'rgba(135,206,235,0.60)',
+  legendFill: 'rgba(13,17,23,0.85)',
+};
+const CMD_INK_PRINT = {
+  /* A light gray at 30 % alpha reads as a legible whisper on a dark panel and
+     as nothing at all on white, so the rejected points get a mid gray at half
+     again the opacity: still clearly subordinate to the kept points, still
+     actually on the page. */
+  snr: '#6e747b',
+  snrBarAlpha: 0.45, snrMarkAlpha: 0.60,
+  fitNeg: '#c0271f', fitPos: '#1f6fbf',
+  // the same gold the reddening arrow uses on paper — pure #ffd700 on white is
+  // a pale smear, this is the hue carried down to where it holds
+  meanStar: '#cf9a1e',
+  /* matplotlib's skyblue annotation box, which is what this mimics: on paper
+     the wash carries the box, so the fill comes up and the border becomes a
+     real line rather than a tint of one. */
+  slopeFill: 'rgba(135,206,235,0.45)',
+  slopeEdge: 'rgba(43,105,163,0.85)',
+  // opaque, not the screen's 85 %: the legend lands over data often enough,
+  // and a printed figure has no way to "look past" a ghosted point
+  legendFill: '#ffffff',
+};
+let CMD_INK = CMD_INK_SCREEN;
 
-function drawCMDMarker(ctx, px, py, marker, color, s = 5) {
-  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.6;
+function drawCMDMarker(ctx, px, py, marker, color, s = fpx(5)) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = fpx(1.6);
   if (marker === 'circle') {
     ctx.beginPath(); ctx.arc(px, py, s * 0.8, 0, 2 * Math.PI); ctx.fill();
   } else if (marker === 'star') {
-    drawStar(ctx, px, py, s + 2, color, color);
+    drawStar(ctx, px, py, s + fpx(2), color, color);
   } else if (marker === 'diamond') {
     ctx.beginPath();
     ctx.moveTo(px, py - s); ctx.lineTo(px + s, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s, py);
@@ -4119,16 +4308,18 @@ function cmdAutoExtent(d) {
 
 function drawCMD(d) {
   lastCMD = d;
-  const dpr = window.devicePixelRatio || 1;
-  const W = cmdCanvas.clientWidth || 684, H = 560;
-  cmdCanvas.width = W * dpr; cmdCanvas.height = H * dpr;
-  const ctx = cmdCanvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const { ctx, W, H } = figSurface(cmdCanvas, 684, 560);
+  const paper = figPrint();
 
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
-  const M = { l: 66, r: 20, t: 20, b: 56 };
+  // print keeps the on-screen proportions, with every length scaled up so the
+  // type lands at paper sizes; the left/bottom margins get a little extra on
+  // top of that for the taller tick labels and axis titles
+  const M = paper
+    ? { l: fpx(78), r: fpx(22), t: fpx(22), b: fpx(64) }
+    : { l: 66, r: 20, t: 20, b: 56 };
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
   // user zoom/pan view when active, otherwise auto fit
@@ -4142,34 +4333,38 @@ function drawCMD(d) {
   // panel + axes
   ctx.fillStyle = THEME.panelAlt;
   ctx.fillRect(M.l, M.t, pw, ph);
+  ctx.lineWidth = fpx(1);
   ctx.strokeStyle = THEME.border;
   ctx.strokeRect(M.l + 0.5, M.t + 0.5, pw - 1, ph - 1);
 
-  ctx.font = '11px "IBM Plex Sans", sans-serif';
-  ctx.fillStyle = THEME.muted;
+  const tickFs = fpx(11), labelFs = fpx(14);
+  ctx.font = `${tickFs}px "IBM Plex Sans", sans-serif`;
+  ctx.fillStyle = paper ? THEME.text : THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const v of niceTicks(xmin, xmax)) {
     const px = X(v);
     if (px < M.l || px > M.l + pw) continue;
     ctx.strokeStyle = THEME.border;
-    ctx.beginPath(); ctx.moveTo(px, M.t + ph); ctx.lineTo(px, M.t + ph + 5); ctx.stroke();
-    ctx.fillText(fmtTick(v), px, M.t + ph + 8);
+    ctx.beginPath(); ctx.moveTo(px, M.t + ph); ctx.lineTo(px, M.t + ph + fpx(5)); ctx.stroke();
+    ctx.fillText(figNum(fmtTick(v)), px, M.t + ph + fpx(8));
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (const v of niceTicks(ymin, ymax)) {
     const py = Y(v);
     if (py < M.t || py > M.t + ph) continue;
-    ctx.beginPath(); ctx.moveTo(M.l, py); ctx.lineTo(M.l - 5, py); ctx.stroke();
-    ctx.fillText(fmtTick(v), M.l - 8, py);
+    ctx.beginPath(); ctx.moveTo(M.l, py); ctx.lineTo(M.l - fpx(5), py); ctx.stroke();
+    ctx.fillText(figNum(fmtTick(v)), M.l - fpx(8), py);
   }
 
   // axis labels — the source id is already in the dialog header, so the plot
-  // carries no title of its own
-  ctx.fillStyle = THEME.muted;
-  drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - 14, 14, 'center');
+  // carries no title of its own (a figure caption is the paper's job). The
+  // magnitude axis is named for its column on screen, where the sidebar and
+  // the tooltips use the same word, and for the band it actually is on paper.
+  ctx.fillStyle = paper ? THEME.text : THEME.muted;
+  drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - fpx(14), labelFs, 'center');
   ctx.save();
-  ctx.translate(18, M.t + ph / 2); ctx.rotate(-Math.PI / 2);
-  drawMathText(ctx, LBL_GMAG, 0, 0, 14, 'center');
+  ctx.translate(fpx(18), M.t + ph / 2); ctx.rotate(-Math.PI / 2);
+  drawMathText(ctx, paper ? LBL_GMAG_PRINT : LBL_GMAG, 0, 0, labelFs, 'center');
   ctx.restore();
 
   // pixel positions of everything drawn, so the legend can avoid them
@@ -4179,7 +4374,7 @@ function drawCMD(d) {
   ctx.beginPath(); ctx.rect(M.l, M.t, pw, ph); ctx.clip();
 
   const errBar = (x, y, xe, ye, color, alpha) => {
-    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = 1;
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = fpx(1);
     ctx.beginPath();
     ctx.moveTo(X(x - xe), Y(y)); ctx.lineTo(X(x + xe), Y(y));
     ctx.moveTo(X(x), Y(y - ye)); ctx.lineTo(X(x), Y(y + ye));
@@ -4191,9 +4386,9 @@ function drawCMD(d) {
   for (let i = 0; i < d.snrBad.x.length; i++) {
     const x = d.snrBad.x[i], y = d.snrBad.y[i];
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-    errBar(x, y, d.snrBad.xe[i] || 0, d.snrBad.ye[i] || 0, '#8b949e', 0.3);
-    ctx.globalAlpha = 0.35;
-    drawCMDMarker(ctx, X(x), Y(y), 'cross', '#8b949e', 4.5);
+    errBar(x, y, d.snrBad.xe[i] || 0, d.snrBad.ye[i] || 0, CMD_INK.snr, CMD_INK.snrBarAlpha);
+    ctx.globalAlpha = CMD_INK.snrMarkAlpha;
+    drawCMDMarker(ctx, X(x), Y(y), 'cross', CMD_INK.snr, fpx(4.5));
     ctx.globalAlpha = 1;
     occupied.push([X(x), Y(y)]);
   }
@@ -4210,8 +4405,8 @@ function drawCMD(d) {
   }
   // fit line over the used points, red if negative slope, blue if positive
   const fx0 = Math.min(...d.usedX), fx1 = Math.max(...d.usedX);
-  ctx.strokeStyle = d.m < 0 ? '#f85149' : '#58a6ff';
-  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.strokeStyle = d.m < 0 ? CMD_INK.fitNeg : CMD_INK.fitPos;
+  ctx.lineWidth = fpx(2); ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(X(fx0), Y(d.m * fx0 + d.b));
   ctx.lineTo(X(fx1), Y(d.m * fx1 + d.b));
@@ -4219,29 +4414,34 @@ function drawCMD(d) {
   // gold star at mean of used points
   const mkx = d.usedX.reduce((s, v) => s + v, 0) / d.usedX.length;
   const mky = d.usedY.reduce((s, v) => s + v, 0) / d.usedY.length;
-  drawStar(ctx, X(mkx), Y(mky), 11, '#ffd700', THEME.muted);
+  drawStar(ctx, X(mkx), Y(mky), fpx(11), CMD_INK.meanStar, paper ? THEME.text : THEME.muted);
   occupied.push([X(mkx), Y(mky)]);
   ctx.restore();
 
   // slope box (top-left, like the skyblue bbox)
-  ctx.font = '600 14px "IBM Plex Sans", sans-serif';
-  const slopeTxt = `m = ${d.m.toFixed(2)}`;
+  const slopeFs = fpx(14), slopeH = fpx(28), slopePad = fpx(12);
+  ctx.font = `600 ${slopeFs}px "IBM Plex Sans", sans-serif`;
+  const slopeTxt = figNum(`m = ${d.m.toFixed(2)}`);
   const tw = ctx.measureText(slopeTxt).width;
-  ctx.fillStyle = 'rgba(135,206,235,0.25)';
-  ctx.strokeStyle = 'rgba(135,206,235,0.6)';
-  roundRect(ctx, M.l + 12, M.t + 12, tw + 20, 28, 7);
+  ctx.lineWidth = fpx(1);
+  ctx.fillStyle = CMD_INK.slopeFill;
+  ctx.strokeStyle = CMD_INK.slopeEdge;
+  roundRect(ctx, M.l + slopePad, M.t + slopePad, tw + fpx(20), slopeH, fpx(7));
   ctx.fill(); ctx.stroke();
   ctx.fillStyle = THEME.text;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(slopeTxt, M.l + 22, M.t + 26);
+  ctx.fillText(slopeTxt, M.l + slopePad + fpx(10), M.t + slopePad + slopeH / 2);
   // block the legend from landing on the slope box
   for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
-    occupied.push([M.l + 12 + fx * (tw + 20), M.t + 12 + fy * 28]);
+    occupied.push([M.l + slopePad + fx * (tw + fpx(20)), M.t + slopePad + fy * slopeH]);
   }
   // ...and from landing under the floating X/Y zoom buttons overlaid on the
-  // plot's top-right corner (.zoom-overlay-cmd: top 28px, right 28px, ~70×56 px)
-  for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
-    occupied.push([W - 104 + fx * 82, 22 + fy * 68]);
+  // plot's top-right corner (.zoom-overlay-cmd: top 28px, right 28px, ~70×56 px).
+  // Those are UI, not figure: on paper that corner is free real estate.
+  if (!paper) {
+    for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
+      occupied.push([W - 104 + fx * 82, 22 + fy * 68]);
+    }
   }
 
   // legend: every rank present, placed where the fewest points sit
@@ -4254,14 +4454,15 @@ function drawCMD(d) {
     }
   }
   if (d.snrBad.x.length) {
-    items.push({ marker: 'cross', color: '#8b949e', label: `SNR rejected (${d.snrBad.x.length})` });
+    items.push({ marker: 'cross', color: CMD_INK.snr, label: `SNR rejected (${d.snrBad.x.length})` });
   }
-  items.push({ marker: 'meanstar', color: '#ffd700', label: 'mean of used points' });
+  items.push({ marker: 'meanstar', color: CMD_INK.meanStar, label: 'mean of used points' });
 
-  ctx.font = '12px "IBM Plex Sans", sans-serif';
-  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + 38;
-  const lh = items.length * 20 + 12;
-  const pad = 12;
+  const legFs = fpx(12), rowH = fpx(20);
+  ctx.font = `${legFs}px "IBM Plex Sans", sans-serif`;
+  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + fpx(38);
+  const lh = items.length * rowH + fpx(12);
+  const pad = fpx(12);
   const candidates = [
     [M.l + pw - lw - pad, M.t + pad],            // top-right
     [M.l + pad, M.t + pad],                      // top-left
@@ -4276,26 +4477,27 @@ function drawCMD(d) {
   for (const [cxp, cyp] of candidates) {
     let count = 0;
     for (const [px, py] of occupied) {
-      if (px >= cxp - 8 && px <= cxp + lw + 8 && py >= cyp - 8 && py <= cyp + lh + 8) count++;
+      if (px >= cxp - pad && px <= cxp + lw + pad && py >= cyp - pad && py <= cyp + lh + pad) count++;
     }
     if (count < bestCount) { bestCount = count; lx = cxp; ly = cyp; }
     if (count === 0) break;   // earlier candidates are preferred on ties
   }
 
-  ctx.fillStyle = 'rgba(13,17,23,0.85)';
+  ctx.lineWidth = fpx(1);
+  ctx.fillStyle = CMD_INK.legendFill;
   ctx.strokeStyle = THEME.border;
-  roundRect(ctx, lx, ly, lw, lh, 7);
+  roundRect(ctx, lx, ly, lw, lh, fpx(7));
   ctx.fill(); ctx.stroke();
   items.forEach((it, i) => {
-    const cy = ly + 16 + i * 20, cx = lx + 16;
+    const cy = ly + fpx(16) + i * rowH, cx = lx + fpx(16);
     if (it.marker === 'meanstar') {
-      drawStar(ctx, cx, cy, 6, '#ffd700', THEME.muted);
+      drawStar(ctx, cx, cy, fpx(6), it.color, paper ? THEME.text : THEME.muted);
     } else {
-      drawCMDMarker(ctx, cx, cy, it.marker, it.color, 4.5);
+      drawCMDMarker(ctx, cx, cy, it.marker, it.color, fpx(4.5));
     }
     ctx.fillStyle = THEME.text;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(it.label, lx + 30, cy);
+    ctx.fillText(it.label, lx + fpx(30), cy);
   });
 }
 
@@ -4311,7 +4513,7 @@ function drawStar(ctx, cx, cy, r, fill, stroke) {
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.strokeStyle = stroke;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = fpx(1);
   ctx.fill(); ctx.stroke();
   ctx.restore();
 }
@@ -4427,6 +4629,18 @@ const PHASE_COLORS = {
   color: '#cfc0e8',     // soft lavender (BP−RP)
   peak: '#ead9a6',      // peak markers & period annotations
 };
+/* The same five on white paper. Pastels are what a dark panel wants and what
+   paper cannot use at all — a mint 1 px light curve on white is a rumor — so
+   each becomes the deep, saturated member of its hue: the band identities and
+   their mapping to the panel titles survive, and the four series stay distinct
+   both in color and, since the hues differ in lightness too, in grayscale. */
+const PHASE_COLORS_PRINT = {
+  G: '#1b7a4b',         // deep green
+  BP: '#1f5fa8',        // deep blue
+  RP: '#b03a2e',        // deep coral/red
+  color: '#6b3fa0',     // deep violet (BP−RP)
+  peak: '#8a6d1f',      // dark gold, still clearly the annotation color
+};
 
 // pull one band's (time, mag, magErr) epochs out of the clipped table
 function extractSeries(c, tCol, mCol, eCol, snrCol) {
@@ -4537,58 +4751,84 @@ const fmtPeriod = P => `${P < 1 ? P.toFixed(4) : P.toFixed(3)} d`;
 
 /* ---- small panel plotting helpers for the 4×2 grid ---- */
 function phasePanel(ctx, r, xlim, ylim, opts = {}) {
+  const paper = figPrint();
   ctx.fillStyle = THEME.panelAlt;
   ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.lineWidth = fpx(1);
   ctx.strokeStyle = THEME.border;
   ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
   const X = v => r.x + (v - xlim[0]) / (xlim[1] - xlim[0]) * r.w;
   const Y = v => opts.invertY
     ? r.y + (v - ylim[0]) / (ylim[1] - ylim[0]) * r.h
     : r.y + (1 - (v - ylim[0]) / (ylim[1] - ylim[0])) * r.h;
-  ctx.font = '10px "IBM Plex Sans", sans-serif';
-  ctx.fillStyle = THEME.muted;
+  // on paper the tick VALUES also get tick MARKS: eight small panels of bare
+  // numbers read as a table of figures, and the marks are what tie each number
+  // back to its position on the axis
+  const tickLen = fpx(4);
+  ctx.font = `${fpx(10)}px "IBM Plex Sans", sans-serif`;
+  ctx.fillStyle = paper ? THEME.text : THEME.muted;
+  ctx.strokeStyle = THEME.border;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const v of niceTicks(xlim[0], xlim[1], 5)) {
     const px = X(v);
     if (px < r.x - 0.5 || px > r.x + r.w + 0.5) continue;
-    ctx.fillText(fmtTick(v), px, r.y + r.h + 4);
+    if (paper) {
+      ctx.beginPath(); ctx.moveTo(px, r.y + r.h); ctx.lineTo(px, r.y + r.h + tickLen); ctx.stroke();
+    }
+    ctx.fillText(figNum(fmtTick(v)), px, r.y + r.h + fpx(4) + (paper ? tickLen : 0));
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (const v of niceTicks(ylim[0], ylim[1], 4)) {
     const py = Y(v);
     if (py < r.y - 0.5 || py > r.y + r.h + 0.5) continue;
-    ctx.fillText(fmtTick(v), r.x - 5, py);
+    if (paper) {
+      ctx.beginPath(); ctx.moveTo(r.x, py); ctx.lineTo(r.x - tickLen, py); ctx.stroke();
+    }
+    ctx.fillText(figNum(fmtTick(v)), r.x - fpx(5) - (paper ? tickLen : 0), py);
   }
   if (opts.title) {
-    ctx.font = '600 12px "IBM Plex Sans", sans-serif';
+    ctx.font = `600 ${fpx(12)}px "IBM Plex Sans", sans-serif`;
     ctx.fillStyle = opts.titleColor || THEME.text;
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText(opts.title, r.x + 2, r.y - 5);
+    ctx.fillText(opts.title, r.x + fpx(2), r.y - fpx(5));
   }
   if (opts.note) {
-    ctx.font = '11px "IBM Plex Sans", sans-serif';
+    ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
     ctx.fillStyle = PHASE_COLORS.peak;
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-    ctx.fillText(opts.note, r.x + r.w - 2, r.y - 5);
+    ctx.fillText(opts.note, r.x + r.w - fpx(2), r.y - fpx(5));
   }
   if (opts.xlabel) {
-    ctx.font = '11px "IBM Plex Sans", sans-serif';
-    ctx.fillStyle = THEME.muted;
+    ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
+    ctx.fillStyle = paper ? THEME.text : THEME.muted;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(opts.xlabel, r.x + r.w / 2, r.y + r.h + 17);
+    ctx.fillText(opts.xlabel, r.x + r.w / 2, r.y + r.h + fpx(paper ? 24 : 17));
+  }
+  /* Y-axis titles exist on paper only. On screen every panel is captioned
+     above and the 52 px gutter has no room for one; in a figure, an axis
+     without a quantity on it is the reader's problem, not the app's. */
+  if (paper && opts.ylabel) {
+    ctx.save();
+    ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
+    ctx.fillStyle = THEME.text;
+    ctx.translate(r.x - fpx(48), r.y + r.h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(opts.ylabel, 0, 0);
+    ctx.restore();
   }
   return [X, Y];
 }
 
 function emptyPhasePanel(ctx, r, title, msg) {
   phasePanel(ctx, r, [0, 1], [0, 1], { title });
-  ctx.font = '12px "IBM Plex Sans", sans-serif';
+  ctx.font = `${fpx(12)}px "IBM Plex Sans", sans-serif`;
   ctx.fillStyle = THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(msg, r.x + r.w / 2, r.y + r.h / 2);
 }
 
-function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel, key) {
+function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel, key, ylabel) {
   const pmax = Math.max(power[argmaxArr(power)], 1e-6);
   let xlim = [0, freqs[freqs.length - 1]];
   let ylim = [0, pmax * 1.12];
@@ -4597,7 +4837,7 @@ function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel,
   if (key) panelRects.phase.push({ key, r, xlim, ylim, invertY: false });
   const P = 1 / freqs[peakI];
   const [X, Y] = phasePanel(ctx, r, xlim, ylim,
-    { title, titleColor: color, note: `P = ${fmtPeriod(P)}`, xlabel });
+    { title, titleColor: color, note: `P = ${fmtPeriod(P)}`, xlabel, ylabel });
   // per-pixel max decimation (across the visible x-range) keeps narrow peaks visible
   const bins = new Float64Array(Math.max(2, Math.ceil(r.w)));
   const span = xlim[1] - xlim[0];
@@ -4610,7 +4850,7 @@ function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel,
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = fpx(1);
   ctx.beginPath();
   for (let px = 0; px < bins.length; px++) {
     const x = r.x + px * (r.w / (bins.length - 1)), y = Y(bins[px]);
@@ -4618,7 +4858,8 @@ function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel,
   }
   ctx.stroke();
   ctx.strokeStyle = PHASE_COLORS.peak;
-  ctx.setLineDash([4, 3]);
+  ctx.lineWidth = fpx(1.2);
+  ctx.setLineDash([fpx(4), fpx(3)]);
   ctx.beginPath();
   ctx.moveTo(X(freqs[peakI]), r.y);
   ctx.lineTo(X(freqs[peakI]), r.y + r.h);
@@ -4639,27 +4880,32 @@ function drawFoldedPanel(ctx, r, s, period, color, title, opts = {}) {
   if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
   if (opts.key) panelRects.phase.push({ key: opts.key, r, xlim, ylim, invertY: !!opts.invertY });
   const [X, Y] = phasePanel(ctx, r, xlim, ylim,
-    { title, titleColor: color, invertY: opts.invertY, xlabel: opts.xlabel, note: opts.note });
+    { title, titleColor: color, invertY: opts.invertY, xlabel: opts.xlabel,
+      ylabel: opts.ylabel, note: opts.note });
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+  // error bars carry less of the ink budget on white than they do on a dark
+  // panel, where 40 % of a pastel is already a solid-looking line
+  const barAlpha = figPrint() ? 0.55 : 0.4;
   // plot two phase cycles so the shape is easy to read
   for (const off of [0, 1]) {
     for (let i = 0; i < s.t.length; i++) {
       const ph = ((s.t[i] - t0) / period) % 1;
       const px = X(ph + off);
-      ctx.strokeStyle = color; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
+      ctx.strokeStyle = color; ctx.globalAlpha = barAlpha; ctx.lineWidth = fpx(1);
       ctx.beginPath();
       ctx.moveTo(px, Y(s.m[i] - s.e[i]));
       ctx.lineTo(px, Y(s.m[i] + s.e[i]));
       ctx.stroke();
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(px, Y(s.m[i]), 2.5, 0, 2 * Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, Y(s.m[i]), fpx(2.5), 0, 2 * Math.PI); ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
   ctx.strokeStyle = THEME.border;
-  ctx.setLineDash([3, 3]);
+  ctx.lineWidth = fpx(1);
+  ctx.setLineDash([fpx(3), fpx(3)]);
   ctx.beginPath(); ctx.moveTo(X(1), r.y); ctx.lineTo(X(1), r.y + r.h); ctx.stroke();
   ctx.restore();
 }
@@ -4725,16 +4971,16 @@ function drawPhase() {
   const xf = f !== 1 ? ` (×${f})` : '';
 
   // ---- layout: 4 rows × 2 columns ----
-  const dpr = window.devicePixelRatio || 1;
-  const W = phaseCanvas.clientWidth || 900, H = phaseCanvas.clientHeight || 780;
-  phaseCanvas.width = Math.round(W * dpr);
-  phaseCanvas.height = Math.round(H * dpr);
-  const ctx = phaseCanvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const { ctx, W, H } = figSurface(phaseCanvas, 900, 780);
+  const paper = figPrint();
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
-  const mL = 52, mR = 16, gapX = 64, topPad = 34, rowGap = 48, botPad = 36, rows = 4;
+  // the paper gutters are wider than a straight scale-up: each panel gains a
+  // rotated y-axis title, and the bottom row an x-axis title under taller ticks
+  const mL = fpx(paper ? 84 : 52), mR = fpx(16);
+  const gapX = fpx(paper ? 104 : 64);
+  const topPad = fpx(34), rowGap = fpx(48), botPad = fpx(paper ? 56 : 36), rows = 4;
   const colW = (W - mL - mR - gapX) / 2;
   const rowH = (H - topPad - botPad - rowGap * (rows - 1)) / rows;
   const rectAt = (row, col) => ({
@@ -4742,14 +4988,25 @@ function drawPhase() {
     y: topPad + row * (rowH + rowGap),
     w: colW, h: rowH,
   });
+  /* Each column shares one x quantity all the way down — frequency on the left,
+     phase on the right — so only the bottom panel of a column is labelled, and
+     the rows in between stay free of a caption sitting on the next title. The
+     y quantity does change from row to row (power, then magnitude), so every
+     panel carries its own y title in the figure. */
 
   panelRects.phase = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
   pd.bands.forEach((b, row) => {
+    // resolve the band's color now rather than trusting the one computePhase()
+    // captured: the paper palette is swapped in after the periodograms are
+    // cached, and a figure drawn from the cache would come out in pastels
+    const bc = PHASE_COLORS[b.label] || b.color;
     if (b.power) {
-      drawPeriodogramPanel(ctx, rectAt(row, 0), pd.freqs, b.power, b.peakI, b.color,
-        `${b.label} periodogram (${b.s.t.length} epochs)`, undefined, `pg-${b.label}`);
-      drawFoldedPanel(ctx, rectAt(row, 1), b.s, b.period * f, b.color,
-        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`, { invertY: true, key: `fold-${b.label}` });
+      drawPeriodogramPanel(ctx, rectAt(row, 0), pd.freqs, b.power, b.peakI, bc,
+        `${b.label} periodogram (${b.s.t.length} epochs)`,
+        undefined, `pg-${b.label}`, 'GLS power');
+      drawFoldedPanel(ctx, rectAt(row, 1), b.s, b.period * f, bc,
+        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`,
+        { invertY: true, key: `fold-${b.label}`, ylabel: `${b.label} [mag]` });
     } else {
       emptyPhasePanel(ctx, rectAt(row, 0), `${b.label} periodogram`,
         `not enough epochs (${b.s.t.length})`);
@@ -4758,10 +5015,12 @@ function drawPhase() {
   });
 
   drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.color,
-    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]', 'pg-comb');
+    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]', 'pg-comb',
+    'normalized power');
   if (d.color.t.length >= 3) {
     drawFoldedPanel(ctx, rectAt(3, 1), d.color, pd.combPeriod * f, PHASE_COLORS.color,
-      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`, { invertY: false, xlabel: 'phase', key: 'fold-color' });
+      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`,
+      { invertY: false, xlabel: 'phase', key: 'fold-color', ylabel: 'BP − RP [mag]' });
   } else {
     emptyPhasePanel(ctx, rectAt(3, 1), 'BP−RP folded', 'not enough simultaneous BP/RP epochs');
   }
@@ -4813,10 +5072,9 @@ phaseModal.addEventListener('click', ev => {
   if (ev.target === phaseModal && Date.now() - panelDragEnd > 200) closeModal('phase-modal');
 });
 $('phase-png-btn').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = phaseCanvas.toDataURL('image/png');
-  a.download = (lastEpoch ? `gaia_dr3_${lastEpoch.id}_phase` : 'phase_analysis') + '.png';
-  a.click();
+  if (!phaseData || !lastEpoch) return;
+  saveDialogFigure($('phase-png-btn'), phaseCanvas, drawPhase,
+    (lastEpoch ? `gaia_dr3_${lastEpoch.id}_phase` : 'phase_analysis') + '.png', $('phase-status'));
 });
 // harmonic re-folds: GLS often locks onto half (or twice) the true period,
 // e.g. eclipsing binaries — these re-fold instantly from the cached periodograms
@@ -4917,16 +5175,15 @@ function drawMEP() {
   const tpad = 0.02 * (baseline || 1);
   tmin -= tpad; tmax += tpad;
 
-  const dpr = window.devicePixelRatio || 1;
-  const W = mepCanvas.clientWidth || 900, H = mepCanvas.clientHeight || 720;
-  mepCanvas.width = Math.round(W * dpr);
-  mepCanvas.height = Math.round(H * dpr);
-  const ctx = mepCanvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const { ctx, W, H } = figSurface(mepCanvas, 900, 720);
+  const paper = figPrint();
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
-  const mL = 64, mR = 20, topPad = 34, rowGap = 46, botPad = 42, n = rows.length;
+  // as in drawPhase: on paper the left gutter also holds a rotated y-axis
+  // title and the bottom one an x-axis title under taller ticks
+  const mL = fpx(paper ? 96 : 64), mR = fpx(20);
+  const topPad = fpx(34), rowGap = fpx(46), botPad = fpx(paper ? 62 : 42), n = rows.length;
   const rowH = (H - topPad - botPad - rowGap * (n - 1)) / n;
 
   panelRects.mep = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
@@ -4950,20 +5207,25 @@ function drawMEP() {
       title: `${row.label} (${row.s.t.length} epochs)`,
       titleColor: row.color,
       invertY: row.invertY,
+      // the rows share one time axis, so only the bottom panel is labelled —
+      // on paper as on screen. The y quantity does change row to row, so each
+      // panel gets its own y title in the figure (drawn only on paper).
       xlabel: i === n - 1 ? 'time [JD − 2455197.5, days]' : undefined,
+      ylabel: row.label === 'BP−RP' ? 'BP − RP [mag]' : `${row.label} [mag]`,
     });
     ctx.save();
     ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    const barAlpha = paper ? 0.55 : 0.4;
     for (let k = 0; k < row.s.t.length; k++) {
       const px = X(row.s.t[k]);
-      ctx.strokeStyle = row.color; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
+      ctx.strokeStyle = row.color; ctx.globalAlpha = barAlpha; ctx.lineWidth = fpx(1);
       ctx.beginPath();
       ctx.moveTo(px, Y(row.s.m[k] - row.s.e[k]));
       ctx.lineTo(px, Y(row.s.m[k] + row.s.e[k]));
       ctx.stroke();
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = row.color;
-      ctx.beginPath(); ctx.arc(px, Y(row.s.m[k]), 2.5, 0, 2 * Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, Y(row.s.m[k]), fpx(2.5), 0, 2 * Math.PI); ctx.fill();
     }
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -5001,10 +5263,9 @@ mepModal.addEventListener('click', ev => {
   if (ev.target === mepModal && Date.now() - panelDragEnd > 200) closeModal('mep-modal');
 });
 $('mep-png-btn').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = mepCanvas.toDataURL('image/png');
-  a.download = (lastEpoch ? `gaia_dr3_${lastEpoch.id}_mep` : 'light_curves') + '.png';
-  a.click();
+  if (!lastEpoch) return;
+  saveDialogFigure($('mep-png-btn'), mepCanvas, drawMEP,
+    (lastEpoch ? `gaia_dr3_${lastEpoch.id}_mep` : 'light_curves') + '.png', $('mep-status'));
 });
 
 /* ---------------- Color legend bar ---------------- */

@@ -38,8 +38,7 @@
     },
     "files": [
       "main.js",
-      "index.html",
-      "lists.zip"
+      "index.html"
     ]
   },
   "repository": {
@@ -59,7 +58,6 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "extract-zip": "^2.0.1",
     "yauzl": "^2.10.0"
   }
 }

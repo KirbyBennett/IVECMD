@@ -30,7 +30,7 @@ An interactive variability-encoded CMD with trajectories mapped as lines. Toggle
 ## Quickstart
 
 ### Downloading the App (Recommended)
-Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo as when you run the .dmg it will download the file for you. **NOTE:** Currently this is unsupported but it will come in further updates once the data is published.
+Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo — the first time you run the app it fetches them for you.
 
 1. Navigate to the "Releases" tab on the right side of the screen.
 2. Find the release that you want to download and click the "iVECMD-<version-#>-arm64.dmg" to download the app.
@@ -44,10 +44,32 @@ Downloading the .dmg version of the app is less work in the long run. The setup 
 
 6. Run the app on your machine and enjoy exploring the Gaia CMD!
 
+#### First launch
+
+The first time the app opens it has no data yet, so it downloads `lists.zip`
+(about 1.75 GB) from Zenodo, checks it against the record's MD5 and unpacks it
+to roughly 4 GB. Expect a couple of minutes on a fast connection; a progress bar
+shows the download, the check and the extraction. That only happens once — every
+launch after that goes straight to the diagram.
+
+- **Quitting mid-download is safe.** The next launch resumes from where it
+  stopped rather than starting over, and dropped connections are retried
+  automatically.
+- **The archive is deleted after unpacking**, so only the ~4 GB of data tables
+  stay on disk.
+- **Already have `lists.zip`?** Put it in your **Downloads** folder before
+  opening the app and it will use that instead of downloading anything. A copy
+  you supplied is left in place.
+- If anything goes wrong the app says why and offers **Try again**.
+
+Data source: [10.5072/zenodo.597047](https://handle.test.datacite.org/10.5072/zenodo.597047).
+
 ### Pulling Github repo
 This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, there are more steps to get the code up and running.
 
-1. Go to the Zenodo page and download the .
+1. Go to the [Zenodo record](https://handle.test.datacite.org/10.5072/zenodo.597047),
+   download `lists.zip` and unzip it next to `index.html`. (The browser version
+   has no downloader of its own — that lives in the Electron app.)
 2. Open a terminal and run:
    ```bash
    python3 -m http.server 8000

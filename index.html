@@ -4723,25 +4723,24 @@ function lombScargle(t, y, err, freqs) {
 // With the multi-year Gaia baseline the peaks are ~1/T wide, so the grid is
 // heavily oversampled (30 samples across a peak). The standard grid extends to
 // 1-hour periods; the optional high-res grid (toggled by the "high-res freq grid"
-// checkbox) extends to 5-minute periods at the same density — that's ~12× more
-// frequencies, so it's opt-in and unnecessary for most systems.
+// checkbox) extends to 5-minute periods AND samples each peak more finely (50×) —
+// that's ~20× more frequencies, so it's opt-in and unnecessary for most systems.
 const PHASE_FMAX_DEFAULT = 24;        // cycles/day → shortest period = 1 hour
 const PHASE_FMAX_HIRES   = 288;       // cycles/day → shortest period = 5 minutes (1/288 d)
-const PHASE_OVERSAMPLE   = 30;        // samples across the natural peak width 1/T
-const PHASE_NF_CAP_DEFAULT = 1500000;
-const PHASE_NF_CAP_HIRES   = 12000000;
+const PHASE_OVERSAMPLE       = 30;    // samples across the natural peak width 1/T
+const PHASE_OVERSAMPLE_HIRES = 50;    // the high-res grid resolves each peak more finely
 let phaseHighRes = false;             // high-sampling 5-min grid on/off (default off)
 function phaseFmax() { return phaseHighRes ? PHASE_FMAX_HIRES : PHASE_FMAX_DEFAULT; }
+function phaseOversample() { return phaseHighRes ? PHASE_OVERSAMPLE_HIRES : PHASE_OVERSAMPLE; }
 function buildFreqGrid(tAll) {
   const fmax = phaseFmax();
-  // Reaching the 5-min floor at the full 30× oversampling needs ~fmax·OVERSAMPLE·T
-  // points — ~9M for a ~1000-day Gaia baseline — so the high-res cap is large; the
-  // standard cap stays modest since the 1-hour grid is 12× smaller.
-  const cap = phaseHighRes ? PHASE_NF_CAP_HIRES : PHASE_NF_CAP_DEFAULT;
+  // The grid is uncapped: whatever fmax·OVERSAMPLE·T asks for is what gets built, so
+  // the requested resolution is always realized. For a ~1000-day Gaia baseline that's
+  // ~700k points on the standard grid and ~14M on the high-res one.
   const T = Math.max(Math.max(...tAll) - Math.min(...tAll), 1);
   const fmin = 1 / T;
-  const df = 1 / (PHASE_OVERSAMPLE * T);
-  const nf = Math.min(Math.floor((fmax - fmin) / df), cap);
+  const df = 1 / (phaseOversample() * T);
+  const nf = Math.floor((fmax - fmin) / df);
   const freqs = new Float64Array(nf);
   for (let i = 0; i < nf; i++) freqs[i] = fmin + i * df;
   return freqs;
@@ -5034,7 +5033,7 @@ function drawPhase() {
     (f !== 1 ? ` | folds drawn at ×${f} the peak periods` : '') +
     ` | right-click a periodogram to re-fold its row at that period` +
     ` | grid: ${pd.freqs.length.toLocaleString()} frequencies up to ${phaseFmax()} c/d ` +
-    `(P ≥ ${phaseHighRes ? '5 min' : '1 h'}), ${PHASE_OVERSAMPLE}× oversampled` +
+    `(P ≥ ${phaseHighRes ? '5 min' : '1 h'}), ${phaseOversample()}× oversampled` +
     (phaseHighRes ? ' [high-res]' : '') +
     ` | ${PANEL_HINT}`;
 }

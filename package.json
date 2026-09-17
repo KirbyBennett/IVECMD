@@ -9,7 +9,7 @@
   },
   "build": {
     "appId": "com.kirbybennett.ivecmd",
-    "productName": "iVECMD",
+    "productName": "IVECMD",
     "icon": "AppIcon.icns",
     "asar": false,
     "mac": {
@@ -18,7 +18,7 @@
       "category": "public.app-category.utilities"
     },
     "dmg": {
-      "title": "iVECMD ${version}"
+      "title": "IVECMD ${version}"
     },
     "win": {
       "icon": "build/icon.ico",

@@ -1,4 +1,4 @@
-# iVECMD
+# IVECMD
 
 An interactive variability-encoded CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulsators, and further analysis tools are available once a line has been clicked on.
 
@@ -33,12 +33,12 @@ An interactive variability-encoded CMD with trajectories mapped as lines. Toggle
 Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo — the first time you run the app it fetches them for you.
 
 1. Navigate to the "Releases" tab on the right side of the screen.
-2. Find the release that you want to download and click the "iVECMD-<version-#>-arm64.dmg" to download the app.
+2. Find the release that you want to download and click the "IVECMD-<version-#>-arm64.dmg" to download the app.
 3. Open the .dmg file on you computer. Normally, this will end up in the downloads folder.
 4. Drag the app icon over to the applications folder.
 5. Open a terminal and run this command to allow the app to run on your machine.
   ```
-  xattr -dr com.apple.quarantine /Applications/iVECMD.app
+  xattr -dr com.apple.quarantine /Applications/IVECMD.app
   ```
 **NOTE:** This step is necessary to run this code. When your Mac downloads this app, it puts it in  "quarantine". You must take it out of quarantine with this command (or any other that you choose) for the app to run.
 
@@ -102,7 +102,7 @@ Shows the stars within the selected region. Drag to pan, scroll to zoom around t
 
 ### Filters
 
-Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. A parallax-quality cut and a distance range are also available — the min and max distance share a single dual-thumb slider whose thumbs can't pass each other (an inline message appears if they touch). Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
+Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The **Slope** slider keeps lines within a range of steepness |ΔG/Δ(BP−RP)|, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes); its stops are spaced evenly in the line's angle, so the middle of the track is slope 1, and hovering a line in the Detail View shows its slope. A parallax-quality cut, a distance range and a galactic-latitude |b| range are also available. Each range is a single dual-thumb slider whose thumbs can't pass each other (an inline message appears if they touch). Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
 
 ### Highlight Lists
 

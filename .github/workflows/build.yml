@@ -23,7 +23,7 @@ jobs:
         run: npm install
 
       # Stamp the pushed tag (v1.2.3 → 1.2.3) into package.json so the built
-      # app and the "iVECMD ${version}" DMG are named after the tag, not the
+      # app and the "IVECMD ${version}" DMG are named after the tag, not the
       # hardcoded version committed in the repo.
       - name: Set version from tag
         run: npm pkg set version="${GITHUB_REF_NAME#v}"

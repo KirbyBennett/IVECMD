@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>iVECMD — Gaia Variability Dataset Viewer</title>
+<title>IVECMD — Gaia Variability Dataset Viewer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -533,7 +533,7 @@ input[type=range]::-moz-range-thumb {
   <!-- ================= Sidebar ================= -->
   <aside id="sidebar">
     <div>
-      <div class="title">iVECMD</div>
+      <div class="title">IVECMD</div>
     </div>
 
     <div class="card" id="status-card">
@@ -579,6 +579,14 @@ input[type=range]::-moz-range-thumb {
         <button id="dir-pos" title="Show only blue lines — stars that get bluer as they brighten (ρ &gt; 0)"><span style="color:#5e7ce2">●</span> Blue</button>
         <button id="dir-neg" title="Show only red lines — stars that get redder as they brighten (ρ &lt; 0)"><span style="color:#d65c5c">●</span> Red</button>
       </div>
+      <div class="field-label" id="slope-label" title="Cut on how steep each star's line is, |ΔG / Δ(BP−RP)|: 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. Slope direction above picks the sign.">Slope |ΔG/Δ(BP−RP)|: off</div>
+      <div class="dual-range" id="slope-range" title="Cut on how steep each star's line is, |ΔG / Δ(BP−RP)|: 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. Slope direction above picks the sign.">
+        <div class="track"></div>
+        <div class="track-fill" id="slope-fill"></div>
+        <input type="range" id="smin-slider" min="0" max="180" step="1" value="0">
+        <input type="range" id="smax-slider" min="0" max="180" step="1" value="180">
+      </div>
+      <div class="range-error" id="slope-error" hidden>Min and max slope are touching — they can't overlap.</div>
       <div class="field-label" id="sig-label">Significance: p ≤ 1e-4</div>
       <input type="range" id="sig-slider" min="0" max="10" step="1" value="4">
       <div class="field-label" id="rho-label">Min |ρ|: 0.00</div>
@@ -803,7 +811,7 @@ input[type=range]::-moz-range-thumb {
 <div class="modal-backdrop" id="help-modal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1">
     <div class="modal-header">
-      <h2 id="help-title">iVECMD Help</h2>
+      <h2 id="help-title">IVECMD Help</h2>
       <button class="small" id="help-close-x" title="Close the help dialog">✕</button>
     </div>
     <div class="modal-body">
@@ -813,7 +821,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
         <li><b>Plot style:</b> The Display card switches both plots between <b>Lines</b> (each star's variability segment) and <b>Points</b> (a single dot at each star's average color and magnitude from the input table). Points keep the same ρ color and significance opacity as the lines, and the thickness slider sets the dot size.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
-        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
+        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The <b>Slope</b> slider keeps lines within a range of steepness |ΔG/Δ(BP−RP)|, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes). Its stops are spaced evenly in the line's angle, so the middle of the track is slope 1; hover a line in the Detail View to read its slope. The other dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Saved Settings:</b> Once the Filters are dialed in, type a name and press <b>Save Current Settings</b> to keep that whole arrangement — Filters, the Display card, the catalog overlays, the plot-image options and the current view. Pick it from the list later and press <b>Load</b> to come straight back to it. <b>Set ★</b> marks one set as the startup configuration: it is applied automatically every time the app opens, and <b>Reset Filters</b> then returns to it instead of the factory values. <b>Export File… / Import File…</b> put the same thing in a <code>.json</code> file, for keeping several configurations beside a project or handing one to a collaborator. Custom ID lists travel along up to 20,000 IDs; above that only the on/off state is kept, and a catalog whose file is missing is reported and left off.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
@@ -1201,7 +1209,7 @@ function setMessage(text) { messageLabel.textContent = text; }
 
 // One app name everywhere; the window/tab title picks up the name of whichever
 // dataset is currently loaded (auto-fetch, browse, or drop).
-const APP_NAME = 'iVECMD';
+const APP_NAME = 'IVECMD';
 
 // The version shown in the window title comes from package.json — the same
 // field that names the built DMG, so there's nothing to keep in sync by hand.
@@ -1408,7 +1416,7 @@ const state = {
   pinned: [],                    // selected indices the filters would otherwise hide
   hover: -1,
   filter: { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: 10000,
-            minGlat: 0, maxGlat: 90 },
+            minGlat: 0, maxGlat: 90, minSlope: 0, maxSlope: 1000 },
   xColName: 'avg_B_R', yColName: 'avg_G',
 };
 // Distance (pc) slider span. minDist <= 0 means "no lower bound"; maxDist at the
@@ -1416,11 +1424,37 @@ const state = {
 const DIST_MAX = 10000;
 // Absolute galactic latitude |b| (deg) slider span; thumbs at 0 and 90 = off.
 const GLAT_MAX = 90;
+/* Line-slope slider. A star's line has slope |ΔG/Δ(BP−RP)| = delta_G/delta_B_R:
+   0 when only its color changes, ∞ when only its brightness does. On the RANKED
+   table every line's slope is finite and nonzero, running from ~0.001 to just
+   under 1000, with 97% of lines between 0.03 and 10 (0.3 and 10 under the
+   default filters). A linear track can't show that span, and a log one spends
+   most of its length on the near-empty tails, so the thumbs step through stops
+   spaced evenly in the line's ANGLE instead: 0.5° apart from flat (stop 0,
+   slope 0) to vertical (the last stop), with slope 1 in the middle — which
+   also puts the bulk of the catalog across the middle two thirds of the track.
+   Each stop's slope is rounded to 3 significant figures, and
+   that rounded number is both what the label shows and what the cut uses. The
+   vertical stop stands in for ∞ as SLOPE_MAX — larger than any slope in the
+   table — and, like a min thumb at 0, a max thumb parked there turns its side
+   of the cut off. */
+const SLOPE_STOP_DEG = 0.5;
+const SLOPE_NSTOPS = Math.round(90 / SLOPE_STOP_DEG);   // index of the vertical stop
+const SLOPE_MAX = 1000;
+const SLOPE_STOPS = Array.from({ length: SLOPE_NSTOPS + 1 }, (_, k) =>
+  k === 0 ? 0 : k === SLOPE_NSTOPS ? SLOPE_MAX
+    : parseFloat(Math.tan(k * SLOPE_STOP_DEG * Math.PI / 180).toPrecision(3)));
+// the stop nearest a slope value; round-trips every entry of SLOPE_STOPS
+function slopeStopIndex(v) {
+  const k = Math.round(Math.atan(Math.max(0, v)) * 180 / Math.PI / SLOPE_STOP_DEG);
+  return Math.min(SLOPE_NSTOPS, Math.max(0, k));
+}
+const fmtSlope = v => (v >= 1000 ? v.toFixed(0) : String(parseFloat(v.toPrecision(3))));
 // The filter values present when the app first loads. "Reset Filters" returns
 // every control to exactly these positions (NOT all-zero), so the slider knobs
 // land back where they started rather than fully wide open.
 const DEFAULT_FILTER = { dir: 'all', minLogP: 4, minAbsRho: 0, minPoe: 10, minDist: 0, maxDist: DIST_MAX,
-                         minGlat: 0, maxGlat: GLAT_MAX };
+                         minGlat: 0, maxGlat: GLAT_MAX, minSlope: 0, maxSlope: SLOPE_MAX };
 
 /* Equatorial (ICRS/J2000) → galactic latitude b, in degrees. North galactic
    pole at α = 192.85948°, δ = +27.12825°. Only b is needed here — the filter
@@ -1691,6 +1725,7 @@ function applyFilters() {
   const pMax = Math.pow(10, -f.minLogP);
   const minRho = f.minAbsRho, minPoe = f.minPoe, minDist = f.minDist, maxDist = f.maxDist;
   const minGlat = f.minGlat, maxGlat = f.maxGlat;
+  const minSlope = f.minSlope, maxSlope = f.maxSlope;
   const rset = slRestrictSet;   // catalog "show only" restriction, or null when off
   const n = state.coeff.length;
   // reuse the mask buffer across calls; only reallocate when the dataset changes
@@ -1706,6 +1741,12 @@ function applyFilters() {
     if (minRho > 0 && Math.abs(c) < minRho) continue;
     if (state.p[i] > pMax) continue;
     if (minPoe > 0 && !(state.poe[i] >= minPoe)) continue;
+    // steepness of the drawn line, |ΔG/Δ(BP−RP)| (segEnds tilts it by ρ's sign)
+    if (minSlope > 0 || maxSlope < SLOPE_MAX) {
+      const s = Math.abs(state.dG[i] / state.dBR[i]);   // ΔBP−RP = 0 → ∞
+      if (!(s >= minSlope)) continue;                   // NaN: a zero-length line has no slope
+      if (maxSlope < SLOPE_MAX && s > maxSlope) continue;
+    }
     // distance cut (parsecs), derived from parallax: distance = 1000 / parallax(mas)
     if (minDist > 0 || maxDist < DIST_MAX) {
       const plx = state.parallax[i];
@@ -2088,7 +2129,7 @@ function ensureOverviewCache() {
   const f = state.filter;
   const key = [overview.xlim, overview.ylim, state.invertY, r.w, r.h, dpr,
     f.dir, f.minLogP, f.minAbsRho, f.minPoe, f.minDist, f.maxDist, f.minGlat, f.maxGlat,
-    state.thickness, state.plotMode, state.visIdx.length, slSignature()].join('|');
+    f.minSlope, f.maxSlope, state.thickness, state.plotMode, state.visIdx.length, slSignature()].join('|');
   if (key === overviewCacheKey && overviewCache) return;
   // No deferral: any filter/display change re-bakes the cache on the very next
   // frame, so the overview tracks slider drags live (rAF-coalesced upstream).
@@ -2612,9 +2653,11 @@ dtCanvas.addEventListener('mousemove', ev => {
   if (close) {
     if (state.hover !== i) { state.hover = i; requestRedraw(); }
     const bV = state.glat[i];
+    const sV = Math.abs(state.dG[i] / state.dBR[i]);   // what the slope filter cuts on
     tooltip.innerHTML = `<span class="tt-id">Gaia DR3 ${state.ids[i]}</span><br>` +
       `ρ = ${state.coeff[i].toFixed(3)} &nbsp;|&nbsp; p = ${state.p[i].toExponential(2)}` +
-      (Number.isFinite(bV) ? ` &nbsp;|&nbsp; b = ${fmtGlat(bV)}` : '') + `<br>` +
+      (Number.isFinite(bV) ? ` &nbsp;|&nbsp; b = ${fmtGlat(bV)}` : '') +
+      (Number.isFinite(sV) ? ` &nbsp;|&nbsp; slope = ${fmtSlope(sV)}` : '') + `<br>` +
       `<span style="color:${THEME.muted}">click for epoch CMD</span>`;
     tooltip.style.display = 'block';
     tooltip.style.left = (ev.clientX + 14) + 'px';
@@ -3043,6 +3086,47 @@ $('bmax-slider').addEventListener('input', () => {
   scheduleFilters();
 });
 updateGlatUI();   // initial label + fill on load
+// Dual-thumb slope slider: same pattern once more, except the thumbs move
+// through the SLOPE_STOPS indices while state.filter keeps the slopes themselves.
+const SLOPE_GAP = 1;   // one stop
+// the markup's max is the number of stops, so SLOPE_STOP_DEG stays the one knob
+$('smin-slider').max = $('smax-slider').max = SLOPE_NSTOPS;
+$('smax-slider').value = SLOPE_NSTOPS;
+function updateSlopeUI() {
+  const lo = state.filter.minSlope, hi = state.filter.maxSlope;
+  const offLo = lo <= 0, offHi = hi >= SLOPE_MAX;
+  let txt;
+  if (offLo && offHi) txt = 'Slope |ΔG/Δ(BP−RP)|: off';
+  else if (offHi)     txt = `Slope: |ΔG/Δ(BP−RP)| ≥ ${fmtSlope(lo)}`;
+  else if (offLo)     txt = `Slope: |ΔG/Δ(BP−RP)| ≤ ${fmtSlope(hi)}`;
+  else                txt = `Slope: ${fmtSlope(lo)} ≤ |ΔG/Δ(BP−RP)| ≤ ${fmtSlope(hi)}`;
+  $('slope-label').textContent = txt;
+  const kLo = slopeStopIndex(lo), kHi = slopeStopIndex(hi);
+  const fill = $('slope-fill');
+  fill.style.left = (kLo / SLOPE_NSTOPS * 100) + '%';
+  fill.style.width = ((kHi - kLo) / SLOPE_NSTOPS * 100) + '%';
+}
+$('smin-slider').addEventListener('input', () => {
+  let lo = parseInt($('smin-slider').value, 10);
+  const hi = parseInt($('smax-slider').value, 10);
+  const touching = lo > hi - SLOPE_GAP;
+  if (touching) { lo = hi - SLOPE_GAP; $('smin-slider').value = lo; }
+  state.filter.minSlope = SLOPE_STOPS[lo];
+  $('slope-error').hidden = !touching;
+  updateSlopeUI();
+  scheduleFilters();
+});
+$('smax-slider').addEventListener('input', () => {
+  let hi = parseInt($('smax-slider').value, 10);
+  const lo = parseInt($('smin-slider').value, 10);
+  const touching = hi < lo + SLOPE_GAP;
+  if (touching) { hi = lo + SLOPE_GAP; $('smax-slider').value = hi; }
+  state.filter.maxSlope = SLOPE_STOPS[hi];
+  $('slope-error').hidden = !touching;
+  updateSlopeUI();
+  scheduleFilters();
+});
+updateSlopeUI();   // initial label + fill on load
 /* Push state.filter out to every control and readout in the Filters card.
    Both Reset Filters and loading a saved set go through here, so the knobs can
    never drift out of step with the values the plots are actually filtered on. */
@@ -3055,6 +3139,8 @@ function syncFilterUI() {
   $('dmax-slider').value = f.maxDist;
   $('bmin-slider').value = f.minGlat;
   $('bmax-slider').value = f.maxGlat;
+  $('smin-slider').value = slopeStopIndex(f.minSlope);
+  $('smax-slider').value = slopeStopIndex(f.maxSlope);
   $('sig-label').textContent = f.minLogP === 0
     ? 'Significance: all (any p)'
     : `Significance: p ≤ 1e-${f.minLogP}`;
@@ -3064,15 +3150,17 @@ function syncFilterUI() {
     : `Min parallax / error: ${f.minPoe}`;
   $('dist-error').hidden = true;
   $('glat-error').hidden = true;
+  $('slope-error').hidden = true;
   updateDistUI();
   updateGlatUI();
+  updateSlopeUI();
   for (const [id, d] of [['dir-all', 'all'], ['dir-pos', 'pos'], ['dir-neg', 'neg']]) {
     $(id).classList.toggle('active', d === f.dir);
   }
 }
 // Reset Filters: put every control back where it sits on first load
 // (significance 1e-4, |ρ| 0, parallax/error 10, distance off, galactic |b| off,
-// direction All) — or, once a saved set is marked ★, back to that instead.
+// slope off, direction All) — or, once a saved set is marked ★, back to that instead.
 function resetFilters() {
   const def = startupFilterValues();
   Object.assign(state.filter, def.filter);
@@ -5857,11 +5945,19 @@ function sanitizeFilter(raw) {
     // snap onto the slider's own step, so the knob and the label agree
     f[k] = parseFloat((Math.round(clamped / b.step) * b.step).toFixed(6));
   }
+  // the slope thumbs have no fixed step, so snap each slope onto its nearest
+  // stop and do the no-touching check below in stop indices
+  const slopeIdx = (v, dflt) => (Number.isFinite(Number(v)) ? slopeStopIndex(Number(v)) : dflt);
+  let sLo = slopeIdx(raw.minSlope, 0), sHi = slopeIdx(raw.maxSlope, SLOPE_NSTOPS);
   // the dual sliders may not cross or touch
   if (f.maxDist < f.minDist + DIST_GAP) f.maxDist = Math.min(DIST_MAX, f.minDist + DIST_GAP);
   if (f.minDist > f.maxDist - DIST_GAP) f.minDist = Math.max(0, f.maxDist - DIST_GAP);
   if (f.maxGlat < f.minGlat + GLAT_GAP) f.maxGlat = Math.min(GLAT_MAX, f.minGlat + GLAT_GAP);
   if (f.minGlat > f.maxGlat - GLAT_GAP) f.minGlat = Math.max(0, f.maxGlat - GLAT_GAP);
+  if (sHi < sLo + SLOPE_GAP) sHi = Math.min(SLOPE_NSTOPS, sLo + SLOPE_GAP);
+  if (sLo > sHi - SLOPE_GAP) sLo = Math.max(0, sHi - SLOPE_GAP);
+  f.minSlope = SLOPE_STOPS[sLo];
+  f.maxSlope = SLOPE_STOPS[sHi];
   return f;
 }
 // a stored {x:[lo,hi], y:[lo,hi]} pair, or null if it isn't a usable rectangle

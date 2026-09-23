@@ -579,8 +579,8 @@ input[type=range]::-moz-range-thumb {
         <button id="dir-pos" title="Show only blue lines — stars that get bluer as they brighten (ρ &gt; 0)"><span style="color:#5e7ce2">●</span> Blue</button>
         <button id="dir-neg" title="Show only red lines — stars that get redder as they brighten (ρ &lt; 0)"><span style="color:#d65c5c">●</span> Red</button>
       </div>
-      <div class="field-label" id="slope-label" title="Cut on how steep each star's line is, |ΔG / Δ(BP−RP)|: 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. Slope direction above picks the sign.">Slope |ΔG/Δ(BP−RP)|: off</div>
-      <div class="dual-range" id="slope-range" title="Cut on how steep each star's line is, |ΔG / Δ(BP−RP)|: 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. Slope direction above picks the sign.">
+      <div class="field-label" id="slope-label" title="Cut on how steep each star's line is, |m|: the slope of its least-squares fit of G against BP−RP (B-R_Slope in the data table). 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. The cut ignores the sign; Slope direction above picks blue or red lines.">Slope |m|: off</div>
+      <div class="dual-range" id="slope-range" title="Cut on how steep each star's line is, |m|: the slope of its least-squares fit of G against BP−RP (B-R_Slope in the data table). 0 is a flat line (only the color changes), ∞ a vertical one (only the brightness changes). The track is spaced evenly in the line's angle, so its middle is slope 1. The cut ignores the sign; Slope direction above picks blue or red lines.">
         <div class="track"></div>
         <div class="track-fill" id="slope-fill"></div>
         <input type="range" id="smin-slider" min="0" max="180" step="1" value="0">
@@ -773,10 +773,11 @@ input[type=range]::-moz-range-thumb {
       <div class="legend-bar" id="legend-bar"></div>
       <div class="legend-ticks"><span>−1 (reddening)</span><span>0</span><span>+1 (bluing)</span></div>
       <div class="muted" id="legend-desc" style="font-size:12px; line-height:1.5;">
-        Each line is one star. Color encodes the Spearman correlation between its
-        color and brightness across epochs; opacity scales with statistical
-        significance (−log<sub>10</sub> p). Bluing and reddening lines also tilt in
-        opposite directions, so the sign is readable without color.
+        Each line is one star, tilted to the slope of a straight-line fit of its
+        brightness against its color across epochs. Color encodes the Spearman
+        correlation between its color and brightness; opacity scales with statistical
+        significance (−log<sub>10</sub> p). Bluing and reddening lines tilt in
+        opposite directions, unless the fitted slope and ρ disagree in sign.
       </div>
     </div>
 
@@ -821,7 +822,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Detail View:</b> Shows the stars within the selected region. Drag to pan, scroll to zoom around the cursor, and use the slider to adjust line thickness.</li>
         <li><b>Plot style:</b> The Display card switches both plots between <b>Lines</b> (each star's variability segment) and <b>Points</b> (a single dot at each star's average color and magnitude from the input table). Points keep the same ρ color and significance opacity as the lines, and the thickness slider sets the dot size.</li>
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
-        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The <b>Slope</b> slider keeps lines within a range of steepness |ΔG/Δ(BP−RP)|, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes). Its stops are spaced evenly in the line's angle, so the middle of the track is slope 1; hover a line in the Detail View to read its slope. The other dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
+        <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The <b>Slope</b> slider keeps lines within a range of steepness |m|, the slope of each star's least-squares fit of G against BP−RP, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes). Its stops are spaced evenly in the line's angle, so the middle of the track is slope 1; hover a line in the Detail View to read its slope. The other dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Saved Settings:</b> Once the Filters are dialed in, type a name and press <b>Save Current Settings</b> to keep that whole arrangement — Filters, the Display card, the catalog overlays, the plot-image options and the current view. Pick it from the list later and press <b>Load</b> to come straight back to it. <b>Set ★</b> marks one set as the startup configuration: it is applied automatically every time the app opens, and <b>Reset Filters</b> then returns to it instead of the factory values. <b>Export File… / Import File…</b> put the same thing in a <code>.json</code> file, for keeping several configurations beside a project or handing one to a collaborator. Custom ID lists travel along up to 20,000 IDs; above that only the on/off state is kept, and a catalog whose file is missing is reported and left off.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
@@ -846,8 +847,9 @@ input[type=range]::-moz-range-thumb {
         Each line segment represents one star observed many times by ESA's
         <b>Gaia</b> space telescope. The horizontal axis is the star's color
         (G<sub>BP</sub>−G<sub>RP</sub>, blue→red), and the vertical axis is its absolute
-        brightness (GMAG). A star that varies traces a small path in this diagram:
-        the segment shows the direction and size of that path.
+        brightness (M<sub>G</sub>). A star that varies traces a small path in this diagram:
+        the segment is the straight line that best fits that path, drawn across
+        the range of color it covers.
       </p>
       <p>
         <b style="color:#6b8dd6">Blue lines</b> are stars that get <i>bluer</i> as they brighten;
@@ -1136,9 +1138,11 @@ function alphaBucket(a) {                // a ∈ [0.1,1] → 0..NA-1
 }
 // segment endpoints from the source's center + half-vector, written into `out`
 // (reused scratch) so we never allocate per line nor store 4 endpoint arrays.
+// Each line is the star's own least-squares fit (B-R_Slope, curve_fit of G
+// against BP−RP) drawn across its BP−RP range: the fit passes through the mean
+// point (avg_B_R, avg_G), which the pipeline takes over the same kept epochs.
 function segEnds(i, out) {
-  const dir = state.coeff[i] < 0 ? -1 : 1;   // ρ === 0 rows are dropped at load
-  const hdx = state.dBR[i] * 0.5 * dir, hdy = state.dG[i] * 0.5;
+  const hdx = state.dBR[i] * 0.5, hdy = state.slope[i] * hdx;
   const cx = state.xFull[i], cy = state.yFull[i];
   out[0] = cx - hdx; out[1] = cy - hdy;
   out[2] = cx + hdx; out[3] = cy + hdy;
@@ -1387,15 +1391,16 @@ function drawMathText(ctx, parts, x, y, size, align = 'center') {
   ctx.restore();
 }
 const LBL_BPRP = [{ t: 'G' }, { t: 'BP', sub: true }, { t: ' − ' }, { t: 'G' }, { t: 'RP', sub: true }];
-const LBL_GMAG = [{ t: 'GMAG' }];
-// the same axis for a figure, where the column name is nobody's business and
-// the quantity wants its band and its unit
-const LBL_GMAG_PRINT = [{ t: 'G' }, { t: ' [mag]' }];
+// absolute G magnitude, written M_G as on the Gaia Collaboration's HR diagrams
+const LBL_GMAG = [{ t: 'M' }, { t: 'G', sub: true }];
+// the same axis for a figure, where the quantity also wants its unit
+const LBL_GMAG_PRINT = [{ t: 'M' }, { t: 'G', sub: true }, { t: ' [mag]' }];
 
 /* ---------------- Application state ---------------- */
 const state = {
   ids: [], ra: null, dec: null,
-  coeff: null, p: null, dBR: null, dG: null,
+  coeff: null, p: null, dBR: null,
+  slope: null,                   // B-R_Slope: each line's fitted slope dG/d(BP−RP)
   xFull: null, yFull: null,      // segment centers (avg_B_R / avg_G)
   parallax: null, poe: null,     // parallax (mas) and parallax / parallax_error
   glat: null,                    // galactic latitude b (deg); NaN without RA/DEC
@@ -1424,15 +1429,17 @@ const state = {
 const DIST_MAX = 10000;
 // Absolute galactic latitude |b| (deg) slider span; thumbs at 0 and 90 = off.
 const GLAT_MAX = 90;
-/* Line-slope slider. A star's line has slope |ΔG/Δ(BP−RP)| = delta_G/delta_B_R:
-   0 when only its color changes, ∞ when only its brightness does. On the RANKED
-   table every line's slope is finite and nonzero, running from ~0.001 to just
-   under 1000, with 97% of lines between 0.03 and 10 (0.3 and 10 under the
-   default filters). A linear track can't show that span, and a log one spends
+/* Line-slope slider. A star's line is drawn at its fitted slope m (B-R_Slope,
+   see segEnds) and the slider cuts on |m|: 0 when only its color changes, ∞
+   when only its brightness does. On the RANKED table every loaded line's |m| is
+   finite and nonzero, from ~1e-9 up to ~670. Under the default filters 97% of
+   lines sit between 0.3 and 10 (median 1.2); with the significance cut off the
+   weak correlations pull the bulk much flatter (median 0.09, 72% between 0.03
+   and 10). A linear track can't show that span, and a log one spends
    most of its length on the near-empty tails, so the thumbs step through stops
    spaced evenly in the line's ANGLE instead: 0.5° apart from flat (stop 0,
    slope 0) to vertical (the last stop), with slope 1 in the middle — which
-   also puts the bulk of the catalog across the middle two thirds of the track.
+   also puts 90% of the default view across the middle two thirds of the track.
    Each stop's slope is rounded to 3 significant figures, and
    that rounded number is both what the label shows and what the cut uses. The
    vertical stop stands in for ∞ as SLOPE_MAX — larger than any slope in the
@@ -1449,7 +1456,7 @@ function slopeStopIndex(v) {
   const k = Math.round(Math.atan(Math.max(0, v)) * 180 / Math.PI / SLOPE_STOP_DEG);
   return Math.min(SLOPE_NSTOPS, Math.max(0, k));
 }
-const fmtSlope = v => (v >= 1000 ? v.toFixed(0) : String(parseFloat(v.toPrecision(3))));
+const fmtSlope = v => (Math.abs(v) >= 1000 ? v.toFixed(0) : String(parseFloat(v.toPrecision(3))));
 // The filter values present when the app first loads. "Reset Filters" returns
 // every control to exactly these positions (NOT all-zero), so the slider knobs
 // land back where they started rather than fully wide open.
@@ -1498,30 +1505,34 @@ function computeColumnMeta(headerLine) {
   const header = headerLine.trim().split(/\s+/);
   const col = {}; header.forEach((h, i) => col[h] = i);
 
-  const need = ['Spearman_coeff', 'Spearman_p', 'delta_B_R', 'delta_G', 'avg_B_R', 'avg_G'];
+  const need = ['Spearman_coeff', 'Spearman_p', 'delta_B_R', 'B-R_Slope', 'avg_B_R', 'avg_G'];
   for (const c of need) if (!(c in col)) throw new Error(`Missing column '${c}' in data table`);
 
+  // Slope_Significance, Slope_Error and B-R_Median_Error were written as
+  // Slope_Uncertainty, Slope_Certainty and Median_err_ratio before the pipeline
+  // fixed its labels; older tables, including the one on Zenodo, use those.
   const finiteCols = ['Spearman_coeff', 'Spearman_p', 'delta_B_R', 'delta_G', 'avg_B_R', 'avg_G',
-    'B-R_Scatter', 'B-R_Slope', 'Slope_Uncertainty', 'Slope_Certainty',
-    'Pearson_coeff', 'Pearson_p', 'std_B_R', 'std_G', 'B-R_Length', 'Median_err_ratio']
+    'B-R_Scatter', 'B-R_Slope', 'Slope_Significance', 'Slope_Error',
+    'Pearson_coeff', 'Pearson_p', 'std_B_R', 'std_G', 'B-R_Length', 'B-R_Median_Error',
+    'Slope_Uncertainty', 'Slope_Certainty', 'Median_err_ratio']
     .filter(c => c in col).map(c => col[c]);
 
   const idCol = col[['ID', 'SOURCE_ID', 'GaiaEDR3'].find(c => c in col)];
   const raCol = col['RA'], decCol = col['DEC'], lenCol = col['B-R_Length'];
   const scCol = col['Spearman_coeff'], spCol = col['Spearman_p'];
-  const dbrCol = col['delta_B_R'], dgCol = col['delta_G'];
+  const dbrCol = col['delta_B_R'], slopeCol = col['B-R_Slope'];
   const abrCol = col['avg_B_R'], agCol = col['avg_G'];
   const plxCol = col['parallax'], plxErrCol = col['parallax_error'];
   const hasPlx = plxCol !== undefined && plxErrCol !== undefined;
 
   // every column index we must read; the tokenizer stops after the largest one
-  const wanted = [idCol, raCol, decCol, scCol, spCol, dbrCol, dgCol, abrCol, agCol,
+  const wanted = [idCol, raCol, decCol, scCol, spCol, dbrCol, slopeCol, abrCol, agCol,
     lenCol, plxCol, plxErrCol, ...finiteCols].filter(v => v !== undefined);
   const maxCol = Math.max(...wanted);
   const read = new Array(maxCol + 1).fill(false);
   for (const c of wanted) read[c] = true;
 
-  return { idCol, raCol, decCol, lenCol, scCol, spCol, dbrCol, dgCol, abrCol, agCol,
+  return { idCol, raCol, decCol, lenCol, scCol, spCol, dbrCol, slopeCol, abrCol, agCol,
     plxCol, plxErrCol, hasPlx, finiteCols, read, maxCol };
 }
 
@@ -1561,7 +1572,7 @@ function makeRowAccumulator() {
       ids: new BigInt64Array(ACC_BLOCK),
       ra: new Float32Array(ACC_BLOCK), dec: new Float32Array(ACC_BLOCK),
       coeff: new Float32Array(ACC_BLOCK), p: new Float32Array(ACC_BLOCK),
-      dBR: new Float32Array(ACC_BLOCK), dG: new Float32Array(ACC_BLOCK),
+      dBR: new Float32Array(ACC_BLOCK), slope: new Float32Array(ACC_BLOCK),
       avgBR: new Float32Array(ACC_BLOCK), avgG: new Float32Array(ACC_BLOCK),
       parallax: new Float32Array(ACC_BLOCK), poe: new Float32Array(ACC_BLOCK),
     };
@@ -1569,10 +1580,10 @@ function makeRowAccumulator() {
   }
   return {
     count: () => m,
-    push(id, raV, decV, sc, pV, dbr, dg, abr, ag, plx, poeV) {
+    push(id, raV, decV, sc, pV, dbr, slope, abr, ag, plx, poeV) {
       if (off >= ACC_BLOCK) newBlock();
       cur.ids[off] = parseId(id); cur.ra[off] = raV; cur.dec[off] = decV; cur.coeff[off] = sc; cur.p[off] = pV;
-      cur.dBR[off] = dbr; cur.dG[off] = dg; cur.avgBR[off] = abr; cur.avgG[off] = ag;
+      cur.dBR[off] = dbr; cur.slope[off] = slope; cur.avgBR[off] = abr; cur.avgG[off] = ag;
       cur.parallax[off] = plx; cur.poe[off] = poeV;
       off++; m++;
     },
@@ -1593,7 +1604,7 @@ function makeRowAccumulator() {
         ids: join('ids', BigInt64Array),
         ra: join('ra', Float32Array), dec: join('dec', Float32Array),
         coeff: join('coeff', Float32Array), p: join('p', Float32Array),
-        dBR: join('dBR', Float32Array), dG: join('dG', Float32Array),
+        dBR: join('dBR', Float32Array), slope: join('slope', Float32Array),
         avgBR: join('avgBR', Float32Array), avgG: join('avgG', Float32Array),
         parallax: join('parallax', Float32Array), poe: join('poe', Float32Array),
       };
@@ -1616,7 +1627,7 @@ function acceptRow(meta, vals, acc) {
     meta.idCol !== undefined ? vals[meta.idCol] : String(acc.count()),  // parsed to BigInt in push()
     meta.raCol !== undefined ? +vals[meta.raCol] : NaN,
     meta.decCol !== undefined ? +vals[meta.decCol] : NaN,
-    sc, +vals[meta.spCol], +vals[meta.dbrCol], +vals[meta.dgCol],
+    sc, +vals[meta.spCol], +vals[meta.dbrCol], +vals[meta.slopeCol],
     +vals[meta.abrCol], +vals[meta.agCol], plx, poeV);
 }
 
@@ -1669,7 +1680,7 @@ function ingestSpearmanData(d) {
   state.ids = d.ids; state.ra = d.ra; state.dec = d.dec;
   state.coeff = d.coeff; state.p = d.p;       // already Float32Array from the parser
   state.xFull = d.avgBR; state.yFull = d.avgG;
-  state.dBR = d.dBR; state.dG = d.dG;
+  state.dBR = d.dBR; state.slope = d.slope;
   state.parallax = d.parallax; state.poe = d.poe;
 
   const n = state.coeff.length;
@@ -1741,10 +1752,10 @@ function applyFilters() {
     if (minRho > 0 && Math.abs(c) < minRho) continue;
     if (state.p[i] > pMax) continue;
     if (minPoe > 0 && !(state.poe[i] >= minPoe)) continue;
-    // steepness of the drawn line, |ΔG/Δ(BP−RP)| (segEnds tilts it by ρ's sign)
+    // steepness of the drawn line, |m| (the load keeps only finite B-R_Slope)
     if (minSlope > 0 || maxSlope < SLOPE_MAX) {
-      const s = Math.abs(state.dG[i] / state.dBR[i]);   // ΔBP−RP = 0 → ∞
-      if (!(s >= minSlope)) continue;                   // NaN: a zero-length line has no slope
+      const s = Math.abs(state.slope[i]);
+      if (s < minSlope) continue;
       if (maxSlope < SLOPE_MAX && s > maxSlope) continue;
     }
     // distance cut (parsecs), derived from parallax: distance = 1000 / parallax(mas)
@@ -2653,11 +2664,10 @@ dtCanvas.addEventListener('mousemove', ev => {
   if (close) {
     if (state.hover !== i) { state.hover = i; requestRedraw(); }
     const bV = state.glat[i];
-    const sV = Math.abs(state.dG[i] / state.dBR[i]);   // what the slope filter cuts on
     tooltip.innerHTML = `<span class="tt-id">Gaia DR3 ${state.ids[i]}</span><br>` +
       `ρ = ${state.coeff[i].toFixed(3)} &nbsp;|&nbsp; p = ${state.p[i].toExponential(2)}` +
       (Number.isFinite(bV) ? ` &nbsp;|&nbsp; b = ${fmtGlat(bV)}` : '') +
-      (Number.isFinite(sV) ? ` &nbsp;|&nbsp; slope = ${fmtSlope(sV)}` : '') + `<br>` +
+      ` &nbsp;|&nbsp; slope m = ${fmtSlope(state.slope[i])}<br>` +
       `<span style="color:${THEME.muted}">click for epoch CMD</span>`;
     tooltip.style.display = 'block';
     tooltip.style.left = (ev.clientX + 14) + 'px';
@@ -2941,10 +2951,11 @@ function setPlotMode(mode) {
        input table. Color encodes the Spearman correlation between its color
        and brightness across epochs; opacity scales with statistical
        significance (−log<sub>10</sub> p).`
-    : `Each line is one star. Color encodes the Spearman correlation between its
-       color and brightness across epochs; opacity scales with statistical
-       significance (−log<sub>10</sub> p). Bluing and reddening lines also tilt in
-       opposite directions, so the sign is readable without color.`;
+    : `Each line is one star, tilted to the slope of a straight-line fit of its
+       brightness against its color across epochs. Color encodes the Spearman
+       correlation between its color and brightness; opacity scales with statistical
+       significance (−log<sub>10</sub> p). Bluing and reddening lines tilt in
+       opposite directions, unless the fitted slope and ρ disagree in sign.`;
   // plotMode is part of the overview cache key, so this re-bakes the overview
   requestRedraw();
 }
@@ -3096,10 +3107,10 @@ function updateSlopeUI() {
   const lo = state.filter.minSlope, hi = state.filter.maxSlope;
   const offLo = lo <= 0, offHi = hi >= SLOPE_MAX;
   let txt;
-  if (offLo && offHi) txt = 'Slope |ΔG/Δ(BP−RP)|: off';
-  else if (offHi)     txt = `Slope: |ΔG/Δ(BP−RP)| ≥ ${fmtSlope(lo)}`;
-  else if (offLo)     txt = `Slope: |ΔG/Δ(BP−RP)| ≤ ${fmtSlope(hi)}`;
-  else                txt = `Slope: ${fmtSlope(lo)} ≤ |ΔG/Δ(BP−RP)| ≤ ${fmtSlope(hi)}`;
+  if (offLo && offHi) txt = 'Slope |m|: off';
+  else if (offHi)     txt = `Slope: |m| ≥ ${fmtSlope(lo)}`;
+  else if (offLo)     txt = `Slope: |m| ≤ ${fmtSlope(hi)}`;
+  else                txt = `Slope: ${fmtSlope(lo)} ≤ |m| ≤ ${fmtSlope(hi)}`;
   $('slope-label').textContent = txt;
   const kLo = slopeStopIndex(lo), kHi = slopeStopIndex(hi);
   const fill = $('slope-fill');

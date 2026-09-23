@@ -102,7 +102,7 @@ Shows the stars within the selected region. Drag to pan, scroll to zoom around t
 
 ### Filters
 
-Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The **Slope** slider keeps lines within a range of steepness |ΔG/Δ(BP−RP)|, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes); its stops are spaced evenly in the line's angle, so the middle of the track is slope 1, and hovering a line in the Detail View shows its slope. A parallax-quality cut, a distance range and a galactic-latitude |b| range are also available. Each range is a single dual-thumb slider whose thumbs can't pass each other (an inline message appears if they touch). Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
+Restrict the view to bluing (ρ > 0) or reddening (ρ < 0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The **Slope** slider keeps lines within a range of steepness |m|, the slope of each star's least-squares fit of G against BP−RP, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes); its stops are spaced evenly in the line's angle, so the middle of the track is slope 1, and hovering a line in the Detail View shows its slope. A parallax-quality cut, a distance range and a galactic-latitude |b| range are also available. Each range is a single dual-thumb slider whose thumbs can't pass each other (an inline message appears if they touch). Both panels and the export honor the active filters. **Reset Filters** returns every control to the position it had when the app loaded.
 
 ### Highlight Lists
 
@@ -162,9 +162,9 @@ Enter a filename and use the **Export** card to download the visible, selected, 
 Each line segment represents one star observed many times by ESA's Gaia space telescope.
 
 - The **horizontal axis** is the star's color (G_BP − G_RP, blue → red).
-- The **vertical axis** is its absolute brightness (G_MAG).
+- The **vertical axis** is its absolute brightness (M_G).
 
-A star that varies traces a small path in this diagram — the segment shows the **direction and size** of that variation.
+A star that varies traces a small path in this diagram — the segment is the **straight line that best fits** that path (its `B-R_Slope`, from the pipeline's least-squares fit), drawn across the range of color it covers.
 
 - 🔵 **Blue lines** — stars that get bluer as they brighten.
 - 🔴 **Red lines** — stars that get redder as they brighten.

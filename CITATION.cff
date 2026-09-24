@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "IVECMD"
+abstract: "An Interactive Variability-Encoded CMD (IVECMD) with trajectories mapped as lines. Toggleable lists are presented for radial mode pulastors and further analysis tools are available once a line has been clicked on."
+authors:
+    - family-names: "Kirby"
+      given-names: "Bennett C."
+      orcid: "https://orcid.org/0009-0003-4021-0934"
+      affiliation: "University of North Carolina at Chapel Hill"
+version: "0.4.5"
+date-released: "2026-09-23"
+repository-code: "https://github.com/KirbyBennett/IVECMD"
+type: software

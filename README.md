@@ -1,6 +1,6 @@
 # IVECMD
 
-An interactive variability-encoded CMD with trajectories mapped as lines. Toggleable lists are presented for radial mode pulsators, and further analysis tools are available once a line has been clicked on.
+Welcome to IVECMD! We are so excited to publish this software and allow the scientific community to get hands on with the app. We hope you enjoy the Interactive Variability-Encoded CMD as much as as we have! Clear skies and happy exploring!
 
 ---
 

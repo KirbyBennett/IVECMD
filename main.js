@@ -14,15 +14,17 @@ const ZIP_NAME      = 'lists.zip'
 const DATA_FILENAME = 'list_RANKED_Scatter_Slope_SPEARMAN'
 const DATA_VERSION  = '1'
 
-// The dataset lives on Zenodo. DOI 10.5072/zenodo.597047 resolves to the record
-// below; we ask the API rather than the DOI because it hands back the file's
-// real download URL, byte size and MD5 instead of an HTML landing page.
+// The dataset lives on Zenodo. DOI 10.5281/zenodo.20931723 resolves to the
+// record below; we ask the API rather than the DOI because it hands back the
+// file's real download URL, byte size and MD5 instead of an HTML landing page.
 //
-// This currently points at Zenodo's *sandbox*, which is a test instance and
-// wipes records periodically. Publishing for real means changing these five
-// values — the API URL, the DOI, and the three fallbacks — and nothing else.
-const ZENODO_API = 'https://sandbox.zenodo.org/api/records/597047'
-const ZENODO_DOI = 'https://handle.test.datacite.org/10.5072/zenodo.597047'
+// This is pinned to one version of the record, not "latest": a published
+// version's files can never change, so the fallbacks below stay valid. A new
+// version of the dataset gets a new record ID — shipping it means changing these
+// five values (the API URL, the DOI, and the three fallbacks) and bumping
+// DATA_VERSION so data that was already extracted gets replaced.
+const ZENODO_API = 'https://zenodo.org/api/records/20931723'
+const ZENODO_DOI = 'https://doi.org/10.5281/zenodo.20931723'
 
 // Used if the metadata request fails (API down, schema change). The content URL
 // is stable, and these are the values published with the record.

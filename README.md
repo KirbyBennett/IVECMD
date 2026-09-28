@@ -62,12 +62,12 @@ launch after that goes straight to the diagram.
   you supplied is left in place.
 - If anything goes wrong the app says why and offers **Try again**.
 
-Data source: [10.5072/zenodo.597047](https://handle.test.datacite.org/10.5072/zenodo.597047).
+Data source: [10.5281/zenodo.20931723](https://doi.org/10.5281/zenodo.20931723).
 
 ### Pulling Github repo
 This method allows you to edit the code on your own machine through a browser. This method works exactly the same and the .dmg however, there are more steps to get the code up and running.
 
-1. Go to the [Zenodo record](https://handle.test.datacite.org/10.5072/zenodo.597047),
+1. Go to the [Zenodo record](https://doi.org/10.5281/zenodo.20931723),
    download `lists.zip` and unzip it next to `index.html`. (The browser version
    has no downloader of its own — that lives in the Electron app.)
 2. Open a terminal and run:

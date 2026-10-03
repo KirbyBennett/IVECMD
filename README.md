@@ -230,4 +230,4 @@ http://localhost:8000/index.html
 
 ## AI Statement
 
-Generative AI was used to generate the code for this project. The models used to generate the code were Claude Fable 5, Opus 5, and Opus 5.5. The code's function modeled directly from human coded Python algorithms and important analyses features (periodograms, sigma-clipping, etc.) was checked against these existing codes. 
+Generative AI wrote the code for this project. The models used to generate the code were Claude Fable 5, Opus 5, and Opus 5.5. We checked the code's functionality, modeled directly from human-written Python code, and its key analysis features (periodograms, sigma-clipping, etc.) against these existing codes.

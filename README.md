@@ -25,6 +25,7 @@ Welcome to IVECMD! We are so excited to publish this software and allow the scie
 - [What Am I Looking At?](#what-am-i-looking-at)
 - [For Astronomers](#for-astronomers)
 - [Serving This File](#serving-this-file)
+- [AI Statement](#ai_statement)
 
 ---
 

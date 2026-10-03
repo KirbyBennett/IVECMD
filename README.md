@@ -7,7 +7,8 @@ Welcome to IVECMD! We are so excited to publish this software and allow the scie
 ## Table of Contents
 
 - [Quickstart](#quickstart)
-  - [Downloading the App](#downloading-the-app)
+  - [Downloading the App (macOS)](#downloading-the-app-recommended)
+  - [Downloading the App (Windows)](#downloading-the-app-windows)
   - [Github repo access](#pulling-github-repo)
 - [How to Use](#how-to-use)
   - [Overview Plot](#overview-plot)
@@ -30,6 +31,8 @@ Welcome to IVECMD! We are so excited to publish this software and allow the scie
 ## Quickstart
 
 ### Downloading the App (Recommended)
+*macOS — Windows users, see [the next section](#downloading-the-app-windows).*
+
 Downloading the .dmg version of the app is less work in the long run. The setup also doesn't require you to download any data files from Zenodo — the first time you run the app it fetches them for you.
 
 1. Navigate to the "Releases" tab on the right side of the screen.
@@ -44,7 +47,29 @@ Downloading the .dmg version of the app is less work in the long run. The setup 
 
 6. Run the app on your machine and enjoy exploring the Gaia CMD!
 
-#### First launch
+### Downloading the App (Windows)
+The Windows installer needs the same one-time data download as the Mac app (see [First launch](#first-launch-both-platforms)), and it is not code-signed, so Windows will warn you the first time you run it. That is expected — here is how to get past it.
+
+1. Navigate to the "Releases" tab on the right side of the screen.
+2. Find the release that you want and, under **Assets**, click the Windows installer (`IVECMD Setup <version-#>.exe`) to download it. (GitHub may show the spaces as dots, e.g. `IVECMD.Setup.<version-#>.exe`.) The installer is for 64-bit Windows.
+3. Your browser may say the file "isn't commonly downloaded" or "could be dangerous". In Edge or Chrome, open the downloads list, click the **⋯** next to the file and choose **Keep**, then **Keep anyway**.
+4. Double-click the installer. If Windows shows **"Windows protected your PC"** (SmartScreen), click **More info**, then **Run anyway**.
+5. Follow the setup wizard. You can change the install folder, and it creates Desktop and Start Menu shortcuts. It installs for your user only, so no administrator rights are needed.
+6. Launch **IVECMD** from the Start Menu or Desktop and enjoy exploring the Gaia CMD!
+
+**If the installer won't open at all** (nothing happens, or SmartScreen offers no **Run anyway** button), Windows has marked the download as coming from the internet — the same "quarantine" idea as on a Mac. Remove the mark with either of these:
+
+- **File Explorer:** right-click the `.exe` → **Properties** → tick **Unblock** at the bottom of the General tab → **OK**.
+- **PowerShell** (adjust the path to wherever the file is):
+  ```powershell
+  Unblock-File -Path "$env:USERPROFILE\Downloads\IVECMD Setup <version-#>.exe"
+  ```
+
+**If antivirus or Windows Security blocks or deletes the file**, it is reacting to the missing signature, not to anything in the app. Restore it from **Windows Security → Virus & threat protection → Protection history** (choose **Allow on device**), or add the Downloads folder as an exclusion while you install, then run the installer again. Only do this for an installer you downloaded from this repository's Releases page.
+
+**Corporate or school computers** may block unsigned installers through policy; if **Run anyway** never appears and Unblock doesn't help, ask your IT department, or use the [GitHub repo method](#pulling-github-repo) below, which needs no installer.
+
+### First launch (both platforms)
 
 The first time the app opens it has no data yet, so it downloads `lists.zip`
 (about 1.75 GB) from Zenodo, checks it against the record's MD5 and unpacks it
@@ -202,3 +227,7 @@ http://localhost:8000/index.html
 ```
 
 > **Note:** If opened directly from disk, you can drag & drop or browse for the data table instead.
+
+## AI Statement
+
+Generative AI was used to generate the code for this project. The models used to generate the code were Claude Fable 5, Opus 5, and Opus 5.5. The code's function modeled directly from human coded Python algorithms and important analyses features (periodograms, sigma-clipping, etc.) was checked against these existing codes. 

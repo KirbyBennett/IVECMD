@@ -77,14 +77,44 @@ body { padding: 0; }
   flex-shrink: 0;
 }
 .section-title { font-size: 15px; font-weight: 600; }
+/* Foldable cards: the non-essential tool groups collapse to their title, so the
+   always-open Search, Filters and Display cards stay within reach */
+details.card { display: block; padding: 0; }
+details.card > summary {
+  list-style: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px;
+  border-radius: 8px;
+  cursor: pointer; user-select: none;
+  transition: color .14s;
+}
+details.card > summary::-webkit-details-marker { display: none; }
+details.card[open] > summary { padding-bottom: 12px; }
+details.card > summary:hover { color: var(--accent-hover); }
+/* chevron drawn from two borders: points right while folded, down when open */
+.card-caret {
+  margin-left: auto; margin-right: 4px; flex-shrink: 0;
+  width: 10px; height: 10px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform .14s ease, border-color .14s;
+}
+details.card[open] > summary .card-caret { transform: rotate(45deg); }
+details.card > summary:hover .card-caret { border-color: var(--accent-hover); }
+.card-badge {
+  color: var(--accent); font-size: 11px; font-weight: 400;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.card-body { display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px; }
 .sub-title {
   font-size: 11px; font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: 0.05em;
   border-top: 1px solid var(--border); padding-top: 10px;
 }
 .sub-title:first-of-type { border-top: none; padding-top: 0; }
-/* the combined Status card keeps the text font of the original View Info panel */
-#status-card, #status-card .sub-title {
+/* the combined Status card keeps the text font of the original View Info panel
+   (its header matches the other card titles) */
+#status-card .card-body, #status-card .sub-title {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -250,6 +280,7 @@ input[type=range] {
 /* ---------- Keyboard focus ----------
    Visible focus ring for keyboard users (mouse clicks don't trigger it). */
 button:focus-visible,
+summary:focus-visible,
 input[type=range]:focus-visible,
 canvas:focus-visible,
 a:focus-visible {
@@ -375,6 +406,29 @@ input[type=range]::-moz-range-thumb {
   display: flex; justify-content: space-between;
   font-size: 11px; color: var(--muted);
 }
+/* The same ramp as a line in the plot panel's top padding, running from the
+   Overview frame's left edge to the Detail frame's right edge (panel padding +
+   MARGIN.l / MARGIN.r). Its title rises into #main-area's top padding and the
+   −1 / +1 ends sit in the margins beside it, so none of it takes room from the
+   plots. The full key lives in the Color Legend card. */
+#legend-line {
+  position: absolute; top: 10px; left: 76px; right: 30px;
+  height: 4px; border-radius: 2px;
+}
+#legend-line > span {
+  position: absolute;
+  font-size: 11px; line-height: 1; color: var(--muted); white-space: nowrap;
+}
+.legend-line-title {
+  bottom: calc(100% + 15px); left: 50%; transform: translateX(-50%);
+  font-weight: 600; letter-spacing: 0.03em;
+}
+.legend-line-end {
+  top: 50%; transform: translateY(-50%);
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.legend-line-end.lo { right: calc(100% + 7px); }
+.legend-line-end.hi { left: calc(100% + 7px); }
 
 /* ---------- Modals ---------- */
 .modal-backdrop {
@@ -536,24 +590,6 @@ input[type=range]::-moz-range-thumb {
       <div class="title">IVECMD</div>
     </div>
 
-    <div class="card" id="status-card">
-      <div class="section-title">Status</div>
-      <div class="sub-title">View Info</div>
-      <div class="msg" id="counts-label">—</div>
-      <div class="muted" id="filter-count" style="font-size:12px;">—</div>
-      <div class="sub-title">Messages</div>
-      <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or both plots as high-resolution PNG images</div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Actions</div>
-      <button id="reset-view-btn" title="Return both plots to their startup view">Reset View</button>
-      <button id="center-detail-btn" title="Bring the detail view region (the green rectangle) back to the center of the overview">Center Detail View</button>
-      <button id="undo-view-btn" disabled title="Go back to the previous view (Ctrl/Cmd+Z)">Undo View</button>
-      <button id="redo-view-btn" disabled title="Reapply the view you undid (Ctrl/Cmd+Shift+Z)">Redo View</button>
-      <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
-    </div>
-
     <!-- Search and the selection it produces are one job, so they share a card
          and sit near the top: searching a source selects it, and a selected
          source is pinned onto both plots past the filters. -->
@@ -613,7 +649,50 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <div class="card">
-      <div class="section-title">Saved Settings</div>
+      <div class="section-title">Display</div>
+      <div class="field-label">Plot style</div>
+      <div class="seg-group">
+        <button id="mode-lines" class="active" title="Draw each star as a variability line segment (direction and size of its motion in the diagram)">Lines</button>
+        <button id="mode-points" title="Draw each star as a single point at its average color and magnitude from the input table">Points</button>
+      </div>
+      <div class="field-label" id="slider-label">Line thickness ×: 2.0</div>
+      <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
+      <label class="check"><input type="checkbox" id="hr-ref-checkbox"><span class="box"></span>Show HR diagram reference lines</label>
+      <label class="check"><input type="checkbox" id="strip-checkbox"><span class="box"></span>Show instability strip</label>
+      <label class="check" title="Interstellar reddening vector for AV = 1 mag of extinction, from the red-clump calibration of the Gaia bands. Shown on both plots; drag it around the Overview plot."><input type="checkbox" id="redvec-checkbox" checked><span class="box"></span>Show reddening vector</label>
+      <label class="check" title="The green rectangle on the Overview marking the region shown in the Detail View. Hide it for a clean overview; scrolling the overview still zooms the Detail View."><input type="checkbox" id="viewrect-checkbox" checked><span class="box"></span>Show Detail View box</label>
+    </div>
+
+    <!-- Everything below is folded away until opened; Search, Filters and
+         Display above are the cards in use all the time. -->
+    <details class="card" id="status-card">
+      <summary class="section-title">Status
+        <span class="card-badge" id="status-badge" hidden>new</span>
+        <span class="card-caret"></span>
+      </summary>
+      <div class="card-body">
+      <div class="sub-title">View Info</div>
+      <div class="msg" id="counts-label">—</div>
+      <div class="muted" id="filter-count" style="font-size:12px;">—</div>
+      <div class="sub-title">Messages</div>
+      <div class="msg" id="message-label">Use the Export card to download the visible, selected, or filtered sources as CSV, or both plots as high-resolution PNG images</div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary class="section-title">Actions<span class="card-caret"></span></summary>
+      <div class="card-body">
+      <button id="reset-view-btn" title="Return both plots to their startup view">Reset View</button>
+      <button id="center-detail-btn" title="Bring the detail view region (the green rectangle) back to the center of the overview">Center Detail View</button>
+      <button id="undo-view-btn" disabled title="Go back to the previous view (Ctrl/Cmd+Z)">Undo View</button>
+      <button id="redo-view-btn" disabled title="Reapply the view you undid (Ctrl/Cmd+Shift+Z)">Redo View</button>
+      <button id="help-btn" title="Open the help dialog (H)">Show Help</button>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary class="section-title">Saved Settings<span class="card-caret"></span></summary>
+      <div class="card-body">
       <div class="muted" style="font-size:12px; line-height:1.5;">
         Keep the Filters you worked out — plus the Display options, catalog
         overlays and current view — under a name. ★ marks the set applied on
@@ -632,10 +711,15 @@ input[type=range]::-moz-range-thumb {
         <button id="preset-import" class="small" title="Apply settings from a .json file saved here before">Import File…</button>
       </div>
       <input type="file" id="preset-file-input" accept=".json,application/json" hidden>
-    </div>
+      </div>
+    </details>
 
-    <div class="card">
-      <div class="section-title">Variable-Star Lists</div>
+    <details class="card">
+      <summary class="section-title">Variable-Star Lists
+        <span class="card-badge" id="lists-card-badge" hidden></span>
+        <span class="card-caret"></span>
+      </summary>
+      <div class="card-body">
       <div class="muted" style="font-size:12px; line-height:1.5;">
         Highlight catalog members on both plots, or restrict the view to a catalog.
         Toggle several to compare them in different colors.
@@ -718,10 +802,12 @@ input[type=range]::-moz-range-thumb {
 
       <button id="sl-clear" class="small" disabled title="Turn off every catalog highlight and restriction">Clear all input lists</button>
       <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
-    </div>
+      </div>
+    </details>
 
-    <div class="card">
-      <div class="section-title">Example Stars</div>
+    <details class="card">
+      <summary class="section-title">Example Stars<span class="card-caret"></span></summary>
+      <div class="card-body">
       <div class="muted" style="font-size:12px; line-height:1.5;">
         New to the diagram? Jump straight to a well-measured star of each class —
         the view centers on it and its epoch CMD opens automatically. No Gaia ID needed.
@@ -734,25 +820,12 @@ input[type=range]::-moz-range-thumb {
         <button id="ex-mira" title="Jump to a well-measured Mira variable and open its color–magnitude diagram">Mira</button>
         <button id="ex-dsct" title="Jump to a well-measured δ Scuti star and open its color–magnitude diagram">δ Scuti</button>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Display</div>
-      <div class="field-label">Plot style</div>
-      <div class="seg-group">
-        <button id="mode-lines" class="active" title="Draw each star as a variability line segment (direction and size of its motion in the diagram)">Lines</button>
-        <button id="mode-points" title="Draw each star as a single point at its average color and magnitude from the input table">Points</button>
       </div>
-      <div class="field-label" id="slider-label">Line thickness ×: 2.0</div>
-      <input type="range" id="thickness-slider" min="0" max="10" step="0.1" value="2">
-      <label class="check"><input type="checkbox" id="hr-ref-checkbox"><span class="box"></span>Show HR diagram reference lines</label>
-      <label class="check"><input type="checkbox" id="strip-checkbox"><span class="box"></span>Show instability strip</label>
-      <label class="check" title="Interstellar reddening vector for AV = 1 mag of extinction, from the red-clump calibration of the Gaia bands. Shown on both plots; drag it around the Overview plot."><input type="checkbox" id="redvec-checkbox" checked><span class="box"></span>Show reddening vector</label>
-      <label class="check" title="The green rectangle on the Overview marking the region shown in the Detail View. Hide it for a clean overview; scrolling the overview still zooms the Detail View."><input type="checkbox" id="viewrect-checkbox" checked><span class="box"></span>Show Detail View box</label>
-    </div>
+    </details>
 
-    <div class="card">
-      <div class="section-title">Export</div>
+    <details class="card">
+      <summary class="section-title">Export<span class="card-caret"></span></summary>
+      <div class="card-body">
       <input type="text" id="filename-input" placeholder="File name (for CSV exports)">
       <label class="check"><input type="checkbox" id="stats-checkbox"><span class="box"></span>Include statistics columns (ID, ρ, p)</label>
       <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
@@ -766,10 +839,12 @@ input[type=range]::-moz-range-thumb {
       </div>
       <label class="check" title="Draw the vertical Spearman correlation colorbar down the right-hand side of each saved figure. Untick it for a figure that carries its own caption, or when several panels share one legend — the page narrows to match, leaving no empty band."><input type="checkbox" id="colorbar-checkbox" checked><span class="box"></span>Colorbar in saved plots</label>
       <button id="export-plots-png-btn" title="Save both plots as high-resolution, paper-ready figures on a white background, in the format chosen above. Each figure takes the shape of its on-screen panel. Both arrive together in one .zip — browsers only allow a page to save one file per click.">Save Plot Images (PNG)</button>
-    </div>
+      </div>
+    </details>
 
-    <div class="card" id="legend-card">
-      <div class="section-title">Color Legend</div>
+    <details class="card" id="legend-card">
+      <summary class="section-title">Color Legend<span class="card-caret"></span></summary>
+      <div class="card-body">
       <div class="legend-bar" id="legend-bar"></div>
       <div class="legend-ticks"><span>−1 (reddening)</span><span>0</span><span>+1 (bluing)</span></div>
       <div class="muted" id="legend-desc" style="font-size:12px; line-height:1.5;">
@@ -779,7 +854,8 @@ input[type=range]::-moz-range-thumb {
         significance (−log<sub>10</sub> p). Bluing and reddening lines tilt in
         opposite directions, unless the fitted slope and ρ disagree in sign.
       </div>
-    </div>
+      </div>
+    </details>
 
     <input type="file" id="spearman-file-input" hidden>
   </aside>
@@ -787,6 +863,11 @@ input[type=range]::-moz-range-thumb {
   <!-- ================= Main area ================= -->
   <main id="main-area">
     <div id="plot-panel">
+      <div id="legend-line" title="Spearman correlation between each star's color and brightness: −1 for stars that get redder as they brighten, +1 for stars that get bluer. Open Color Legend in the sidebar for more.">
+        <span class="legend-line-title">Spearman Correlation Coefficient</span>
+        <span class="legend-line-end lo">−1</span>
+        <span class="legend-line-end hi">+1</span>
+      </div>
       <div class="plot-half">
         <canvas id="overview-canvas"></canvas>
       </div>
@@ -1209,7 +1290,14 @@ function timestamp() {
 const $ = id => document.getElementById(id);
 const messageLabel = $('message-label');
 const countsLabel = $('counts-label');
-function setMessage(text) { messageLabel.textContent = text; }
+const statusCard = $('status-card'), statusBadge = $('status-badge');
+function setMessage(text) {
+  messageLabel.textContent = text;
+  // a message that lands while the Status card is folded is flagged on its
+  // header, so a search miss or an export error isn't silently swallowed
+  if (!statusCard.open) statusBadge.hidden = false;
+}
+statusCard.addEventListener('toggle', () => { if (statusCard.open) statusBadge.hidden = true; });
 
 // One app name everywhere; the window/tab title picks up the name of whichever
 // dataset is currently loaded (auto-fetch, browse, or drop).
@@ -3313,7 +3401,8 @@ function exportPageSize(plot) {
 /* Vertical Spearman colorbar drawn into the widened right margin of each
    exported figure, mirroring a matplotlib colorbar: the same coolwarm_r ramp
    as the data, ticks every 0.25, +1 (bluing) at the top, and a rotated title.
-   Only exists on paper — the live app has the Color Legend card instead. */
+   Only exists on paper — the live app has the gradient line above the plots,
+   keyed in the Color Legend card, instead. */
 function drawPrintColorbar(plot, ctx) {
   const r = plot.plotRect;
   const bx = r.x + r.w + 16, bw = 26, by = r.y, bh = r.h;
@@ -5373,7 +5462,10 @@ $('mep-png-btn').addEventListener('click', () => {
     const [r, g, b] = coolwarmR(i / 10);
     stops.push(`rgb(${r},${g},${b}) ${i * 10}%`);
   }
-  $('legend-bar').style.background = `linear-gradient(to right, ${stops.join(',')})`;
+  const ramp = `linear-gradient(to right, ${stops.join(',')})`;
+  // the keyed bar in the Color Legend card and the bare line above the plots
+  $('legend-bar').style.background = ramp;
+  $('legend-line').style.background = ramp;
 })();
 
 /* =====================================================
@@ -5675,6 +5767,12 @@ function slRefreshUI() {
   const badge = $('pulsator-drawer-badge');
   badge.hidden = nPreset === 0;
   badge.textContent = nPreset ? `${nPreset} active` : '';
+  // same count on the card header, custom IDs included, so a highlight or an
+  // "only" restriction stays visible while the card is folded away
+  const nAll = STAR_LISTS.filter(L => L.highlight || L.restrict).length;
+  const cardBadge = $('lists-card-badge');
+  cardBadge.hidden = nAll === 0;
+  cardBadge.textContent = nAll ? `${nAll} active` : '';
 }
 for (const L of STAR_LISTS) {
   $('sl-hl-' + L.key).addEventListener('click', async () => {

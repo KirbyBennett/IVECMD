@@ -907,7 +907,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Saved Settings:</b> Once the Filters are dialed in, type a name and press <b>Save Current Settings</b> to keep that whole arrangement — Filters, the Display card, the catalog overlays, the plot-image options and the current view. Pick it from the list later and press <b>Load</b> to come straight back to it. <b>Set ★</b> marks one set as the startup configuration: it is applied automatically every time the app opens, and <b>Reset Filters</b> then returns to it instead of the factory values. <b>Export File… / Import File…</b> put the same thing in a <code>.json</code> file, for keeping several configurations beside a project or handing one to a collaborator. Custom ID lists travel along up to 20,000 IDs; above that only the on/off state is kept, and a catalog whose file is missing is reported and left off.</li>
         <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
-        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve — after the quality cuts. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
+        <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve. It uses only the epochs the CMD marks as <b>used</b> or as <b>flare/eclipse candidates</b>; sigma-clipped, std-slope-clipped and low-SNR epochs are left out, and Phase Fold works from the same epochs. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search &amp; Selection card (or press <code>/</code>) to center both plots on that star. <b>One ID per search, but searches add up:</b> run a second search and the first star stays selected, so several sources can be compared on one plot — the box takes a bare ID, a "Gaia DR3 …" label, or a whole table row (the RA/Dec alongside it are ignored). Paste two IDs at once and it says so rather than silently picking one. A searched star is selected even when it fails the active filters: selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. <b>Clear Selection</b> drops them all; <code>Ctrl/Cmd+Click</code> on one drops just that one.</li>
         <li><b>Selecting:</b> Click selects one star, replacing whatever was selected; <code>Ctrl/Cmd+Click</code> adds or removes stars without disturbing the rest. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
@@ -4044,6 +4044,7 @@ function iterativeSigmaClipTable(cols, clipCols, sigma, maxIter = 10000) {
    Rescued-eclipse rows are protected and cannot be removed. A kept rank-0
    point removed here is promoted to rank 2; an ox-pool point removed again
    is reported via clip.fromOx so the caller can promote it to rank 4.
+   Surviving kept points report their index into `kept` via kIdx.
    Inputs are already finite-filtered by the caller. */
 function sigmaClipStdSlope(kept, out, threshold, protectedMask, rankX, rankOx, maxIter = 10000) {
   const cx = [...kept.x, ...out.x], cy = [...kept.y, ...out.y];
@@ -4052,6 +4053,7 @@ function sigmaClipStdSlope(kept, out, threshold, protectedMask, rankX, rankOx, m
   const prot = [...protectedMask, ...out.x.map(() => false)];
   const rankPool = [...rankX, ...rankOx];
   const fromOx = [...kept.x.map(() => -1), ...out.x.map((_, i) => i)];
+  const fromKept = [...kept.x.map((_, i) => i), ...out.x.map(() => -1)];
   const clip = { x: [], y: [], xe: [], ye: [], wasKept: [], ranks: [], fromOx: [] };
 
   for (let iter = 0; iter < maxIter; iter++) {
@@ -4083,16 +4085,17 @@ function sigmaClipStdSlope(kept, out, threshold, protectedMask, rankX, rankOx, m
     clip.wasKept.push(isKept[worst]);
     clip.ranks.push(r);
     clip.fromOx.push(fromOx[worst]);
-    for (const arr of [cx, cy, cxe, cye, isKept, prot, rankPool, fromOx]) arr.splice(worst, 1);
+    for (const arr of [cx, cy, cxe, cye, isKept, prot, rankPool, fromOx, fromKept]) arr.splice(worst, 1);
   }
 
   // surviving originally-kept points (the fit set); pooled ox survivors stay clipped
-  const res = { kx: [], ky: [], kxe: [], kye: [], kRanks: [], clip };
+  const res = { kx: [], ky: [], kxe: [], kye: [], kRanks: [], kIdx: [], clip };
   for (let j = 0; j < cx.length; j++) {
     if (!isKept[j]) continue;
     res.kx.push(cx[j]); res.ky.push(cy[j]);
     res.kxe.push(cxe[j]); res.kye.push(cye[j]);
     res.kRanks.push(rankPool[j]);
+    res.kIdx.push(fromKept[j]);
   }
   return res;
 }
@@ -4317,20 +4320,6 @@ async function showEpochCMD(gi) {
     const sub = pickRows(goodIdx);
     const clip1 = iterativeSigmaClipTable(sub, ['Gmag', 'BPmag', 'RPmag'], 4);
 
-    // cleaned per-band epoch series for phase-folding analysis
-    const keptTable = pickRows(clip1.keepIdx.map(p => goodIdx[p]));
-    lastEpoch = {
-      id,
-      G:  extractSeries(keptTable, 'TimeG', 'Gmag', 'e_Gmag', 'RFG'),
-      BP: extractSeries(keptTable, 'TimeBP', 'BPmag', 'e_BPmag', 'RFBP'),
-      RP: extractSeries(keptTable, 'TimeRP', 'RPmag', 'e_RPmag', 'RFRP'),
-      color: extractColorSeries(keptTable),
-    };
-    if (token === cmdToken) {
-      $('cmd-phase-btn').disabled = false;
-      $('cmd-mep-btn').disabled = false;
-    }
-
     const series = idxs => ({
       x: idxs.map(i => c['B_R'][i]),
       y: idxs.map(i => c['GMAG'][i]),
@@ -4351,6 +4340,28 @@ async function showEpochCMD(gi) {
 
     // stage 2: pooled leave-one-out dispersion-ratio clip with rank tracking
     const ss = sigmaClipStdSlope(k0, o0, 0.1, protectedK, rankK, rankO);
+
+    // per-band epoch series for the light curves and phase folding: only the
+    // final rank 0 and 1 epochs — the fit set (clean points plus rescued
+    // eclipses) and the flare candidates stage 1 set aside. Rank 1 is final
+    // in either pool (rescued rows are protected, ox rank 1 is never promoted),
+    // so the candidates come straight from clip1. Rows stay in table order.
+    const lcRows = [
+      ...ss.kIdx.map(k => goodIdx[clip1.keepIdx[k]]),
+      ...clip1.removeIdx.filter(p => clip1.rank[p] === 1).map(p => goodIdx[p]),
+    ].sort((a, b) => a - b);
+    const lcTable = pickRows(lcRows);
+    lastEpoch = {
+      id,
+      G:  extractSeries(lcTable, 'TimeG', 'Gmag', 'e_Gmag', 'RFG'),
+      BP: extractSeries(lcTable, 'TimeBP', 'BPmag', 'e_BPmag', 'RFBP'),
+      RP: extractSeries(lcTable, 'TimeRP', 'RPmag', 'e_RPmag', 'RFRP'),
+      color: extractColorSeries(lcTable),
+    };
+    if (token === cmdToken) {
+      $('cmd-phase-btn').disabled = false;
+      $('cmd-mep-btn').disabled = false;
+    }
 
     if (ss.kx.length < 2) {
       setMessage(`Not enough epochs after std-slope clip for ${id} (${ss.kx.length} kept).`);

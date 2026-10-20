@@ -666,10 +666,7 @@ input[type=range]::-moz-range-thumb {
     <!-- Everything below is folded away until opened; Search, Filters and
          Display above are the cards in use all the time. -->
     <details class="card" id="status-card">
-      <summary class="section-title">Status
-        <span class="card-badge" id="status-badge" hidden>new</span>
-        <span class="card-caret"></span>
-      </summary>
+      <summary class="section-title">Status<span class="card-caret"></span></summary>
       <div class="card-body">
       <div class="sub-title">View Info</div>
       <div class="msg" id="counts-label">—</div>
@@ -1290,14 +1287,7 @@ function timestamp() {
 const $ = id => document.getElementById(id);
 const messageLabel = $('message-label');
 const countsLabel = $('counts-label');
-const statusCard = $('status-card'), statusBadge = $('status-badge');
-function setMessage(text) {
-  messageLabel.textContent = text;
-  // a message that lands while the Status card is folded is flagged on its
-  // header, so a search miss or an export error isn't silently swallowed
-  if (!statusCard.open) statusBadge.hidden = false;
-}
-statusCard.addEventListener('toggle', () => { if (statusCard.open) statusBadge.hidden = true; });
+function setMessage(text) { messageLabel.textContent = text; }
 
 // One app name everywhere; the window/tab title picks up the name of whichever
 // dataset is currently loaded (auto-fetch, browse, or drop).

@@ -592,7 +592,8 @@ input[type=range]::-moz-range-thumb {
 
     <!-- Search and the selection it produces are one job, so they share a card
          and sit near the top: searching a source selects it, and a selected
-         source is pinned onto both plots past the filters. -->
+         source is pinned onto both plots past the filters. A whole list of IDs
+         loads here too, beside the box that takes one. -->
     <div class="card">
       <div class="section-title">Search &amp; Selection</div>
       <div class="muted" style="font-size:12px; line-height:1.5;">
@@ -601,6 +602,17 @@ input[type=range]::-moz-range-thumb {
       </div>
       <input type="text" id="search-input" placeholder="One Gaia DR3 source ID">
       <button id="search-btn" title="Center both plots on this Gaia DR3 source and add it to the selection, keeping any already there. A source that fails the active filters is still plotted while it stays selected.">Search</button>
+      <div class="sub-title">ID List</div>
+      <div class="sl-row">
+        <button id="sl-custom-load" class="small" style="flex:1" title="Load a text/CSV file of Gaia DR3 source IDs">Load ID list…</button>
+        <button id="sl-custom-paste" class="small" style="flex:1" title="Paste Gaia DR3 source IDs">Paste IDs…</button>
+        <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
+      </div>
+      <div class="sl-row">
+        <button id="sl-hl-custom" class="sl-list" disabled title="Load a list of Gaia DR3 source IDs to enable"><span class="sl-swatch" style="background:#ffffff"></span>Custom IDs<span class="sl-count" id="sl-count-custom"></span></button>
+        <button id="sl-only-custom" class="sl-only small" disabled title="Show only the custom IDs">only</button>
+      </div>
+      <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
       <div class="sub-title">Selected Sources</div>
       <div class="msg" id="sel-count">0 selected</div>
       <div class="muted" id="sel-list" style="font-size:11px; word-break:break-all;"></div>
@@ -722,16 +734,6 @@ input[type=range]::-moz-range-thumb {
         Toggle several to compare them in different colors.
       </div>
 
-      <div class="sl-row">
-        <button id="sl-hl-custom" class="sl-list" disabled title="Load a list of Gaia DR3 source IDs to enable"><span class="sl-swatch" style="background:#ffffff"></span>Custom IDs<span class="sl-count" id="sl-count-custom"></span></button>
-        <button id="sl-only-custom" class="sl-only small" disabled title="Show only the custom IDs">only</button>
-      </div>
-      <div class="sl-row">
-        <button id="sl-custom-load" class="small" style="flex:1" title="Load a text/CSV file of Gaia DR3 source IDs">Load ID list…</button>
-        <button id="sl-custom-paste" class="small" style="flex:1" title="Paste Gaia DR3 source IDs">Paste IDs…</button>
-        <button id="sl-custom-clear" class="small sl-only" disabled title="Forget the loaded custom IDs">✕</button>
-      </div>
-
       <details class="sl-drawer" id="pulsator-drawer">
       <summary title="Preset Gaia DR3 catalogs of known radial pulsator classes">
         <span class="sl-drawer-caret">▸</span>Known Radial Pulsators
@@ -798,7 +800,6 @@ input[type=range]::-moz-range-thumb {
       </details>
 
       <button id="sl-clear" class="small" disabled title="Turn off every catalog highlight and restriction">Clear all input lists</button>
-      <input type="file" id="custom-ids-file-input" accept=".txt,.csv,.tsv,.dat,.lst,.list,text/plain" hidden>
       </div>
     </details>
 
@@ -907,7 +908,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Zooming:</b> Use <code>+</code> and <code>−</code> keys to zoom the detail view in and out, and <code>0</code> to reset. To stretch one axis independently (in the Detail View or the CMD), scroll while hovering over that axis — or hold <code>Shift</code> for x-only / <code>Alt</code> for y-only zoom inside the plot. In the epoch-CMD dialog you can also use the <b>X −/+</b> and <b>Y −/+</b> buttons in the corner of the plot to zoom each axis on its own. Dragging the CMD's axis strips pans that axis alone.</li>
         <li><b>Filters:</b> Restrict the view to bluing (ρ&gt;0) or reddening (ρ&lt;0) systems, and tighten the significance (p-value) or correlation strength (|ρ|) thresholds. The <b>Slope</b> slider keeps lines within a range of steepness |m|, the slope of each star's least-squares fit of G against BP−RP, from 0 (flat — only the color changes) to ∞ (vertical — only the brightness changes). Its stops are spaced evenly in the line's angle, so the middle of the track is slope 1; hover a line in the Detail View to read its slope. The other dual sliders cut on parallax distance and on galactic latitude |b| — the angular distance from the galactic plane — so you can exclude the crowded plane (raise the min) or keep only sources near it (lower the max). Both panels and the export honor the active filters. <b>Reset Filters</b> returns every control to its startup position.</li>
         <li><b>Saved Settings:</b> Once the Filters are dialed in, type a name and press <b>Save Current Settings</b> to keep that whole arrangement — Filters, the Display card, the catalog overlays, the plot-image options and the current view. Pick it from the list later and press <b>Load</b> to come straight back to it. <b>Set ★</b> marks one set as the startup configuration: it is applied automatically every time the app opens, and <b>Reset Filters</b> then returns to it instead of the factory values. <b>Export File… / Import File…</b> put the same thing in a <code>.json</code> file, for keeping several configurations beside a project or handing one to a collaborator. Custom ID lists travel along up to 20,000 IDs; above that only the on/off state is kept, and a catalog whose file is missing is reported and left off.</li>
-        <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>Custom IDs</b>, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
+        <li><b>Variable-star &amp; custom lists:</b> Toggle a catalog (Cepheids, RR Lyrae, …) to highlight its members on both plots, or use <b>only</b> to restrict to it. Under <b>ID List</b> in the Search &amp; Selection card, <b>Load ID list…</b> or <b>Paste IDs…</b> takes any list of Gaia DR3 source IDs (a bare list, or a whole table — extra columns and a header row are ignored) and highlights the matches in white.</li>
         <li><b>Inspecting a star:</b> Click any line in the Detail View. The app queries VizieR live for that star's Gaia DR3 epoch photometry and builds its color–magnitude diagram, with sigma clipping and a slope fit. Scroll on the CMD to zoom past clipped outliers, drag to pan, and double-click (or Reset Zoom) to restore the full view.</li>
         <li><b>Light curves:</b> The <b>Light Curves</b> button in the CMD dialog shows the raw multi-epoch photometry — G, BP, and RP magnitudes versus time plus the BP−RP color curve. It uses only the epochs the CMD marks as <b>used</b> or as <b>flare/eclipse candidates</b>; sigma-clipped, std-slope-clipped and low-SNR epochs are left out, and Phase Fold works from the same epochs. Every panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom about the cursor (<code>Ctrl</code> both axes, <code>Shift</code> x-only, <code>Ctrl</code>+<code>Alt</code> y-only — plain scrolling just scrolls the dialog), and double-click to reset that panel — or use <b>Reset Views</b> in the dialog header to reset every panel at once (also available in the Phase Fold dialog).</li>
         <li><b>Phase folding:</b> Inside the CMD dialog, the <b>Phase Fold</b> button computes generalized Lomb–Scargle periodograms for G, BP, and RP, folds each light curve at its own best period, multiplies the three periodograms together, and folds the BP−RP color curve at the combined best period. <b>Period ×2 / ÷2</b> re-fold everything at harmonics of the peaks — useful when the periodogram locks onto half the true period, as it often does for eclipsing binaries. The standard grid searches down to 1-hour periods; tick <b>high-res freq grid</b> to extend the search to 5-minute periods with a much denser frequency grid (slower — only needed for short-period pulsators; it unticks itself each time the dialog opens). <b>Right-click any periodogram</b> to re-fold its row at that period — the click snaps to the strongest peak within a few pixels, so you don't have to hit a narrow peak exactly (band periodograms re-fold their own band; the combined one re-folds the BP−RP curve; reopening the dialog restores the GLS peaks). Each periodogram and folded panel is interactive: drag to pan, hold <code>Shift</code> or <code>Ctrl</code> and scroll to zoom, double-click to reset.</li>
@@ -6031,12 +6032,12 @@ function slRefreshUI() {
   const badge = $('pulsator-drawer-badge');
   badge.hidden = nPreset === 0;
   badge.textContent = nPreset ? `${nPreset} active` : '';
-  // same count on the card header, custom IDs included, so a highlight or an
-  // "only" restriction stays visible while the card is folded away
-  const nAll = STAR_LISTS.filter(L => L.highlight || L.restrict).length;
+  // same count on the card header, so a highlight or an "only" restriction
+  // stays visible while the card is folded away (the Custom IDs live in the
+  // always-open Search card, so they aren't counted here)
   const cardBadge = $('lists-card-badge');
-  cardBadge.hidden = nAll === 0;
-  cardBadge.textContent = nAll ? `${nAll} active` : '';
+  cardBadge.hidden = nPreset === 0;
+  cardBadge.textContent = nPreset ? `${nPreset} active` : '';
 }
 for (const L of STAR_LISTS) {
   $('sl-hl-' + L.key).addEventListener('click', async () => {

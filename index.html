@@ -828,6 +828,11 @@ input[type=range]::-moz-range-thumb {
       <button id="export-visible-btn" title="Download the sources currently in the Detail View as CSV">Export Visible Sources</button>
       <button id="export-selected-btn" title="Download the selected sources as CSV">Export Selected Sources (0)</button>
       <button id="export-filtered-btn" title="Download every source that passes the active filters as CSV">Export Filtered Sources</button>
+      <div class="field-label">Figure style</div>
+      <div class="seg-group">
+        <button id="style-paper" class="active" title="Figures sized for a paper: print-legible type, every annotation kept">Paper</button>
+        <button id="style-presentation" title="Figures made for slides: very large type and tick marks, bold lines, only what a talk needs, saved at 600 dpi. Applies to the main plots and to the Download PNG buttons in the CMD, Phase Analysis and Light Curve dialogs.">Presentation</button>
+      </div>
       <div class="field-label">Plot image format</div>
       <div class="seg-group">
         <button id="fmt-png" class="active" title="Lossless PNG images — best for slides and further editing">PNG</button>
@@ -909,6 +914,7 @@ input[type=range]::-moz-range-thumb {
         <li><b>Searching:</b> Paste a Gaia DR3 source ID into the Search &amp; Selection card (or press <code>/</code>) to center both plots on that star. <b>One ID per search, but searches add up:</b> run a second search and the first star stays selected, so several sources can be compared on one plot — the box takes a bare ID, a "Gaia DR3 …" label, or a whole table row (the RA/Dec alongside it are ignored). Paste two IDs at once and it says so rather than silently picking one. A searched star is selected even when it fails the active filters: selecting <b>pins</b> it, so it is drawn on both plots regardless of the cuts, and the status line says so. <b>Clear Selection</b> drops them all; <code>Ctrl/Cmd+Click</code> on one drops just that one.</li>
         <li><b>Selecting:</b> Click selects one star, replacing whatever was selected; <code>Ctrl/Cmd+Click</code> adds or removes stars without disturbing the rest. Selected stars are redrawn on top of everything else at about 2½× their normal line width, so they stay findable in a crowded field, and they count as visible for the CSV exports.</li>
         <li><b>Saving Data:</b> Enter a filename and use the Export card to download the visible, selected, or filtered sources as CSV. <b>Save Plot Images</b> writes both panels as separate high-resolution figures in the chosen format (PNG, JPEG, or PDF), re-rendered on a white background with paper-sized fonts (dark-mode colors are swapped for print-legible ones) so they drop straight into a paper or slide. Each figure takes the <b>shape of its panel on screen</b> — reshape the window to frame a feature and the saved figure is framed the same way, rather than being squeezed into a fixed page. Untick <b>Colorbar in saved plots</b> for figures that carry their own caption or share one legend; the page narrows to match so no empty band is left behind. The two figures arrive together in a single <code>.zip</code>, because a browser only lets a page save one file per click — sending them separately meant the second one was silently dropped.</li>
+        <li><b>Figure style:</b> <b>Paper</b> (the default) sizes every saved figure for a journal column. <b>Presentation</b> remakes them for slides: very large tick numbers and axis titles, long heavy tick marks, bolder lines and markers, and nothing a talk does not need — no epoch counts or "periodogram" / "folded at" captions, a short colorbar title, stacked panels sharing one numbered x axis. They are saved at 600 dpi (about 4200 px on the long side, so a slide program places them at roughly the height of a 16:9 slide), with <code>_presentation</code> added to the file name so they never replace the paper versions. The choice applies to <b>Save Plot Images</b> and to every dialog's <b>Download PNG</b>.</li>
         <li><b>Saving a dialog figure:</b> the <b>Download PNG</b> button in the CMD, Phase Analysis and Multi-Epoch Photometry dialogs saves that dialog's plot the same way: re-rendered on white paper at print resolution, with paper-sized type, deeper inks in place of the dark-mode pastels, tick marks, and a labelled axis on every panel. It saves what you are looking at, so any zoom, pan, re-fold or period pick you have made is in the figure. As with the main plots the figure takes the shape of the dialog's plot area, and it carries no title — the source id belongs in your caption, not inside the frame.</li>
       </ul>
       <h3>Keyboard shortcuts</h3>
@@ -964,7 +970,7 @@ input[type=range]::-moz-range-thumb {
       <button class="small" id="cmd-reset-zoom-btn" style="display:none" title="Restore the full CMD view">Reset Zoom</button>
       <button class="small" id="cmd-mep-btn" disabled title="Available once the epoch photometry has loaded">Light Curves</button>
       <button class="small" id="cmd-phase-btn" disabled title="Available once the epoch photometry has loaded">Phase Fold</button>
-      <button class="small" id="cmd-png-btn" title="Save this CMD as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
+      <button class="small" id="cmd-png-btn" title="Save this CMD as a high-resolution PNG on a white background, in the figure style chosen in the Export card (Paper or Presentation)">Download PNG</button>
       <button class="small" id="cmd-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="cmd-plot-wrap">
@@ -988,7 +994,7 @@ input[type=range]::-moz-range-thumb {
       <button class="small" id="phase-half-btn" title="Halve the fold period">Period ÷2</button>
       <button class="small" id="phase-double-btn" title="Double the fold period">Period ×2</button>
       <button class="small" id="phase-reset-btn" title="Return every periodogram and folded panel to its auto-fit view">Reset Views</button>
-      <button class="small" id="phase-png-btn" title="Save the phase plots as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
+      <button class="small" id="phase-png-btn" title="Save the phase plots as a high-resolution PNG on a white background, in the figure style chosen in the Export card (Paper or Presentation)">Download PNG</button>
       <button class="small" id="phase-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="phase-plot-wrap">
@@ -1028,7 +1034,7 @@ input[type=range]::-moz-range-thumb {
     <div class="modal-header">
       <h2 id="mep-title">Multi-Epoch Photometry</h2>
       <button class="small" id="mep-reset-btn" title="Return every light-curve panel to its auto-fit view">Reset Views</button>
-      <button class="small" id="mep-png-btn" title="Save the light curves as a high-resolution, paper-ready PNG on a white background">Download PNG</button>
+      <button class="small" id="mep-png-btn" title="Save the light curves as a high-resolution PNG on a white background, in the figure style chosen in the Export card (Paper or Presentation)">Download PNG</button>
       <button class="small" id="mep-close-btn" title="Close this dialog">✕</button>
     </div>
     <div id="mep-plot-wrap">
@@ -1110,6 +1116,12 @@ const THEME_PRINT = {
   accent: '#2f5d8a', accentHover: '#24496c', green: '#35a94c',
 };
 let printMode = false;
+/* Figure style of every saved image, picked in the Export card: 'paper' sizes
+   the type for a journal column, 'presentation' for a slide read across a room
+   (see PRES). presMode is the same switch as printMode — true only while a
+   presentation figure renders, so the screen never sees it. */
+let figureStyle = 'paper';
+let presMode = false;
 
 /* Run fn with the plots' palette switched to the print one. Restores on the
    way out even if fn throws, so a failed export can't leave the live app
@@ -1119,11 +1131,13 @@ function withPrintPalette(fn) {
   Object.assign(THEME, THEME_PRINT);
   INK = INK_PRINT;
   printMode = true;
+  presMode = figureStyle === 'presentation';
   try { return fn(); }
   finally {
     Object.assign(THEME, savedTheme);
     INK = INK_SCREEN;
     printMode = false;
+    presMode = false;
   }
 }
 
@@ -1273,6 +1287,18 @@ function niceTicks(lo, hi, target = 6) {
   }
   return ticks;
 }
+/* Presentation ticks: the niceTicks target is stepped down until neighbouring
+   numbers, at their large size, sit at least `gap` apart along an axis `len`
+   px long — a narrow panel at 40 px type otherwise runs "−0.6 −0.4 −0.2"
+   together. size(v) is one label's extent along the axis. */
+function fitTicks(lo, hi, target, len, size, gap) {
+  for (let t = target; ; t--) {
+    const ticks = niceTicks(lo, hi, t);
+    if (t <= 2 || ticks.length < 2) return ticks;
+    const step = Math.abs(ticks[1] - ticks[0]) / Math.abs(hi - lo) * len;
+    if (step >= Math.max(...ticks.map(size)) + gap) return ticks;
+  }
+}
 function fmtTick(v) {
   const a = Math.abs(v);
   if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(1);
@@ -1332,9 +1358,32 @@ const MARGIN_PRINT = { l: 136, r: 176, t: 60, b: 171 };
    down its right edge where the bar used to be. What remains is the small
    breathing room the top/right of the frame needs. */
 const MARGIN_PRINT_NOBAR = { ...MARGIN_PRINT, r: 46 };
+/* Presentation figures. A slide is read from the back of a room, so the type
+   is about twice the paper size relative to the page, the ticks are long and
+   heavy, and there are fewer of them so the big numbers never crowd. The page is also laid out at
+   roughly the on-screen panel size (dataLong) rather than the paper's 1244 px:
+   the data lines and dots are drawn in fixed CSS px, so on the smaller page
+   they keep the weight they have on screen instead of thinning to hairlines,
+   and the raster is pushed to minPx by the device scale instead. Saved images
+   are stamped at `dpi`, so a slide program places the long side at
+   minPx / dpi ≈ 7 in — the height of a 16:9 slide. */
+const PRES = {
+  tickFs: 40, labelFs: 50, annotFs: 30,   // tick numbers, axis titles, in-plot labels
+  tickLen: 16, tickGap: 12, lw: 3,        // tick marks, the frame and its ticks
+  nTicks: 5,                              // niceTicks target (paper: 6)
+  dataLong: 760, minPx: 4200, maxScale: 8, dpi: 600,
+};
+// the margins that type needs; the colorbar column holds 40 px ticks and a 50 px title
+const MARGIN_PRES = { l: 200, r: 250, t: 34, b: 150 };
+const MARGIN_PRES_NOBAR = { ...MARGIN_PRES, r: 56 };
 // whether saved figures carry the Spearman colorbar (Export card checkbox)
 let exportColorbar = true;
-function printMargin() { return exportColorbar ? MARGIN_PRINT : MARGIN_PRINT_NOBAR; }
+function printMargin() {
+  if (presMode) return exportColorbar ? MARGIN_PRES : MARGIN_PRES_NOBAR;
+  return exportColorbar ? MARGIN_PRINT : MARGIN_PRINT_NOBAR;
+}
+// a tick value with a real minus sign, for figures (the screen keeps hyphens)
+const tickNum = v => fmtTick(v).replace('-', '−');
 
 class Plot {
   constructor(canvas, title) {
@@ -1392,28 +1441,38 @@ class Plot {
     ctx.fillStyle = THEME.panelAlt;
     ctx.fillRect(r.x, r.y, r.w, r.h);
 
-    // ticks — print exports get the larger, paper-legible type sizes
-    const tickFs = printMode ? 28 : 11;
-    const labelFs = printMode ? 34 : 13;
+    // ticks — print exports get the larger, paper-legible type sizes, and
+    // presentation ones larger still, with long heavy tick marks in black
+    const pres = presMode;
+    const tickFs = pres ? PRES.tickFs : printMode ? 28 : 11;
+    const labelFs = pres ? PRES.labelFs : printMode ? 34 : 13;
     const titleFs = 14;
-    ctx.fillStyle = THEME.muted;
+    const tickLen = pres ? PRES.tickLen : 5, tickGap = pres ? PRES.tickGap : 3;
+    const nTicks = pres ? PRES.nTicks : 6;
+    const tickTxt = pres ? tickNum : fmtTick;
+    ctx.fillStyle = pres ? THEME.text : THEME.muted;
     ctx.strokeStyle = THEME.border;
+    ctx.lineWidth = pres ? PRES.lw : 1;
     ctx.font = `${tickFs}px "IBM Plex Sans", sans-serif`;
-    const xt = niceTicks(this.xlim[0], this.xlim[1]);
+    const xt = pres
+      ? fitTicks(this.xlim[0], this.xlim[1], nTicks, r.w, v => ctx.measureText(tickTxt(v)).width, tickFs * 0.75)
+      : niceTicks(this.xlim[0], this.xlim[1], nTicks);
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (const v of xt) {
       const px = this.xToPx(v);
       if (px < r.x - 0.5 || px > r.x + r.w + 0.5) continue;
-      ctx.beginPath(); ctx.moveTo(px, r.y + r.h); ctx.lineTo(px, r.y + r.h + 5); ctx.stroke();
-      ctx.fillText(fmtTick(v), px, r.y + r.h + 8);
+      ctx.beginPath(); ctx.moveTo(px, r.y + r.h); ctx.lineTo(px, r.y + r.h + tickLen); ctx.stroke();
+      ctx.fillText(tickTxt(v), px, r.y + r.h + tickLen + tickGap);
     }
-    const yt = niceTicks(this.ylim[0], this.ylim[1]);
+    const yt = pres
+      ? fitTicks(this.ylim[0], this.ylim[1], nTicks, r.h, () => tickFs, tickFs * 0.5)
+      : niceTicks(this.ylim[0], this.ylim[1], nTicks);
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (const v of yt) {
       const py = this.yToPx(v);
       if (py < r.y - 0.5 || py > r.y + r.h + 0.5) continue;
-      ctx.beginPath(); ctx.moveTo(r.x, py); ctx.lineTo(r.x - 5, py); ctx.stroke();
-      ctx.fillText(fmtTick(v), r.x - 8, py);
+      ctx.beginPath(); ctx.moveTo(r.x, py); ctx.lineTo(r.x - tickLen, py); ctx.stroke();
+      ctx.fillText(tickTxt(v), r.x - tickLen - tickGap, py);
     }
     // frame
     ctx.strokeStyle = THEME.border;
@@ -1429,13 +1488,13 @@ class Plot {
     }
 
     // axis labels (supports subscript parts like G_BP)
-    ctx.fillStyle = THEME.muted;
+    ctx.fillStyle = pres ? THEME.text : THEME.muted;
     if (this.xlabelParts) {
-      drawMathText(ctx, this.xlabelParts, r.x + r.w / 2, this.h - (printMode ? 60 : 8), labelFs, 'center');
+      drawMathText(ctx, this.xlabelParts, r.x + r.w / 2, this.h - (pres ? 30 : printMode ? 60 : 8), labelFs, 'center');
     }
     if (this.ylabelParts) {
       ctx.save();
-      ctx.translate(printMode ? 36 : 14, r.y + r.h / 2);
+      ctx.translate(pres ? 58 : printMode ? 36 : 14, r.y + r.h / 2);
       ctx.rotate(-Math.PI / 2);
       drawMathText(ctx, this.ylabelParts, 0, 0, labelFs, 'center');
       ctx.restore();
@@ -2254,7 +2313,7 @@ function drawOverview() {
       ctx.fillRect(rx, ry, rw, rh);
     }
     ctx.strokeStyle = THEME.green;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = presMode ? 4 : 2.5;
     ctx.strokeRect(rx, ry, rw, rh);
   }
   drawSelectionEmphasis(overview, ctx);  // find the searched star at a glance
@@ -2301,10 +2360,12 @@ function redVecPx(plot) {
    so on paper it came out as a hairline with a caption a third the height of
    the tick numbers. Everything with a pixel size here scales by PRINT_K. */
 const PRINT_K = 2.5;
+// a presentation page is near screen size, so this is a bolder arrow, not a bigger page
+const PRES_K = 2.4;
 function drawReddeningVector(plot, ctx) {
   if (!state.showRedVec) return;
   const { tx, ty, tipX, tipY } = redVecPx(plot);
-  const k = printMode ? PRINT_K : 1;
+  const k = presMode ? PRES_K : printMode ? PRINT_K : 1;
   ctx.save();
   ctx.strokeStyle = INK.redVec;
   ctx.fillStyle = INK.redVec;
@@ -2321,9 +2382,10 @@ function drawReddeningVector(plot, ctx) {
   ctx.lineTo(tipX - ah * Math.cos(ang + 0.45), tipY - ah * Math.sin(ang + 0.45));
   ctx.closePath();
   ctx.fill();
-  // label above the tail so the arrow itself stays clear
-  drawMathText(ctx, [{ t: 'A' }, { t: 'V', sub: true }, { t: ' = 1 reddening' }],
-    tx, ty - 8 * k, 12 * k, 'center');
+  // label above the tail so the arrow itself stays clear; a slide drops the
+  // word, which the speaker supplies
+  drawMathText(ctx, [{ t: 'A' }, { t: 'V', sub: true }, { t: presMode ? ' = 1' : ' = 1 reddening' }],
+    tx, ty - 8 * k, presMode ? PRES.annotFs : 12 * k, 'center');
   ctx.restore();
 }
 // distance from a point to the arrow segment, for grab hit-testing
@@ -2366,12 +2428,14 @@ function drawDetail() {
     ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.beginPath();
-    ctx.ellipse(detail.xToPx(cx), detail.yToPx(cy), Math.max(5, r.w * 0.007), Math.max(5, r.h * 0.007), 0, 0, 2 * Math.PI);
+    const rMin = presMode ? 10 : 5;
+    ctx.ellipse(detail.xToPx(cx), detail.yToPx(cy), Math.max(rMin, r.w * 0.007), Math.max(rMin, r.h * 0.007), 0, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.restore();
   };
-  for (const i of state.selection) ring(i, THEME.green, 2.5, 0);
-  if (state.hover >= 0) ring(state.hover, INK.hoverRing, 2.5, 10);
+  const ringLw = presMode ? 4.5 : 2.5;
+  for (const i of state.selection) ring(i, THEME.green, ringLw, 0);
+  if (state.hover >= 0) ring(state.hover, INK.hoverRing, ringLw, 10);
   // the A_V = 1 arrow at its data position; the clip region means it appears
   // only when the detail window (the green overview box) covers that spot
   drawReddeningVector(detail, ctx);
@@ -2402,12 +2466,15 @@ const HR_TRACKS = [
              [0.60, 12.8], [0.90, 13.8], [1.20, 14.8], [1.50, 15.7]],
   },
 ];
+// presentation figures draw the reference overlays twice as heavy
+const hrK = () => presMode ? 2 : 1;
 function drawHRTracks(plot, ctx, lw) {
   if (!state.showHRRef) return;
+  const k = hrK();
   ctx.save();
   ctx.strokeStyle = INK.hrTrack;
-  ctx.lineWidth = lw;
-  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = lw * k;
+  ctx.setLineDash([6 * k, 4 * k]);
   for (const t of HR_TRACKS) {
     ctx.beginPath();
     t.points.forEach(([x, y], k) => {
@@ -2453,8 +2520,8 @@ function drawHRRegions(plot, ctx) {
     ctx.fillStyle = INK[rg.ink + 'Fill'];
     ctx.fill();
     ctx.strokeStyle = INK[rg.ink + 'Edge'];
-    ctx.lineWidth = 1.2;
-    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.2 * hrK();
+    ctx.setLineDash([5 * hrK(), 4 * hrK()]);
     ctx.stroke();
   }
   ctx.restore();
@@ -2462,20 +2529,21 @@ function drawHRRegions(plot, ctx) {
 // Track/region names are drawn in a separate pass, after the data segments,
 // so the wording on the plot always stays legible on top of the lines.
 function drawHRLabels(plot, ctx) {
+  const k = hrK();
   ctx.save();
-  ctx.font = '11px "IBM Plex Sans", sans-serif';
+  ctx.font = `${presMode ? PRES.annotFs : 11}px "IBM Plex Sans", sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   if (state.showHRRef) {
     ctx.fillStyle = INK.hrLabel;
     for (const t of HR_TRACKS) {
       const [mx, my] = t.points[Math.floor(t.points.length / 2)];
-      ctx.fillText(t.name, plot.xToPx(mx) + 6, plot.yToPx(my) - 4);
+      ctx.fillText(t.name, plot.xToPx(mx) + 6 * k, plot.yToPx(my) - 4 * k);
     }
   }
   if (state.showInstabilityStrip) {
     for (const rg of HR_REGIONS) {
       ctx.fillStyle = INK[rg.ink + 'Text'];
-      ctx.fillText(rg.name, plot.xToPx(rg.label[0]) + 6, plot.yToPx(rg.label[1]) - 4);
+      ctx.fillText(rg.name, plot.xToPx(rg.label[0]) + 6 * k, plot.yToPx(rg.label[1]) - 4 * k);
     }
   }
   ctx.restore();
@@ -3382,8 +3450,9 @@ function exportPageSize(plot) {
   const inH = plot.h - MARGIN.t - MARGIN.b;
   let a = (inW > 0 && inH > 0) ? inW / inH : 868 / 1244;
   a = Math.max(1 / EXPORT_ASPECT_MAX, Math.min(EXPORT_ASPECT_MAX, a));
-  const dataW = a >= 1 ? EXPORT_DATA_LONG : EXPORT_DATA_LONG * a;
-  const dataH = a >= 1 ? EXPORT_DATA_LONG / a : EXPORT_DATA_LONG;
+  const long = presMode ? PRES.dataLong : EXPORT_DATA_LONG;
+  const dataW = a >= 1 ? long : long * a;
+  const dataH = a >= 1 ? long / a : long;
   const m = printMargin();
   return { w: Math.round(dataW + m.l + m.r), h: Math.round(dataH + m.t + m.b) };
 }
@@ -3395,7 +3464,9 @@ function exportPageSize(plot) {
    keyed in the Color Legend card, instead. */
 function drawPrintColorbar(plot, ctx) {
   const r = plot.plotRect;
-  const bx = r.x + r.w + 16, bw = 26, by = r.y, bh = r.h;
+  // presentation: a wider bar, ticks only at the halves, and the short title
+  const pres = presMode;
+  const bx = r.x + r.w + (pres ? 28 : 16), bw = pres ? 36 : 26, by = r.y, bh = r.h;
   const grad = ctx.createLinearGradient(0, by + bh, 0, by);   // stop 0 at ρ=−1 (bottom)
   for (let k = 0; k <= 24; k++) {
     const t = k / 24;
@@ -3406,28 +3477,29 @@ function drawPrintColorbar(plot, ctx) {
   ctx.fillStyle = grad;
   ctx.fillRect(bx, by, bw, bh);
   ctx.strokeStyle = THEME.border;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = pres ? PRES.lw : 1;
   ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
   ctx.fillStyle = THEME.text;
-  ctx.font = '22px "IBM Plex Sans", sans-serif';
+  ctx.font = `${pres ? PRES.tickFs : 22}px "IBM Plex Sans", sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const steps = pres ? 2 : 4, tickLen = pres ? 10 : 4, tickGap = pres ? 8 : 4;
   let widest = 0;
-  for (let s = -4; s <= 4; s++) {
-    const v = s / 4;
+  for (let s = -steps; s <= steps; s++) {
+    const v = s / steps;
     const y = by + (1 - (v + 1) / 2) * bh;
-    const txt = v.toFixed(2).replace('-', '−');
-    ctx.beginPath(); ctx.moveTo(bx + bw, y); ctx.lineTo(bx + bw + 4, y); ctx.stroke();
-    ctx.fillText(txt, bx + bw + 8, y);
+    const txt = pres ? tickNum(v) : v.toFixed(2).replace('-', '−');
+    ctx.beginPath(); ctx.moveTo(bx + bw, y); ctx.lineTo(bx + bw + tickLen, y); ctx.stroke();
+    ctx.fillText(txt, bx + bw + tickLen + tickGap, y);
     widest = Math.max(widest, ctx.measureText(txt).width);
   }
   // seat the rotated title just past the widest tick label rather than at a
   // fixed offset, so a larger type size can never push the two into each other
-  const titleFs = 24;
-  ctx.translate(bx + bw + 8 + widest + 12 + titleFs * 0.6, by + bh / 2);
+  const titleFs = pres ? PRES.labelFs : 24;
+  ctx.translate(bx + bw + tickLen + tickGap + widest + 12 + titleFs * 0.6, by + bh / 2);
   ctx.rotate(Math.PI / 2);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = `${titleFs}px "IBM Plex Sans", sans-serif`;
-  ctx.fillText('Spearman Correlation Coefficient', 0, 0);
+  ctx.fillText(pres ? 'Spearman ρ' : 'Spearman Correlation Coefficient', 0, 0);
   ctx.restore();
 }
 
@@ -3435,7 +3507,9 @@ function renderPlotForPrint(plot, draw) {
   if (!(plot.w > 0 && plot.h > 0)) throw new Error('the plots have no size yet');
   // read the page size before the live .w/.h are swapped out below
   const { w, h } = exportPageSize(plot);
-  const scale = Math.min(EXPORT_MAX_SCALE, Math.max(2, EXPORT_MIN_PX / Math.max(w, h)));
+  const scale = presMode
+    ? Math.min(PRES.maxScale, Math.max(2, PRES.minPx / Math.max(w, h)))
+    : Math.min(EXPORT_MAX_SCALE, Math.max(2, EXPORT_MIN_PX / Math.max(w, h)));
   const off = document.createElement('canvas');
   off.width = Math.round(w * scale);
   off.height = Math.round(h * scale);
@@ -3481,10 +3555,10 @@ function canvasToBlob(canvas, type, quality) {
 /* Minimal single-page PDF wrapping the figure as one JPEG (DCTDecode) image —
    just the five objects every viewer requires, written by hand so the export
    needs no library (the app runs fully offline). The page is sized so the
-   figure comes out at 300 dpi. */
-async function canvasToPdfBlob(canvas) {
+   figure comes out at `dpi` (300 for paper figures). */
+async function canvasToPdfBlob(canvas, dpi = 300) {
   const jpeg = new Uint8Array(await (await canvasToBlob(canvas, 'image/jpeg', 0.95)).arrayBuffer());
-  const W = (canvas.width * 72 / 300).toFixed(2), H = (canvas.height * 72 / 300).toFixed(2);
+  const W = (canvas.width * 72 / dpi).toFixed(2), H = (canvas.height * 72 / dpi).toFixed(2);
   const enc = s => new TextEncoder().encode(s);   // every string here is ASCII
   const content = enc(`q\n${W} 0 0 ${H} 0 0 cm\n/Im0 Do\nQ\n`);
   const objs = [
@@ -3513,6 +3587,37 @@ async function canvasToPdfBlob(canvas) {
     + `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${pos}\n%%EOF\n`;
   parts.push(enc(xref));
   return new Blob(parts, { type: 'application/pdf' });
+}
+
+/* Write a resolution into an encoded PNG or JPEG. The browser's encoders leave
+   it out, and PowerPoint, Keynote and Word then assume 72–96 dpi and place a
+   4200 px figure 44 inches wide. PNG gets a pHYs chunk right after IHDR
+   (pixels per metre); JPEG gets the density fields of its JFIF header patched.
+   Anything not laid out as expected is passed through unchanged. */
+async function stampDpi(blob, dpi) {
+  const src = new Uint8Array(await blob.arrayBuffer());
+  const png = src[1] === 0x50 && src[2] === 0x4e && src[3] === 0x47 &&
+              String.fromCharCode(...src.subarray(12, 16)) === 'IHDR';
+  if (png) {
+    const ppm = Math.round(dpi / 0.0254);
+    const chunk = new Uint8Array(21);
+    const v = new DataView(chunk.buffer);
+    v.setUint32(0, 9);                       // data length
+    chunk.set([0x70, 0x48, 0x59, 0x73], 4);  // 'pHYs'
+    v.setUint32(8, ppm); v.setUint32(12, ppm);
+    chunk[16] = 1;                           // unit: metre
+    v.setUint32(17, crc32(chunk.subarray(4, 17)));
+    return new Blob([src.subarray(0, 33), chunk, src.subarray(33)], { type: blob.type });
+  }
+  const jfif = src[0] === 0xff && src[1] === 0xd8 && src[2] === 0xff && src[3] === 0xe0 &&
+               String.fromCharCode(...src.subarray(6, 11)) === 'JFIF\0';
+  if (jfif) {
+    const v = new DataView(src.buffer);
+    src[13] = 1;                             // units: dots per inch
+    v.setUint16(14, dpi); v.setUint16(16, dpi);
+    return new Blob([src], { type: blob.type });
+  }
+  return blob;
 }
 
 /* ---------------- Bundling both figures into one file ----------------
@@ -3614,6 +3719,15 @@ let plotImageFormat = 'png';
 $('colorbar-checkbox').addEventListener('change', ev => {
   exportColorbar = ev.target.checked;
 });
+const FIGURE_STYLES = ['paper', 'presentation'];
+for (const s of FIGURE_STYLES) {
+  $('style-' + s).addEventListener('click', () => {
+    figureStyle = s;
+    for (const t of FIGURE_STYLES) $('style-' + t).classList.toggle('active', t === s);
+  });
+}
+// presentation files are named apart, so a slide copy never replaces the paper one
+const styleSuffix = () => figureStyle === 'presentation' ? '_presentation' : '';
 for (const f of Object.keys(PLOT_FORMATS)) {
   $('fmt-' + f).addEventListener('click', () => {
     plotImageFormat = f;
@@ -3626,8 +3740,9 @@ async function exportPlotImages() {
   const btn = $('export-plots-png-btn');
   if (btn.disabled) return;
   const fmt = plotImageFormat, ext = PLOT_FORMATS[fmt].ext;
+  const pres = figureStyle === 'presentation';
   const base = $('filename-input').value.trim().replace(/\.(csv|png|jpe?g|pdf)$/i, '');
-  const name = suffix => (base ? base + '_' : '') + suffix + ext;
+  const name = suffix => (base ? base + '_' : '') + suffix + styleSuffix() + ext;
   btn.disabled = true;
   const label = btn.textContent;
   btn.textContent = 'Rendering images…';
@@ -3649,18 +3764,22 @@ async function exportPlotImages() {
     for (const j of jobs) {
       const canvas = withPrintPalette(() => renderPlotForPrint(j.plot, j.draw));
       canvases.push(canvas);
-      const blob = fmt === 'pdf'
-        ? await canvasToPdfBlob(canvas)
-        : await canvasToBlob(canvas, 'image/' + fmt, 0.95);
+      let blob;
+      if (fmt === 'pdf') blob = await canvasToPdfBlob(canvas, pres ? PRES.dpi : 300);
+      else {
+        blob = await canvasToBlob(canvas, 'image/' + fmt, 0.95);
+        if (pres) blob = await stampDpi(blob, PRES.dpi);
+      }
       ready.push({ blob, file: j.file, w: canvas.width, h: canvas.height });
     }
     btn.textContent = 'Saving…';
     const zip = await filesToZipBlob(ready.map(r => ({ name: r.file, blob: r.blob })));
-    const saved = downloadBlob(zip, (base ? base + '_' : '') + 'plots.zip');
+    const saved = downloadBlob(zip, (base ? base + '_' : '') + 'plots' + styleSuffix() + '.zip');
     const mb = (saved.bytes / 1048576).toFixed(1);
     setMessage(`[${timestamp()}] Saved '${saved.filename}' containing ` +
       `${ready.map(r => `'${r.file}' (${r.w}×${r.h} px)`).join(' and ')} — ` +
-      `on a white background${exportColorbar ? ' with a Spearman colorbar' : ', no colorbar'}, ${mb} MB`);
+      `${pres ? `presentation style at ${PRES.dpi} dpi` : 'on a white background'}` +
+      `${exportColorbar ? ' with a Spearman colorbar' : ', no colorbar'}, ${mb} MB`);
   } catch (e) {
     setMessage(`[${timestamp()}] Could not save the plot images: ${e.message}`);
   } finally {
@@ -3707,8 +3826,24 @@ const FIG_TYPE_BOOST = 1.2;
 const FIG_MIN_PX = 3000;      // target for the longer side of the raster
 const FIG_MAX_SCALE = 4;      // ceiling on device-pixels per CSS px
 
+/* Presentation dialog figures use the same page, with the marks — dots, error
+   bars, curves — grown by this instead of FIG_TYPE_BOOST, and the type set
+   straight from FIG_PRES. Those are page px: the page's long side is always
+   FIG_PAGE_LONG, so a fixed size is a fixed fraction of the figure. */
+const FIG_PRES_MARK_BOOST = 1.5;
+const FIG_PRES = {
+  tickFs: 46, labelFs: 56, titleFs: 46,   // multi-panel grids (phase, light curves)
+  tickLen: 18, tickGap: 10, tickLw: 3,
+  /* The light curves are the figure people read point by point, so their
+     page is taller than the dialog (height / width) and the bands sit
+     further apart — each row comes out about a third taller. */
+  mepAspect: 1.05, mepRowSpace: 28,
+  cmd: { tickFs: 54, labelFs: 64, legendFs: 42 },
+};
+
 let figTarget = null;         // {ctx, w, h, k} while a dialog figure renders
 const figPrint = () => figTarget !== null;
+const figPres = () => figTarget !== null && presMode;
 const fpx = v => figTarget ? v * figTarget.k : v;
 /* Typographic minus for anything numeric in a figure. The hyphen the number
    formatters emit is a shorter, higher mark that reads as a dash next to a
@@ -3751,12 +3886,17 @@ function figSurface(canvas, defW, defH) {
   return { ctx, W, H };
 }
 
-function renderFigureForPrint(canvas, draw) {
+/* presAspect (height / width), when given, replaces the dialog's shape for a
+   presentation figure: the page keeps the width it would have had — so the
+   type and marks come out exactly as large — and grows only downward. */
+function renderFigureForPrint(canvas, draw, presAspect) {
   const liveW = canvas.clientWidth, liveH = canvas.clientHeight;
   if (!(liveW > 0 && liveH > 0)) throw new Error('the figure has no size yet');
-  const g = FIG_PAGE_LONG / Math.max(liveW, liveH);     // page growth
-  const w = Math.round(liveW * g), h = Math.round(liveH * g);
-  const scale = Math.min(FIG_MAX_SCALE, Math.max(2, FIG_MIN_PX / Math.max(w, h)));
+  const pres = figureStyle === 'presentation';
+  const shaped = pres && presAspect > 0;
+  const g = FIG_PAGE_LONG / (shaped ? liveW : Math.max(liveW, liveH));   // page growth
+  const w = Math.round(liveW * g), h = Math.round(shaped ? w * presAspect : liveH * g);
+  const scale = Math.min(FIG_MAX_SCALE, Math.max(2, (pres ? PRES.minPx : FIG_MIN_PX) / Math.max(w, h)));
   const off = document.createElement('canvas');
   off.width = Math.round(w * scale);
   off.height = Math.round(h * scale);
@@ -3773,7 +3913,7 @@ function renderFigureForPrint(canvas, draw) {
      than the screen, so it is put back on the way out — the dialog stays
      interactive without needing a redraw after every save. */
   const savedXf = cmdXf, savedPhaseRects = panelRects.phase, savedMepRects = panelRects.mep;
-  figTarget = { ctx: octx, w, h, k: g * FIG_TYPE_BOOST };
+  figTarget = { ctx: octx, w, h, k: g * (pres ? FIG_PRES_MARK_BOOST : FIG_TYPE_BOOST) };
   try { withFigurePalette(draw); }
   finally {
     figTarget = null;
@@ -3787,8 +3927,9 @@ function renderFigureForPrint(canvas, draw) {
 /* Render one dialog figure and save it. One file per click, so no zip is
    needed here — the burst-download limit that forces the two main plots into a
    single archive only bites from the second save onward. */
-async function saveDialogFigure(btn, canvas, draw, filename, statusEl) {
+async function saveDialogFigure(btn, canvas, draw, filename, statusEl, presAspect) {
   if (btn.disabled) return;
+  const pres = figureStyle === 'presentation';
   const label = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Rendering…';
@@ -3796,11 +3937,13 @@ async function saveDialogFigure(btn, canvas, draw, filename, statusEl) {
   await new Promise(requestAnimationFrame);
   let off = null;
   try {
-    off = renderFigureForPrint(canvas, draw);
-    const blob = await canvasToBlob(off, 'image/png');
-    const saved = downloadBlob(blob, filename);
+    off = renderFigureForPrint(canvas, draw, presAspect);
+    let blob = await canvasToBlob(off, 'image/png');
+    if (pres) blob = await stampDpi(blob, PRES.dpi);
+    const saved = downloadBlob(blob, filename.replace(/\.png$/, styleSuffix() + '.png'));
     setMessage(`[${timestamp()}] Saved '${saved.filename}' (${off.width}×${off.height} px) — ` +
-      `paper-ready on a white background, ${(saved.bytes / 1048576).toFixed(1)} MB`);
+      `${pres ? `presentation style at ${PRES.dpi} dpi` : 'paper-ready'} on a white background, ` +
+      `${(saved.bytes / 1048576).toFixed(1)} MB`);
     btn.textContent = 'Saved ✓';
     setTimeout(() => { if (!btn.disabled) btn.textContent = label; }, 1600);
   } catch (e) {
@@ -4498,22 +4641,42 @@ function cmdAutoExtent(d) {
 function drawCMD(d) {
   lastCMD = d;
   const { ctx, W, H } = figSurface(cmdCanvas, 684, 560);
-  const paper = figPrint();
+  const paper = figPrint(), pres = figPres();
+  const P = FIG_PRES.cmd;
 
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
-  // print keeps the on-screen proportions, with every length scaled up so the
-  // type lands at paper sizes; the left/bottom margins get a little extra on
-  // top of that for the taller tick labels and axis titles
-  const M = paper
-    ? { l: fpx(78), r: fpx(22), t: fpx(22), b: fpx(64) }
-    : { l: 66, r: 20, t: 20, b: 56 };
-  const pw = W - M.l - M.r, ph = H - M.t - M.b;
-
   // user zoom/pan view when active, otherwise auto fit
   const { xmin, xmax, ymin, ymax } = cmdView || cmdAutoExtent(d);
   $('cmd-reset-zoom-btn').style.display = cmdView ? '' : 'none';
+
+  const tickFs = pres ? P.tickFs : fpx(11), labelFs = pres ? P.labelFs : fpx(14);
+  const tickLen = pres ? FIG_PRES.tickLen : fpx(5), tickGap = pres ? FIG_PRES.tickGap : fpx(3);
+  const tickTxt = v => figNum(fmtTick(v));
+
+  // print keeps the on-screen proportions, with every length scaled up so the
+  // type lands at paper sizes; the left/bottom margins get a little extra on
+  // top of that for the taller tick labels and axis titles. At presentation
+  // sizes the y tick labels' width swings by a third between stars, so the
+  // left margin is fitted to the widest one — and each axis takes only as
+  // many numbers as fit at that size.
+  let M, xTicks, yTicks;
+  if (pres) {
+    ctx.font = `${tickFs}px "IBM Plex Sans", sans-serif`;
+    M = { r: tickFs, t: tickFs * 0.7, b: Math.ceil(tickLen + tickGap + tickFs * 1.1 + 18 + labelFs * 1.3) };
+    yTicks = fitTicks(ymin, ymax, PRES.nTicks, H - M.t - M.b, () => tickFs, tickFs * 0.5);
+    const yw = Math.max(0, ...yTicks.map(v => ctx.measureText(tickTxt(v)).width));
+    M.l = Math.ceil(24 + labelFs * 1.1 + 20 + yw + tickGap + tickLen);
+    xTicks = fitTicks(xmin, xmax, PRES.nTicks, W - M.l - M.r, v => ctx.measureText(tickTxt(v)).width, tickFs * 0.75);
+  } else {
+    M = paper
+      ? { l: fpx(78), r: fpx(22), t: fpx(22), b: fpx(64) }
+      : { l: 66, r: 20, t: 20, b: 56 };
+    xTicks = niceTicks(xmin, xmax);
+    yTicks = niceTicks(ymin, ymax);
+  }
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
   const X = v => M.l + (v - xmin) / (xmax - xmin) * pw;
   const Y = v => M.t + (v - ymin) / (ymax - ymin) * ph;   // inverted y: larger mag = fainter = lower
@@ -4522,27 +4685,26 @@ function drawCMD(d) {
   // panel + axes
   ctx.fillStyle = THEME.panelAlt;
   ctx.fillRect(M.l, M.t, pw, ph);
-  ctx.lineWidth = fpx(1);
+  ctx.lineWidth = pres ? FIG_PRES.tickLw : fpx(1);
   ctx.strokeStyle = THEME.border;
   ctx.strokeRect(M.l + 0.5, M.t + 0.5, pw - 1, ph - 1);
 
-  const tickFs = fpx(11), labelFs = fpx(14);
   ctx.font = `${tickFs}px "IBM Plex Sans", sans-serif`;
   ctx.fillStyle = paper ? THEME.text : THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (const v of niceTicks(xmin, xmax)) {
+  for (const v of xTicks) {
     const px = X(v);
     if (px < M.l || px > M.l + pw) continue;
     ctx.strokeStyle = THEME.border;
-    ctx.beginPath(); ctx.moveTo(px, M.t + ph); ctx.lineTo(px, M.t + ph + fpx(5)); ctx.stroke();
-    ctx.fillText(figNum(fmtTick(v)), px, M.t + ph + fpx(8));
+    ctx.beginPath(); ctx.moveTo(px, M.t + ph); ctx.lineTo(px, M.t + ph + tickLen); ctx.stroke();
+    ctx.fillText(figNum(fmtTick(v)), px, M.t + ph + tickLen + tickGap);
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for (const v of niceTicks(ymin, ymax)) {
+  for (const v of yTicks) {
     const py = Y(v);
     if (py < M.t || py > M.t + ph) continue;
-    ctx.beginPath(); ctx.moveTo(M.l, py); ctx.lineTo(M.l - fpx(5), py); ctx.stroke();
-    ctx.fillText(figNum(fmtTick(v)), M.l - fpx(8), py);
+    ctx.beginPath(); ctx.moveTo(M.l, py); ctx.lineTo(M.l - tickLen, py); ctx.stroke();
+    ctx.fillText(figNum(fmtTick(v)), M.l - tickLen - tickGap, py);
   }
 
   // axis labels — the source id is already in the dialog header, so the plot
@@ -4550,9 +4712,9 @@ function drawCMD(d) {
   // magnitude axis is named for its column on screen, where the sidebar and
   // the tooltips use the same word, and for the band it actually is on paper.
   ctx.fillStyle = paper ? THEME.text : THEME.muted;
-  drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - fpx(14), labelFs, 'center');
+  drawMathText(ctx, LBL_BPRP, M.l + pw / 2, H - (pres ? 30 : fpx(14)), labelFs, 'center');
   ctx.save();
-  ctx.translate(fpx(18), M.t + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.translate(pres ? 24 + labelFs * 0.78 : fpx(18), M.t + ph / 2); ctx.rotate(-Math.PI / 2);
   drawMathText(ctx, paper ? LBL_GMAG_PRINT : LBL_GMAG, 0, 0, labelFs, 'center');
   ctx.restore();
 
@@ -4607,22 +4769,26 @@ function drawCMD(d) {
   occupied.push([X(mkx), Y(mky)]);
   ctx.restore();
 
-  // slope box (top-left, like the skyblue bbox)
-  const slopeFs = fpx(14), slopeH = fpx(28), slopePad = fpx(12);
-  ctx.font = `600 ${slopeFs}px "IBM Plex Sans", sans-serif`;
+  // slope box (top-left, like the skyblue bbox). A slide puts the slope in the
+  // legend instead, against a sample of the fit line: the fixed corner box
+  // sits on whatever data reaches that corner, and at slide size that is a lot.
   const slopeTxt = figNum(`m = ${d.m.toFixed(2)}`);
-  const tw = ctx.measureText(slopeTxt).width;
-  ctx.lineWidth = fpx(1);
-  ctx.fillStyle = CMD_INK.slopeFill;
-  ctx.strokeStyle = CMD_INK.slopeEdge;
-  roundRect(ctx, M.l + slopePad, M.t + slopePad, tw + fpx(20), slopeH, fpx(7));
-  ctx.fill(); ctx.stroke();
-  ctx.fillStyle = THEME.text;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(slopeTxt, M.l + slopePad + fpx(10), M.t + slopePad + slopeH / 2);
-  // block the legend from landing on the slope box
-  for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
-    occupied.push([M.l + slopePad + fx * (tw + fpx(20)), M.t + slopePad + fy * slopeH]);
+  if (!pres) {
+    const slopeFs = fpx(14), slopeH = fpx(28), slopePad = fpx(12);
+    ctx.font = `600 ${slopeFs}px "IBM Plex Sans", sans-serif`;
+    const tw = ctx.measureText(slopeTxt).width;
+    ctx.lineWidth = fpx(1);
+    ctx.fillStyle = CMD_INK.slopeFill;
+    ctx.strokeStyle = CMD_INK.slopeEdge;
+    roundRect(ctx, M.l + slopePad, M.t + slopePad, tw + fpx(20), slopeH, fpx(7));
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = THEME.text;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(slopeTxt, M.l + slopePad + fpx(10), M.t + slopePad + slopeH / 2);
+    // block the legend from landing on the slope box
+    for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) {
+      occupied.push([M.l + slopePad + fx * (tw + fpx(20)), M.t + slopePad + fy * slopeH]);
+    }
   }
   // ...and from landing under the floating X/Y zoom buttons overlaid on the
   // plot's top-right corner (.zoom-overlay-cmd: top 28px, right 28px, ~70×56 px).
@@ -4633,25 +4799,32 @@ function drawCMD(d) {
     }
   }
 
-  // legend: every rank present, placed where the fewest points sit
+  // legend: every rank present, placed where the fewest points sit. A slide
+  // keeps the categories but not their epoch counts.
+  const counted = (label, n) => pres ? label : `${label} (${n})`;
   const items = [];
   for (const r of [0, 1, 2, 3, 4]) {
     const p = d.rankPts[r];
     if (p.x.length) {
       items.push({ marker: CMD_RANK_STYLE[r].marker, color: CMD_RANK_STYLE[r].color,
-        label: `${CMD_RANK_STYLE[r].label} (${p.x.length})` });
+        label: counted(CMD_RANK_STYLE[r].label, p.x.length) });
     }
   }
   if (d.snrBad.x.length) {
-    items.push({ marker: 'cross', color: CMD_INK.snr, label: `SNR rejected (${d.snrBad.x.length})` });
+    items.push({ marker: 'cross', color: CMD_INK.snr, label: counted('SNR rejected', d.snrBad.x.length) });
   }
   items.push({ marker: 'meanstar', color: CMD_INK.meanStar, label: 'mean of used points' });
+  if (pres) items.push({ marker: 'fitline', color: d.m < 0 ? CMD_INK.fitNeg : CMD_INK.fitPos, label: `fit, ${slopeTxt}` });
 
-  const legFs = fpx(12), rowH = fpx(20);
+  // legend geometry: paper scales the screen's; a slide's follows its own type size
+  const legFs = pres ? P.legendFs : fpx(12), rowH = pres ? legFs * 1.45 : fpx(20);
+  const legTop = pres ? legFs * 0.25 + rowH / 2 : fpx(16);     // first row's center
+  const legMark = pres ? legFs * 0.75 : fpx(16), legText = pres ? legFs * 1.55 : fpx(30);
+  const markS = pres ? legFs * 0.3 : fpx(4.5), starR = pres ? legFs * 0.38 : fpx(6);
   ctx.font = `${legFs}px "IBM Plex Sans", sans-serif`;
-  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + fpx(38);
-  const lh = items.length * rowH + fpx(12);
-  const pad = fpx(12);
+  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + (pres ? legFs * 2.1 : fpx(38));
+  const lh = items.length * rowH + (pres ? legFs * 0.5 : fpx(12));
+  const pad = pres ? 24 : fpx(12);
   const candidates = [
     [M.l + pw - lw - pad, M.t + pad],            // top-right
     [M.l + pad, M.t + pad],                      // top-left
@@ -4678,15 +4851,19 @@ function drawCMD(d) {
   roundRect(ctx, lx, ly, lw, lh, fpx(7));
   ctx.fill(); ctx.stroke();
   items.forEach((it, i) => {
-    const cy = ly + fpx(16) + i * rowH, cx = lx + fpx(16);
+    const cy = ly + legTop + i * rowH, cx = lx + legMark;
     if (it.marker === 'meanstar') {
-      drawStar(ctx, cx, cy, fpx(6), it.color, paper ? THEME.text : THEME.muted);
+      drawStar(ctx, cx, cy, starR, it.color, paper ? THEME.text : THEME.muted);
+    } else if (it.marker === 'fitline') {
+      ctx.strokeStyle = it.color;
+      ctx.lineWidth = fpx(2); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(cx - legFs * 0.5, cy); ctx.lineTo(cx + legFs * 0.5, cy); ctx.stroke();
     } else {
-      drawCMDMarker(ctx, cx, cy, it.marker, it.color, fpx(4.5));
+      drawCMDMarker(ctx, cx, cy, it.marker, it.color, markS);
     }
     ctx.fillStyle = THEME.text;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(it.label, lx + fpx(30), cy);
+    ctx.fillText(it.label, lx + legText, cy);
   });
 }
 
@@ -4939,10 +5116,11 @@ const fmtPeriod = P => `${P < 1 ? P.toFixed(4) : P.toFixed(3)} d`;
 
 /* ---- small panel plotting helpers for the 4×2 grid ---- */
 function phasePanel(ctx, r, xlim, ylim, opts = {}) {
-  const paper = figPrint();
+  const paper = figPrint(), pres = figPres();
+  const F = FIG_PRES;
   ctx.fillStyle = THEME.panelAlt;
   ctx.fillRect(r.x, r.y, r.w, r.h);
-  ctx.lineWidth = fpx(1);
+  ctx.lineWidth = pres ? F.tickLw : fpx(1);
   ctx.strokeStyle = THEME.border;
   ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
   const X = v => r.x + (v - xlim[0]) / (xlim[1] - xlim[0]) * r.w;
@@ -4952,50 +5130,61 @@ function phasePanel(ctx, r, xlim, ylim, opts = {}) {
   // on paper the tick VALUES also get tick MARKS: eight small panels of bare
   // numbers read as a table of figures, and the marks are what tie each number
   // back to its position on the axis
-  const tickLen = fpx(4);
-  ctx.font = `${fpx(10)}px "IBM Plex Sans", sans-serif`;
+  const tickLen = pres ? F.tickLen : fpx(4);
+  const gapX = pres ? F.tickGap : fpx(4), gapY = pres ? F.tickGap : fpx(5);
+  ctx.font = `${pres ? F.tickFs : fpx(10)}px "IBM Plex Sans", sans-serif`;
   ctx.fillStyle = paper ? THEME.text : THEME.muted;
   ctx.strokeStyle = THEME.border;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (const v of niceTicks(xlim[0], xlim[1], 5)) {
+  const tickTxt = v => figNum(fmtTick(v));
+  const xTicks = pres
+    ? fitTicks(xlim[0], xlim[1], 5, r.w, v => ctx.measureText(tickTxt(v)).width, F.tickFs * 0.75)
+    : niceTicks(xlim[0], xlim[1], 5);
+  const yTicks = pres
+    ? fitTicks(ylim[0], ylim[1], 3, r.h, () => F.tickFs, F.tickFs * 0.3)
+    : niceTicks(ylim[0], ylim[1], 4);
+  for (const v of xTicks) {
     const px = X(v);
     if (px < r.x - 0.5 || px > r.x + r.w + 0.5) continue;
     if (paper) {
       ctx.beginPath(); ctx.moveTo(px, r.y + r.h); ctx.lineTo(px, r.y + r.h + tickLen); ctx.stroke();
     }
-    ctx.fillText(figNum(fmtTick(v)), px, r.y + r.h + fpx(4) + (paper ? tickLen : 0));
+    // panels stacked on one shared x axis are numbered along the bottom only
+    if (!opts.noXLabels) ctx.fillText(tickTxt(v), px, r.y + r.h + gapX + (paper ? tickLen : 0));
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for (const v of niceTicks(ylim[0], ylim[1], 4)) {
+  for (const v of yTicks) {
     const py = Y(v);
     if (py < r.y - 0.5 || py > r.y + r.h + 0.5) continue;
     if (paper) {
       ctx.beginPath(); ctx.moveTo(r.x, py); ctx.lineTo(r.x - tickLen, py); ctx.stroke();
     }
-    ctx.fillText(figNum(fmtTick(v)), r.x - fpx(5) - (paper ? tickLen : 0), py);
+    ctx.fillText(tickTxt(v), r.x - gapY - (paper ? tickLen : 0), py);
   }
   if (opts.title) {
-    ctx.font = `600 ${fpx(12)}px "IBM Plex Sans", sans-serif`;
+    ctx.font = `600 ${pres ? F.titleFs : fpx(12)}px "IBM Plex Sans", sans-serif`;
     ctx.fillStyle = opts.titleColor || THEME.text;
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText(opts.title, r.x + fpx(2), r.y - fpx(5));
+    ctx.fillText(opts.title, r.x + (pres ? 0 : fpx(2)), r.y - (pres ? 12 : fpx(5)));
   }
   if (opts.note) {
-    ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
-    ctx.fillStyle = PHASE_COLORS.peak;
+    ctx.font = `${pres ? F.titleFs : fpx(11)}px "IBM Plex Sans", sans-serif`;
+    ctx.fillStyle = pres ? THEME.text : PHASE_COLORS.peak;
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-    ctx.fillText(opts.note, r.x + r.w - fpx(2), r.y - fpx(5));
+    ctx.fillText(opts.note, r.x + r.w - (pres ? 0 : fpx(2)), r.y - (pres ? 12 : fpx(5)));
   }
   if (opts.xlabel) {
-    ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
+    ctx.font = `${pres ? F.labelFs : fpx(11)}px "IBM Plex Sans", sans-serif`;
     ctx.fillStyle = paper ? THEME.text : THEME.muted;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(opts.xlabel, r.x + r.w / 2, r.y + r.h + fpx(paper ? 24 : 17));
+    ctx.fillText(opts.xlabel, r.x + r.w / 2,
+      r.y + r.h + (pres ? tickLen + gapX + F.tickFs * 1.1 + 14 : fpx(paper ? 24 : 17)));
   }
   /* Y-axis titles exist on paper only. On screen every panel is captioned
      above and the 52 px gutter has no room for one; in a figure, an axis
-     without a quantity on it is the reader's problem, not the app's. */
-  if (paper && opts.ylabel) {
+     without a quantity on it is the reader's problem, not the app's. A slide
+     gives each column ONE title down its side instead (see figColumnTitle). */
+  if (paper && !pres && opts.ylabel) {
     ctx.save();
     ctx.font = `${fpx(11)}px "IBM Plex Sans", sans-serif`;
     ctx.fillStyle = THEME.text;
@@ -5008,15 +5197,37 @@ function phasePanel(ctx, r, xlim, ylim, opts = {}) {
   return [X, Y];
 }
 
+/* Presentation grids: one rotated y title for a whole column of panels,
+   centred on the span from `top` to `bottom`, its baseline at x. */
+function figColumnTitle(ctx, text, x, top, bottom) {
+  ctx.save();
+  ctx.font = `${FIG_PRES.labelFs}px "IBM Plex Sans", sans-serif`;
+  ctx.fillStyle = THEME.text;
+  ctx.translate(x, (top + bottom) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+/* Presentation grids share one x axis per column, numbered on the bottom row
+   only — unless a panel has been panned or zoomed to an x range of its own,
+   when every panel keeps its numbers. */
+function figSharesX(store, keys, defXlim) {
+  return keys.every(k => {
+    const v = panelViews[store].get(k);
+    return !v || (v.xlim[0] === defXlim[0] && v.xlim[1] === defXlim[1]);
+  });
+}
+
 function emptyPhasePanel(ctx, r, title, msg) {
   phasePanel(ctx, r, [0, 1], [0, 1], { title });
-  ctx.font = `${fpx(12)}px "IBM Plex Sans", sans-serif`;
+  ctx.font = `${figPres() ? FIG_PRES.titleFs * 0.8 : fpx(12)}px "IBM Plex Sans", sans-serif`;
   ctx.fillStyle = THEME.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(msg, r.x + r.w / 2, r.y + r.h / 2);
 }
 
-function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel, key, ylabel) {
+function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel, key, ylabel, noXLabels) {
   const pmax = Math.max(power[argmaxArr(power)], 1e-6);
   let xlim = [0, freqs[freqs.length - 1]];
   let ylim = [0, pmax * 1.12];
@@ -5024,8 +5235,10 @@ function drawPeriodogramPanel(ctx, r, freqs, power, peakI, color, title, xlabel,
   if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
   if (key) panelRects.phase.push({ key, r, xlim, ylim, invertY: false });
   const P = 1 / freqs[peakI];
+  // a slide states the period once, over the folded curve it produced; here
+  // the dashed marker alone shows where the peak is
   const [X, Y] = phasePanel(ctx, r, xlim, ylim,
-    { title, titleColor: color, note: `P = ${fmtPeriod(P)}`, xlabel, ylabel });
+    { title, titleColor: color, note: figPres() ? null : `P = ${fmtPeriod(P)}`, xlabel, ylabel, noXLabels });
   // per-pixel max decimation (across the visible x-range) keeps narrow peaks visible
   const bins = new Float64Array(Math.max(2, Math.ceil(r.w)));
   const span = xlim[1] - xlim[0];
@@ -5069,7 +5282,7 @@ function drawFoldedPanel(ctx, r, s, period, color, title, opts = {}) {
   if (opts.key) panelRects.phase.push({ key: opts.key, r, xlim, ylim, invertY: !!opts.invertY });
   const [X, Y] = phasePanel(ctx, r, xlim, ylim,
     { title, titleColor: color, invertY: opts.invertY, xlabel: opts.xlabel,
-      ylabel: opts.ylabel, note: opts.note });
+      ylabel: opts.ylabel, note: opts.note, noXLabels: opts.noXLabels });
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
   // error bars carry less of the ink budget on white than they do on a dark
@@ -5160,15 +5373,35 @@ function drawPhase() {
 
   // ---- layout: 4 rows × 2 columns ----
   const { ctx, W, H } = figSurface(phaseCanvas, 900, 780);
-  const paper = figPrint();
+  const paper = figPrint(), pres = figPres();
+  const F = FIG_PRES;
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
   // the paper gutters are wider than a straight scale-up: each panel gains a
   // rotated y-axis title, and the bottom row an x-axis title under taller ticks
-  const mL = fpx(paper ? 84 : 52), mR = fpx(16);
-  const gapX = fpx(paper ? 104 : 64);
-  const topPad = fpx(34), rowGap = fpx(48), botPad = fpx(paper ? 56 : 36), rows = 4;
+  let mL = fpx(paper ? 84 : 52), mR = fpx(16);
+  let gapX = fpx(paper ? 104 : 64);
+  let topPad = fpx(34), rowGap = fpx(48), botPad = fpx(paper ? 56 : 36);
+  const rows = 4;
+  /* A slide's gutters are sized from its type: a column title and the widest
+     plausible tick number (power ≤ "0.00", magnitudes "00.00") down each
+     side, and rows only a title apart when the columns share their x axes. */
+  const pgKeys = ['pg-G', 'pg-BP', 'pg-RP', 'pg-comb'];
+  const foldKeys = ['fold-G', 'fold-BP', 'fold-RP', 'fold-color'];
+  const sharedX = pres && figSharesX('phase', pgKeys, [0, pd.freqs[pd.freqs.length - 1]]) &&
+    figSharesX('phase', foldKeys, [0, 2]);
+  const colTitleW = 20 + F.labelFs * 1.1;
+  if (pres) {
+    ctx.font = `${F.tickFs}px "IBM Plex Sans", sans-serif`;
+    const tickW = s => ctx.measureText(s).width + F.tickGap + F.tickLen;
+    mL = colTitleW + 16 + tickW('0.00');
+    gapX = 40 + colTitleW + 16 + tickW('00.00');
+    mR = F.tickFs * 0.8;
+    topPad = F.titleFs * 1.35;
+    rowGap = F.titleFs * 1.35 + (sharedX ? 0 : F.tickLen + F.tickGap + F.tickFs * 1.1);
+    botPad = F.tickLen + F.tickGap + F.tickFs * 1.1 + 14 + F.labelFs * 1.25;
+  }
   const colW = (W - mL - mR - gapX) / 2;
   const rowH = (H - topPad - botPad - rowGap * (rows - 1)) / rows;
   const rectAt = (row, col) => ({
@@ -5182,6 +5415,12 @@ function drawPhase() {
      y quantity does change from row to row (power, then magnitude), so every
      panel carries its own y title in the figure. */
 
+  /* A slide keeps each panel down to what it shows: the band, and over a
+     folded curve the period it is folded at. Epoch counts, "periodogram" /
+     "folded at" and the ×n harmonic note stay on screen and in the paper
+     figure, along with the peak period over each periodogram. */
+  const noXLabels = row => sharedX && row < rows - 1;
+  const foldNote = P => pres ? `P = ${fmtPeriod(P)}` : undefined;
   panelRects.phase = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
   pd.bands.forEach((b, row) => {
     // resolve the band's color now rather than trusting the one computePhase()
@@ -5190,27 +5429,34 @@ function drawPhase() {
     const bc = PHASE_COLORS[b.label] || b.color;
     if (b.power) {
       drawPeriodogramPanel(ctx, rectAt(row, 0), pd.freqs, b.power, b.peakI, bc,
-        `${b.label} periodogram (${b.s.t.length} epochs)`,
-        undefined, `pg-${b.label}`, 'GLS power');
+        pres ? b.label : `${b.label} periodogram (${b.s.t.length} epochs)`,
+        undefined, `pg-${b.label}`, 'GLS power', noXLabels(row));
       drawFoldedPanel(ctx, rectAt(row, 1), b.s, b.period * f, bc,
-        `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`,
-        { invertY: true, key: `fold-${b.label}`, ylabel: `${b.label} [mag]` });
+        pres ? b.label : `${b.label} folded at ${fmtPeriod(b.period * f)}${xf}`,
+        { invertY: true, key: `fold-${b.label}`, ylabel: `${b.label} [mag]`,
+          note: foldNote(b.period * f), noXLabels: noXLabels(row) });
     } else {
-      emptyPhasePanel(ctx, rectAt(row, 0), `${b.label} periodogram`,
+      emptyPhasePanel(ctx, rectAt(row, 0), pres ? b.label : `${b.label} periodogram`,
         `not enough epochs (${b.s.t.length})`);
-      emptyPhasePanel(ctx, rectAt(row, 1), `${b.label} folded`, '—');
+      emptyPhasePanel(ctx, rectAt(row, 1), pres ? b.label : `${b.label} folded`, '—');
     }
   });
 
   drawPeriodogramPanel(ctx, rectAt(3, 0), pd.freqs, pd.comb, pd.combPeakI, PHASE_COLORS.color,
-    `Combined ${pd.withPower.map(b => b.label).join('×')}`, 'frequency [cycles/day]', 'pg-comb',
-    'normalized power');
+    pres ? pd.withPower.map(b => b.label).join(' × ') : `Combined ${pd.withPower.map(b => b.label).join('×')}`,
+    pres ? 'Frequency [d⁻¹]' : 'frequency [cycles/day]', 'pg-comb', 'normalized power');
   if (d.color.t.length >= 3) {
     drawFoldedPanel(ctx, rectAt(3, 1), d.color, pd.combPeriod * f, PHASE_COLORS.color,
-      `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`,
-      { invertY: false, xlabel: 'phase', key: 'fold-color', ylabel: 'BP − RP [mag]' });
+      pres ? 'BP − RP' : `BP−RP folded at ${fmtPeriod(pd.combPeriod * f)}${xf}`,
+      { invertY: false, xlabel: pres ? 'Phase' : 'phase', key: 'fold-color', ylabel: 'BP − RP [mag]',
+        note: foldNote(pd.combPeriod * f) });
   } else {
-    emptyPhasePanel(ctx, rectAt(3, 1), 'BP−RP folded', 'not enough simultaneous BP/RP epochs');
+    emptyPhasePanel(ctx, rectAt(3, 1), pres ? 'BP − RP' : 'BP−RP folded', 'not enough simultaneous BP/RP epochs');
+  }
+  if (pres) {
+    const top = topPad, bottom = H - botPad;
+    figColumnTitle(ctx, 'Power', 20 + F.labelFs * 0.78, top, bottom);
+    figColumnTitle(ctx, 'Magnitude', mL + colW + 40 + F.labelFs * 0.78, top, bottom);
   }
 
   const picked = pd.bands.some(b => b.power && b.peakI !== b.autoPeakI) ||
@@ -5364,14 +5610,28 @@ function drawMEP() {
   tmin -= tpad; tmax += tpad;
 
   const { ctx, W, H } = figSurface(mepCanvas, 900, 720);
-  const paper = figPrint();
+  const paper = figPrint(), pres = figPres();
+  const F = FIG_PRES;
   ctx.fillStyle = THEME.panel;
   ctx.fillRect(0, 0, W, H);
 
   // as in drawPhase: on paper the left gutter also holds a rotated y-axis
   // title and the bottom one an x-axis title under taller ticks
-  const mL = fpx(paper ? 96 : 64), mR = fpx(20);
-  const topPad = fpx(34), rowGap = fpx(46), botPad = fpx(paper ? 62 : 42), n = rows.length;
+  let mL = fpx(paper ? 96 : 64), mR = fpx(20);
+  let topPad = fpx(34), rowGap = fpx(46), botPad = fpx(paper ? 62 : 42);
+  const n = rows.length;
+  // a slide: one "Magnitude" down the side, rows on a shared time axis, each
+  // band's title clear of the tick marks of the panel above it
+  const sharedX = pres && figSharesX('mep', rows.map(r => r.label), [tmin, tmax]);
+  if (pres) {
+    ctx.font = `${F.tickFs}px "IBM Plex Sans", sans-serif`;
+    mL = 20 + F.labelFs * 1.1 + 16 + ctx.measureText('00.00').width + F.tickGap + F.tickLen;
+    mR = F.tickFs * 1.2;   // half of a centred "2000" at the right edge
+    topPad = F.titleFs * 1.35;
+    rowGap = F.titleFs * 1.35 + F.tickLen + F.mepRowSpace +
+      (sharedX ? 0 : F.tickGap + F.tickFs * 1.1);
+    botPad = F.tickLen + F.tickGap + F.tickFs * 1.1 + 14 + F.labelFs * 1.25;
+  }
   const rowH = (H - topPad - botPad - rowGap * (n - 1)) / n;
 
   panelRects.mep = [];   // rebuilt below; drives the per-panel pan/zoom hit-testing
@@ -5392,14 +5652,15 @@ function drawMEP() {
     if (view) { xlim = [...view.xlim]; ylim = [...view.ylim]; }
     panelRects.mep.push({ key: row.label, r, xlim, ylim, invertY: row.invertY });
     const [X, Y] = phasePanel(ctx, r, xlim, ylim, {
-      title: `${row.label} (${row.s.t.length} epochs)`,
+      title: pres ? (row.label === 'BP−RP' ? 'BP − RP' : row.label) : `${row.label} (${row.s.t.length} epochs)`,
       titleColor: row.color,
       invertY: row.invertY,
       // the rows share one time axis, so only the bottom panel is labelled —
       // on paper as on screen. The y quantity does change row to row, so each
       // panel gets its own y title in the figure (drawn only on paper).
-      xlabel: i === n - 1 ? 'time [JD − 2455197.5, days]' : undefined,
+      xlabel: i === n - 1 ? (pres ? 'Time [JD − 2455197.5]' : 'time [JD − 2455197.5, days]') : undefined,
       ylabel: row.label === 'BP−RP' ? 'BP − RP [mag]' : `${row.label} [mag]`,
+      noXLabels: sharedX && i < n - 1,
     });
     ctx.save();
     ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
@@ -5418,6 +5679,7 @@ function drawMEP() {
     ctx.globalAlpha = 1;
     ctx.restore();
   });
+  if (pres) figColumnTitle(ctx, 'Magnitude', 20 + F.labelFs * 0.78, topPad, H - botPad);
 
   $('mep-status').textContent =
     rows.map(r => `${r.label}: ${r.s.t.length}`).join(' · ') +
@@ -5453,7 +5715,8 @@ mepModal.addEventListener('click', ev => {
 $('mep-png-btn').addEventListener('click', () => {
   if (!lastEpoch) return;
   saveDialogFigure($('mep-png-btn'), mepCanvas, drawMEP,
-    (lastEpoch ? `gaia_dr3_${lastEpoch.id}_mep` : 'light_curves') + '.png', $('mep-status'));
+    (lastEpoch ? `gaia_dr3_${lastEpoch.id}_mep` : 'light_curves') + '.png', $('mep-status'),
+    FIG_PRES.mepAspect);
 });
 
 /* ---------------- Color legend bar ---------------- */
@@ -6018,7 +6281,7 @@ function capturePreset() {
       showRedVec: state.showRedVec,
       showViewRect: state.showViewRect,
     },
-    plotImage: { format: plotImageFormat, colorbar: exportColorbar },
+    plotImage: { format: plotImageFormat, colorbar: exportColorbar, style: figureStyle },
     lists: STAR_LISTS
       .filter(L => L.highlight || L.restrict || L.activeSubtypes.size)
       .map(L => ({ key: L.key, highlight: L.highlight, restrict: L.restrict,
@@ -6107,6 +6370,7 @@ async function applyPreset(p) {
 
   const pi = p.plotImage || {};
   if (PLOT_FORMATS[pi.format]) $('fmt-' + pi.format).click();
+  if (FIGURE_STYLES.includes(pi.style)) $('style-' + pi.style).click();
   if (typeof pi.colorbar === 'boolean') {
     exportColorbar = pi.colorbar;
     $('colorbar-checkbox').checked = pi.colorbar;

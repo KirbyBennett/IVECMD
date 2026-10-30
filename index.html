@@ -3931,7 +3931,7 @@ async function fetchEpochPhotometry(id, token) {
     try {
       const [ep, plxRaw] = await Promise.all([
         (async () => {
-          const resp = await fetch(`${ESA_DATALINK_URL}?RETRIEVAL_TYPE=EPOCH_PHOTOMETRY&ID=Gaia+DR3+${id}&FORMAT=CSV&DATA_STRUCTURE=INDIVIDUAL`);
+          const resp = await fetch(`${ESA_DATALINK_URL}?RETRIEVAL_TYPE=EPOCH_PHOTOMETRY&ID=Gaia+DR3+${id}&FORMAT=CSV&DATA_STRUCTURE=DATAMODEL_STANDARD`);
           if (!resp.ok) throw new Error(`ESA DataLink HTTP ${resp.status}`);
           return parseEsaEpochCSV(await resp.text());
         })(),
